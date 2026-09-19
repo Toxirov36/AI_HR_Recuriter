@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractResume } from './resume';
+import { extractContactDetails, extractResume } from './resume';
 function pdfFixture(text: string) {
   const stream = `BT /F1 12 Tf 50 750 Td (${text}) Tj ET`;
   const objects = [
@@ -23,6 +23,23 @@ function pdfFixture(text: string) {
   return Buffer.from(result);
 }
 describe('document extraction', () => {
+  it('extracts and normalizes contact details from CV text', () => {
+    expect(
+      extractContactDetails(`
+        Ali Valiyev
+        Email: Ali.Valiyev@example.com
+        Telefon: +998 (90) 123-45-67
+      `),
+    ).toEqual({ email: 'ali.valiyev@example.com', phone: '+998901234567' });
+  });
+
+  it('prefers a labelled phone number and returns null for missing email', () => {
+    expect(extractContactDetails(`Candidate ID: 202612345678\nMobile: 90 765 43 21`)).toEqual({
+      email: null,
+      phone: '907654321',
+    });
+  });
+
   it('extracts readable text from a real PDF document', async () => {
     const buffer = pdfFixture('Experienced engineer building APIs with NestJS and PostgreSQL.');
     const result = await extractResume({

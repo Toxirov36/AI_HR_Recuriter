@@ -40,6 +40,10 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
     const resume = await this.db.resume.findFirstOrThrow({
       where: { id: resumeId, candidateId, companyId },
     });
+    const candidate = await this.db.candidate.findUniqueOrThrow({
+      where: { id_companyId: { id: candidateId, companyId } },
+      select: { email: true, phone: true },
+    });
     await this.db.$transaction([
       this.db.resume.update({
         where: { id: resumeId },
@@ -93,6 +97,8 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
             resumeText: extracted.text,
             resumeMime: extracted.mime,
             resumeName: resume.fileName,
+            email: candidate.email ? undefined : (extracted.contacts.email ?? undefined),
+            phone: candidate.phone ? undefined : (extracted.contacts.phone ?? undefined),
             resumeRevision: { increment: 1 },
             parsedResume: Prisma.DbNull,
             skills: Prisma.DbNull,

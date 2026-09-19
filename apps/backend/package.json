@@ -13,6 +13,7 @@
     "db:migrate": "prisma migrate deploy",
     "db:dev": "prisma migrate dev",
     "storage:migrate": "prisma generate && tsx src/scripts/migrate-resumes-to-r2.ts",
+    "contacts:backfill": "prisma generate && tsx src/scripts/backfill-candidate-contacts.ts",
     "telegram:webhook": "tsx src/scripts/setup-telegram-webhook.ts"
   },
   "dependencies": {

@@ -6,6 +6,33 @@ import { Prisma } from '../../generated/prisma/client';
 import { Database } from '../../database/prisma.service';
 import { R2Storage } from '../../common/storage/r2-storage.service';
 
+export function extractContactDetails(text: string) {
+  const email =
+    text.match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,63}\b/i)?.[0].toLowerCase() ?? null;
+  const phoneLabels = /phone|mobile|tel(?:ephone)?|telefon|aloqa|contact|телефон|контакт/i;
+  const phoneCandidates: Array<{ value: string; score: number }> = [];
+  const lines = text.split(/\r?\n/);
+
+  for (const line of lines) {
+    const matches = line.matchAll(/\+?\d[\d\s().-]{7,}\d/g);
+    for (const match of matches) {
+      const raw = match[0].trim();
+      const digits = raw.replace(/\D/g, '');
+      if (digits.length < 9 || digits.length > 15) continue;
+      const normalized = raw.startsWith('+')
+        ? `+${digits}`
+        : digits.startsWith('00')
+          ? `+${digits.slice(2)}`
+          : digits;
+      const score = (phoneLabels.test(line) ? 2 : 0) + (normalized.startsWith('+') ? 1 : 0);
+      phoneCandidates.push({ value: normalized, score });
+    }
+  }
+
+  phoneCandidates.sort((a, b) => b.score - a.score);
+  return { email, phone: phoneCandidates[0]?.value ?? null };
+}
+
 export async function extractResume(file: Express.Multer.File, maxSize = 5 * 1024 * 1024) {
   if (!file || !file.buffer?.length) throw new BadRequestException('Choose a PDF or DOCX file');
   if (file.size > maxSize)
@@ -53,7 +80,7 @@ export async function extractResume(file: Express.Multer.File, maxSize = 5 * 102
       'No readable CV text found. Scanned PDFs require OCR before upload.',
     );
   if (text.length > 80000) throw new BadRequestException('CV text exceeds 80,000 characters');
-  return { text, mime };
+  return { text, mime, contacts: extractContactDetails(text) };
 }
 
 @Injectable()
@@ -67,7 +94,7 @@ export class ResumesService {
     const result = await extractResume(file);
     const previous = await this.db.candidate.findUniqueOrThrow({
       where: { id_companyId: { id: candidateId, companyId } },
-      select: { resumeObjectKey: true },
+      select: { resumeObjectKey: true, email: true, phone: true },
     });
     const objectKey = this.storage.enabled
       ? await this.storage.putResume(
@@ -89,6 +116,8 @@ export class ResumesService {
             resumeText: result.text,
             resumeMime: result.mime,
             resumeName: file.originalname.replace(/[^a-zA-Z0-9_. -]/g, '_').slice(0, 180),
+            email: previous.email ? undefined : (result.contacts.email ?? undefined),
+            phone: previous.phone ? undefined : (result.contacts.phone ?? undefined),
             resumeRevision: { increment: 1 },
             parsedResume: Prisma.DbNull,
             skills: Prisma.DbNull,
