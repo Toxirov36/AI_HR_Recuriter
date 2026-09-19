@@ -12,6 +12,8 @@ import {
   Download,
   Sparkles,
   FileText,
+  Mail,
+  Phone,
 } from 'lucide-react';
 import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
@@ -234,20 +236,44 @@ export function Candidates() {
                       {data.items.map((c) => (
                         <TableRow key={c.id}>
                           <TableCell>
-                            <Link
-                              className="person inline-flex items-center gap-3 font-medium"
-                              to={`/candidates/${c.id}`}
-                            >
-                              <Avatar className="h-8 w-8">
-                                <AvatarFallback className="bg-[#1b4338] text-white font-semibold text-xs">
-                                  {c.fullName.slice(0, 2).toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <strong>{c.fullName}</strong>
-                                <small>{c.email || 'No email added'}</small>
+                            <div className="candidate-identity">
+                              <Link
+                                className="candidate-avatar-link"
+                                to={`/candidates/${c.id}`}
+                                aria-label={`View ${c.fullName}`}
+                              >
+                                <Avatar className="h-9 w-9">
+                                  <AvatarFallback className="bg-[#1b4338] text-white font-semibold text-xs">
+                                    {c.fullName.slice(0, 2).toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                              </Link>
+                              <div className="candidate-identity-content">
+                                <Link className="candidate-name-link" to={`/candidates/${c.id}`}>
+                                  {c.fullName}
+                                </Link>
+                                <div className="candidate-contact-lines">
+                                  {c.email ? (
+                                    <a href={`mailto:${c.email}`} title={c.email}>
+                                      <Mail size={12} /> <span>{c.email}</span>
+                                    </a>
+                                  ) : (
+                                    <span className="missing-contact">
+                                      <Mail size={12} /> No email
+                                    </span>
+                                  )}
+                                  {c.phone ? (
+                                    <a href={`tel:${c.phone}`} title={c.phone}>
+                                      <Phone size={12} /> <span>{c.phone}</span>
+                                    </a>
+                                  ) : (
+                                    <span className="missing-contact">
+                                      <Phone size={12} /> No phone
+                                    </span>
+                                  )}
+                                </div>
                               </div>
-                            </Link>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <span className="badge neutral">
@@ -406,16 +432,12 @@ export function CandidateDetail() {
             <PageTitle
               eyebrow="CANDIDATE PROFILE"
               title={c.fullName}
-              text={
-                [
-                  c.email,
-                  c.phone,
-                  c.source === 'TELEGRAM' ? 'Telegram' : null,
-                  c.telegramUsername ? `@${c.telegramUsername}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ') || 'Contact information not added'
-              }
+              text={[
+                c.source === 'TELEGRAM' ? 'Telegram candidate' : 'Website candidate',
+                c.telegramUsername ? `@${c.telegramUsername}` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             >
               <Button
                 variant="outline"
@@ -425,6 +447,34 @@ export function CandidateDetail() {
                 <Pencil size={16} /> Edit profile
               </Button>
             </PageTitle>
+            <section className="candidate-contact-panel" aria-label="Candidate contact information">
+              <div className="candidate-contact-item">
+                <span className="candidate-contact-icon">
+                  <Mail size={17} />
+                </span>
+                <div>
+                  <small>Email address</small>
+                  {c.email ? (
+                    <a href={`mailto:${c.email}`}>{c.email}</a>
+                  ) : (
+                    <strong className="missing-contact">Not added</strong>
+                  )}
+                </div>
+              </div>
+              <div className="candidate-contact-item">
+                <span className="candidate-contact-icon">
+                  <Phone size={17} />
+                </span>
+                <div>
+                  <small>Phone number</small>
+                  {c.phone ? (
+                    <a href={`tel:${c.phone}`}>{c.phone}</a>
+                  ) : (
+                    <strong className="missing-contact">Not added</strong>
+                  )}
+                </div>
+              </div>
+            </section>
             <div className="detail-grid">
               <section className="panel padded">
                 <div className="panel-heading flush">

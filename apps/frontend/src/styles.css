@@ -3592,6 +3592,146 @@ tbody tr:hover {
   white-space: nowrap;
 }
 
+.candidate-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 230px;
+}
+
+.candidate-avatar-link {
+  flex: 0 0 auto;
+  border-radius: 50%;
+}
+
+.candidate-identity-content {
+  min-width: 0;
+}
+
+.candidate-name-link {
+  display: block;
+  max-width: 250px;
+  overflow: hidden;
+  color: #203b31;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-name-link:hover {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.candidate-contact-lines {
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+}
+
+.candidate-contact-lines a,
+.candidate-contact-lines > span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 250px;
+  color: #73847c;
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.candidate-contact-lines a:hover {
+  color: var(--green);
+}
+
+.candidate-contact-lines a span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-contact-lines svg {
+  flex: 0 0 auto;
+}
+
+.missing-contact {
+  color: #a1aca6 !important;
+  font-weight: 500;
+}
+
+.candidate-contact-panel {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  margin: -7px 0 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--line);
+  box-shadow: 0 8px 24px -22px rgb(31 63 53 / 30%);
+}
+
+.candidate-contact-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 15px 17px;
+  background: #fff;
+}
+
+.candidate-contact-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 10px;
+  background: #edf5f0;
+  color: var(--green);
+}
+
+.candidate-contact-item > div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.candidate-contact-item small {
+  color: #889790;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.candidate-contact-item a,
+.candidate-contact-item strong {
+  overflow: hidden;
+  color: #27483a;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidate-contact-item a:hover {
+  color: var(--green);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 620px) {
+  .candidate-contact-panel {
+    grid-template-columns: 1fr;
+  }
+}
+
 .vacancies-filter-trigger {
   display: inline-flex;
   align-items: center;
