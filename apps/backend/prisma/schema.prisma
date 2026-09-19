@@ -1,0 +1,205 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+datasource db {
+  provider = "postgresql"
+}
+enum UserRole {
+  ADMIN
+  HR
+  RECRUITER
+}
+enum VacancyStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+enum ApplicationStatus {
+  NEW
+  REVIEWING
+  INTERVIEW
+  OFFER
+  HIRED
+  REJECTED
+}
+enum CandidateSource {
+  WEBSITE
+  TELEGRAM
+  MANUAL
+  REFERRAL
+}
+enum ResumeStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+model Company {
+  id Int @id @default(autoincrement())
+  name String
+  users User[]
+  vacancies Vacancy[]
+  candidates Candidate[]
+  applications Application[]
+  invitations Invitation[]
+  telegramConnections TelegramBusinessConnection[]
+  createdAt DateTime @default(now())
+}
+model User {
+  id Int @id @default(autoincrement())
+  fullName String
+  email String @unique
+  password String
+  role UserRole @default(HR)
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  createdAt DateTime @default(now())
+  @@index([companyId])
+}
+model Invitation {
+  id Int @id @default(autoincrement())
+  email String
+  tokenHash String @unique
+  role UserRole @default(HR)
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  expiresAt DateTime
+  usedAt DateTime?
+  @@index([companyId])
+}
+model Vacancy {
+  id Int @id @default(autoincrement())
+  title String
+  description String
+  status VacancyStatus @default(ACTIVE)
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  requirements Requirement[]
+  applications Application[]
+  revision Int @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([id, companyId])
+  @@index([companyId, createdAt])
+}
+model Requirement {
+  id Int @id @default(autoincrement())
+  name String
+  description String?
+  required Boolean @default(true)
+  vacancyId Int
+  vacancy Vacancy @relation(fields: [vacancyId], references: [id], onDelete: Cascade)
+  @@index([vacancyId])
+}
+model Candidate {
+  id Int @id @default(autoincrement())
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  fullName String
+  email String?
+  phone String?
+  telegramUserId String?
+  telegramUsername String?
+  source CandidateSource @default(WEBSITE)
+  resumeName String?
+  resumeMime String?
+  resumeData Bytes?
+  resumeObjectKey String? @unique
+  resumeSize Int?
+  resumeText String?
+  resumeRevision Int @default(0)
+  skills Json?
+  experience Json?
+  education Json?
+  languages Json?
+  parsedResume Json?
+  applications Application[]
+  resumes Resume[]
+  events CandidateEvent[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([id, companyId])
+  @@unique([companyId, telegramUserId])
+  @@index([companyId, createdAt])
+}
+model Resume {
+  id Int @id @default(autoincrement())
+  companyId Int
+  candidateId Int
+  fileName String
+  objectKey String? @unique
+  mimeType String?
+  fileSize Int?
+  telegramFileId String?
+  status ResumeStatus @default(PENDING)
+  rawText String?
+  error String?
+  candidate Candidate @relation(fields: [candidateId, companyId], references: [id, companyId], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId, status])
+  @@index([candidateId, createdAt])
+}
+model CandidateEvent {
+  id Int @id @default(autoincrement())
+  companyId Int
+  candidateId Int
+  type String
+  label String
+  candidate Candidate @relation(fields: [candidateId, companyId], references: [id, companyId], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@index([candidateId, createdAt])
+}
+model TelegramBusinessConnection {
+  id String @id
+  companyId Int?
+  telegramUserId BigInt
+  userChatId BigInt
+  canReply Boolean @default(false)
+  canReadMessages Boolean @default(false)
+  enabled Boolean @default(true)
+  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId])
+  @@index([telegramUserId])
+}
+model TelegramWebhookUpdate {
+  updateId BigInt @id
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+model Application {
+  id Int @id @default(autoincrement())
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id])
+  vacancyId Int
+  candidateId Int
+  vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId, companyId], references: [id, companyId], onDelete: Cascade)
+  analysis Json?
+  interviewQuestions Json?
+  interviewReview Json?
+  reviewRevision Int @default(0)
+  stageHistory ApplicationStageChange[]
+  analyzedResumeRevision Int?
+  analyzedVacancyRevision Int?
+  status ApplicationStatus @default(NEW)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([vacancyId, candidateId])
+  @@index([companyId, status])
+}
+model ApplicationStageChange {
+  id Int @id @default(autoincrement())
+  applicationId Int
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  fromStatus ApplicationStatus?
+  toStatus ApplicationStatus
+  actorId Int
+  actorName String
+  createdAt DateTime @default(now())
+  @@index([applicationId, createdAt])
+}

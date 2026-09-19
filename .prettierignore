@@ -1,0 +1,7 @@
+node_modules
+dist
+package-lock.json
+.local
+*.tsbuildinfo
+test-results
+apps/backend/src/generated

@@ -1,0 +1,6 @@
+# Optional full-stack Docker preview over localhost HTTP. Never use this override in production.
+services:
+  backend:
+    environment:
+      NODE_ENV: development
+      FRONTEND_ORIGIN: http://localhost:8080

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.local/
+playwright-report/
+test-results/
+*.tsbuildinfo
+apps/backend/src/generated/
+apps/backend/prisma/generated/

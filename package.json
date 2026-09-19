@@ -1,0 +1,45 @@
+{
+  "name": "ai-hr-recruiter",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/backend",
+    "apps/frontend",
+    "packages/*"
+  ],
+  "scripts": {
+    "doctor": "node scripts/check-services.mjs",
+    "setup": "node scripts/setup.mjs",
+    "format": "prettier --write \"apps/**/*.{ts,tsx,css,json,html}\" \"scripts/*.mjs\" \"*.{json,yaml,md}\"",
+    "dev": "concurrently -n api,web -c cyan,green \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\"",
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces",
+    "prisma:generate": "npm run prisma:generate -w apps/backend",
+    "db:migrate": "npm run db:migrate -w apps/backend",
+    "db:dev": "npm run db:dev -w apps/backend",
+    "storage:migrate": "npm run storage:migrate -w apps/backend",
+    "telegram:webhook": "npm run telegram:webhook -w apps/backend",
+    "infra:up": "docker compose up -d postgres redis",
+    "infra:stop": "docker compose stop"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "deepmerge-ts": "^8.0.2",
+    "prisma": "7.10.0",
+    "prettier": "^3.9.7"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "overrides": {
+    "multer": "^2.3.0",
+    "deepmerge-ts": "$deepmerge-ts",
+    "@prisma/config": {
+      "deepmerge-ts": "$deepmerge-ts"
+    },
+    "prisma": {
+      "mysql2": "^3.24.4"
+    },
+    "lodash": "^4.18.1"
+  }
+}
