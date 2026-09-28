@@ -89,7 +89,10 @@ jobs:
           target="$DEPLOY_USER@$DEPLOY_HOST"
           ssh "${ssh_opts[@]}" "$target" 'mkdir -p ~/hr-recruiter/incoming'
           scp "${ssh_opts[@]}" "$RUNNER_TEMP/release.tar.gz" "$target:hr-recruiter/incoming/$GITHUB_SHA.tar.gz"
-          ssh "${ssh_opts[@]}" "$target" "bash -s -- '$GITHUB_SHA'" < deploy/release.sh
+          scp "${ssh_opts[@]}" deploy/release.sh "$target:hr-recruiter/incoming/$GITHUB_SHA.sh"
+          ssh -n "${ssh_opts[@]}" "$target" "bash ~/hr-recruiter/incoming/$GITHUB_SHA.sh '$GITHUB_SHA'"
+          deployed=$(ssh -n "${ssh_opts[@]}" "$target" 'cat ~/hr-recruiter/deployed-sha')
+          [[ "$deployed" == "$GITHUB_SHA" ]] || { echo 'Server did not activate the tested commit'; exit 1; }
       - name: Remove runner SSH key
         if: always()
         run: rm -f ~/.ssh/id_ed25519

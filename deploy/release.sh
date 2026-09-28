@@ -39,13 +39,13 @@ fi
 
 # Back up before startup applies migrations. A schema rollback is never automatic.
 backup="$base/backups/pre-$revision-$(date -u +%Y%m%dT%H%M%SZ).dump"
-"${compose[@]}" exec -T postgres pg_dump -U recruiter -d recruiter -Fc > "$backup"
+"${compose[@]}" exec -T postgres pg_dump -U recruiter -d recruiter -Fc < /dev/null > "$backup"
 test -s "$backup"
 "${compose[@]}" up -d --no-build
 
 healthy=false
 for attempt in {1..24}; do
-  if curl --fail --silent --max-time 5 http://127.0.0.1:3000/api/auth/session >/dev/null &&
+  if curl --fail --silent --max-time 5 http://127.0.0.1:3000/api/health >/dev/null &&
      curl --fail --silent --max-time 5 http://127.0.0.1:8080/ >/dev/null; then
     healthy=true
     break
@@ -59,4 +59,5 @@ fi
 ln -sfn "$source_dir" "$base/current"
 printf '%s\n' "$revision" > "$base/deployed-sha"
 rm -f "$base/incoming/$revision.tar.gz"
+rm -f "$base/incoming/$revision.sh"
 echo "Deployed $revision successfully."
