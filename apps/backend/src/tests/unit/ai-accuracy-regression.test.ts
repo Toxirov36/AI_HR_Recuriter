@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { validateEvidence } from './ai.service';
-import { resumeSchema } from './modules/ai/schemas/resume.schema';
+import { validateEvidence } from '../../modules/ai/schemas/evidence.schema';
+import { resumeSchema } from '../../modules/ai/schemas/resume.schema';
 
 describe('AI Accuracy, Hallucination Prevention & Regression Benchmark Suite', () => {
   const cvText = `

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateEvidence } from './ai.service';
+import { validateEvidence } from '../../modules/ai/schemas/evidence.schema';
 
 describe('AI Fairness & Bias Testing (NIST AI RMF & Counterfactual Demographic Parity)', () => {
   const jobRequirements = [

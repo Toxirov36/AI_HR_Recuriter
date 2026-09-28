@@ -8,10 +8,10 @@ import Redis from 'ioredis';
 import request from 'supertest';
 import JSZip from 'jszip';
 import { randomBytes } from 'node:crypto';
-import { AppModule, configureApp } from './app';
-import { Security } from './security';
-import { Database } from './database';
-import { getConfig } from './config';
+import { AppModule, configureApp } from '../../app.module';
+import { Security } from '../../common/utils/security';
+import { Database } from '../../database/prisma.service';
+import { getConfig } from '../../config/app.config';
 // Runs only against an explicitly supplied isolated test database; never clears existing data.
 describe.skipIf(!process.env.TEST_DATABASE_URL)(
   'HTTP integration: PostgreSQL + in-memory Redis substitute',

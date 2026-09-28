@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { exportSnapshot, restoreSnapshot, computeSnapshotChecksum } from './scripts/backup-restore';
+import { exportSnapshot, restoreSnapshot, computeSnapshotChecksum } from '../../scripts/backup-restore';
 
 describe('Database Disaster Recovery: Backup & Restore Verification Test', () => {
   let mockDb: any;

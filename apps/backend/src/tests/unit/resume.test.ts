@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractContactDetails, extractResume } from './resume';
+import { extractContactDetails, extractResume } from '../../modules/resumes/resumes.service';
 function pdfFixture(text: string) {
   const stream = `BT /F1 12 Tf 50 750 Td (${text}) Tj ET`;
   const objects = [

@@ -1,0 +1,5 @@
+services:
+  backend:
+    image: ai-hr-recruiter-backend:${DEPLOY_SHA:?Set DEPLOY_SHA}
+  frontend:
+    image: ai-hr-recruiter-frontend:${DEPLOY_SHA:?Set DEPLOY_SHA}

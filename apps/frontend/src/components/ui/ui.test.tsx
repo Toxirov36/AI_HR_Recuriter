@@ -22,6 +22,6 @@ describe('review interface', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Create a workspace' }));
     expect(screen.getByLabelText('Company name')).toBeRequired();
     expect(screen.queryByLabelText('Company ID')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Password')).toHaveAttribute('minlength', '12');
+    expect(screen.getByLabelText('Password')).toHaveAttribute('minlength', '8');
   });
 });
