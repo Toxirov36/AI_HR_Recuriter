@@ -83,15 +83,47 @@ export async function extractResume(file: Express.Multer.File, maxSize = 5 * 102
   return { text, mime, contacts: extractContactDetails(text) };
 }
 
+import { AntivirusService } from './antivirus.service';
+import { OcrService } from './ocr.service';
+
 @Injectable()
 export class ResumesService {
   constructor(
     @Inject(Database) private db: Database,
     @Inject(R2Storage) private storage: R2Storage,
+    @Inject(AntivirusService) private antivirus: AntivirusService,
+    @Inject(OcrService) private ocr: OcrService,
   ) {}
 
   async upload(companyId: number, candidateId: number, file: Express.Multer.File) {
-    const result = await extractResume(file);
+    // 1. Antivirus and file signature validation
+    const sig = this.antivirus.verifyFileSignature(file.buffer, file.originalname);
+    const scan = await this.antivirus.scanBuffer(file.buffer, file.originalname);
+    if (!scan.isClean) {
+      throw new BadRequestException(
+        `Xavfsizlik xatosi: Zararli fayl aniqlandi (${scan.threatName})`,
+      );
+    }
+
+    // 2. Text extraction with OCR fallback for scanned CVs
+    let isOcr = false;
+    let result: { text: string; mime: string; contacts: { email: string | null; phone: string | null } };
+    try {
+      result = await extractResume(file);
+    } catch (err) {
+      if (this.ocr.shouldOcr(sig.mime, 0)) {
+        const ocrRes = await this.ocr.extractTextFromMedia(file.buffer, sig.mime);
+        isOcr = true;
+        result = {
+          text: ocrRes.text,
+          mime: sig.mime,
+          contacts: extractContactDetails(ocrRes.text),
+        };
+      } else {
+        throw err;
+      }
+    }
+
     const previous = await this.db.candidate.findUniqueOrThrow({
       where: { id_companyId: { id: candidateId, companyId } },
       select: { resumeObjectKey: true, email: true, phone: true },
@@ -115,6 +147,7 @@ export class ResumesService {
             resumeSize: file.size,
             resumeText: result.text,
             resumeMime: result.mime,
+            isOcrProcessed: isOcr,
             resumeName: file.originalname.replace(/[^a-zA-Z0-9_. -]/g, '_').slice(0, 180),
             email: previous.email ? undefined : (result.contacts.email ?? undefined),
             phone: previous.phone ? undefined : (result.contacts.phone ?? undefined),

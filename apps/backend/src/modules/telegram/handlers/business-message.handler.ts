@@ -1,6 +1,7 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import { Database } from '../../../database/prisma.service';
 import { TelegramQueueService } from '../telegram-queue.service';
+import { TelegramApiService } from '../telegram-api.service';
 import type { TelegramBusinessMessage } from '../types/telegram.types';
 
 const MAX_TELEGRAM_CV_BYTES = 10 * 1024 * 1024;
@@ -11,6 +12,7 @@ export class BusinessMessageHandler {
   constructor(
     @Inject(Database) private db: Database,
     @Inject(TelegramQueueService) private queue: TelegramQueueService,
+    @Optional() @Inject(TelegramApiService) private telegramApi?: TelegramApiService,
   ) {}
 
   async handle(message: TelegramBusinessMessage) {
@@ -20,7 +22,7 @@ export class BusinessMessageHandler {
     if (!connectionId || !document || !sender) return;
 
     const connection = await this.db.telegramBusinessConnection.findUnique({
-      where: { id: connectionId },
+      where: { id: connectionId, company: { isActive: true } },
     });
     if (!connection?.enabled || !connection.companyId) return;
     if (BigInt(sender.id) === connection.telegramUserId) return;
@@ -96,6 +98,50 @@ export class BusinessMessageHandler {
       this.logger.log(
         `Telegram CV queued candidateId=${result.candidate.id} resumeId=${result.resume.id}`,
       );
+
+      // Auto-reply to candidate on Telegram: "Rezyumengiz qabul qilindi, AI ko'rib chiqmoqda"
+      if (this.telegramApi && connection.canReply) {
+        try {
+          const ackText =
+            `Assalomu alaykum, ${result.candidate.fullName}!\n\n` +
+            `Rezyumengiz muvaffaqiyatli qabul qilindi, AI ko'rib chiqmoqda.\n\n` +
+            `AI tizimimiz ma'lumotlaringizni tahlil qilib, mos vakansiyalar bilan solishtiradi. ` +
+            `Tez orada siz bilan bog'lanamiz!`;
+
+          const delivery = await this.telegramApi.sendMessage(String(message.chat.id), ackText, {
+            businessConnectionId: connectionId,
+          });
+          if (!delivery.ok) throw new Error(delivery.description || 'Telegram business reply failed');
+
+          await this.db.candidateEvent.create({
+            data: {
+              companyId: connection.companyId!,
+              candidateId: result.candidate.id,
+              type: 'TELEGRAM_AUTO_REPLY_SENT',
+              label: "Avtomatik javob: 'Rezyumengiz qabul qilindi, AI ko'rib chiqmoqda'",
+            },
+          });
+        } catch (notifyErr) {
+          this.logger.warn(`Failed to send Telegram CV auto-reply: ${(notifyErr as Error).message}`);
+          await this.db.candidateEvent.create({
+            data: {
+              companyId: connection.companyId,
+              candidateId: result.candidate.id,
+              type: 'TELEGRAM_DELIVERY_FAILED',
+              label: 'CV javobi Telegram orqali yuborilmadi. Business chat ruxsatlarini tekshiring.',
+            },
+          }).catch(() => undefined);
+        }
+      } else if (!connection.canReply) {
+        await this.db.candidateEvent.create({
+          data: {
+            companyId: connection.companyId,
+            candidateId: result.candidate.id,
+            type: 'TELEGRAM_DELIVERY_FAILED',
+            label: 'CV javobi yuborilmadi: Telegram Business’da Reply to Messages ruxsati o‘chiq.',
+          },
+        }).catch(() => undefined);
+      }
     } catch (error) {
       await this.db.resume.update({
         where: { id: result.resume.id },

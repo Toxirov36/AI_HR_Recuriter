@@ -11,7 +11,7 @@
     "doctor": "node scripts/check-services.mjs",
     "setup": "node scripts/setup.mjs",
     "format": "prettier --write \"apps/**/*.{ts,tsx,css,json,html}\" \"scripts/*.mjs\" \"*.{json,yaml,md}\"",
-    "dev": "concurrently -n api,web -c cyan,green \"npm run dev -w apps/backend\" \"npm run dev -w apps/frontend\"",
+    "dev": "concurrently -n api,web -c cyan,green \"npm run dev -w apps/backend\" \"node scripts/wait-for-backend.mjs && npm run dev -w apps/frontend\"",
     "build": "npm run build --workspaces",
     "test": "npm run test --workspaces",
     "prisma:generate": "npm run prisma:generate -w apps/backend",

@@ -8,7 +8,7 @@ export const acceptInviteSchema = z
     fullName: text(160),
     password: z
       .string()
-      .min(12)
+      .min(8)
       .max(72)
       .refine((v) => Buffer.byteLength(v, 'utf8') <= 72, 'Password must be at most 72 UTF-8 bytes'),
   })

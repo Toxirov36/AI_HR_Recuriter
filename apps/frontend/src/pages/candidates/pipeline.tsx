@@ -1,22 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarDays,
+  Clock3,
+  FileCheck2,
+  GripVertical,
+  LayoutGrid,
+  List as ListIcon,
+  Mail,
   MoreHorizontal,
+  Phone,
   Plus,
   Search,
   Sparkles,
   ShieldCheck,
   Trash2,
+  UserRound,
+  Users,
   ChevronDown,
   Check,
+  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
 import { InterviewReviewEditor } from '../../features/interview-generator';
+import {
+  getEvidenceSummary,
+  sortApplications,
+  type PipelineSortOption,
+} from '../../lib/match-score';
 import {
   AiConsent,
   Alert,
@@ -29,6 +45,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Badge,
+  Combobox,
+  ComboboxCollection,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+  ComboboxSeparator,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -36,15 +62,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Empty,
+  Input,
   label,
   Loading,
   Modal,
   PageTitle,
   Pagination,
-  ScrollArea,
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -60,47 +85,117 @@ function RecordSelect({
   kind: 'candidates' | 'vacancies';
   onSelect: (id: number) => void;
 }) {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState('');
-  const { data, error } = useData<Page<Candidate | Vacancy>>(
-    `/${kind}?search=${encodeURIComponent(search)}&page=${page}`,
-  );
+  const [selected, setSelected] = useState<Candidate | Vacancy | null>(null);
+  const endpoint =
+    kind === 'vacancies'
+      ? `/vacancies?excludeClosed=true&pageSize=100`
+      : `/candidates?pageSize=100`;
+  const { data, error } = useData<Page<Candidate | Vacancy>>(endpoint);
+
+  const rawItems = useMemo(() => {
+    if (!data?.items) return [];
+    return data.items.filter((x) => {
+      if ('status' in x && x.status === 'CLOSED') return false;
+      return true;
+    });
+  }, [data?.items]);
+
+  const groupedData = useMemo<{ value: string; items: (Vacancy | Candidate)[] }[]>(() => {
+    if (kind === 'vacancies') {
+      const vacancies = rawItems as Vacancy[];
+      const active = vacancies.filter((v) => v.status === 'ACTIVE');
+      const draft = vacancies.filter((v) => v.status === 'DRAFT');
+      const other = vacancies.filter((v) => v.status !== 'ACTIVE' && v.status !== 'DRAFT');
+      const groups: { value: string; items: (Vacancy | Candidate)[] }[] = [];
+      if (active.length > 0) groups.push({ value: 'Active Positions', items: active });
+      if (draft.length > 0) groups.push({ value: 'Draft Positions', items: draft });
+      if (other.length > 0) groups.push({ value: 'Other Positions', items: other });
+      if (groups.length === 0 && vacancies.length > 0) {
+        groups.push({ value: 'Available Positions', items: vacancies });
+      }
+      return groups;
+    } else {
+      const candidates = rawItems as Candidate[];
+      const withCv = candidates.filter((c) => c.resumeName || c.resumeText);
+      const withoutCv = candidates.filter((c) => !c.resumeName && !c.resumeText);
+      const groups: { value: string; items: (Candidate | Vacancy)[] }[] = [];
+      if (withCv.length > 0) groups.push({ value: 'Candidates with CV', items: withCv });
+      if (withoutCv.length > 0) groups.push({ value: 'Other Candidates', items: withoutCv });
+      if (groups.length === 0 && candidates.length > 0) {
+        groups.push({ value: 'Available Candidates', items: candidates });
+      }
+      return groups;
+    }
+  }, [kind, rawItems]);
+
+  const handleSelect = (item: Candidate | Vacancy | null) => {
+    setSelected(item);
+    onSelect(item ? item.id : 0);
+  };
+
+  const totalCount = rawItems.length;
+
   return (
-    <div className="record-select">
-      <label>
-        Find a {kind === 'candidates' ? 'candidate' : 'vacancy'}
-        <input
-          value={search}
-          placeholder="Type to search…"
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-        />
-      </label>
+    <div className="form-group mb-5">
+      <div className="flex items-center justify-between mb-2">
+        <label className="form-label text-sm font-semibold text-slate-800">
+          <span>{kind === 'candidates' ? 'Select candidate' : 'Select vacancy'}</span>
+          <span className="text-red-500 font-bold ml-1">*</span>
+        </label>
+        {totalCount > 0 && (
+          <span className="text-xs text-slate-500 font-medium px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200/60">
+            {totalCount} available
+          </span>
+        )}
+      </div>
+
       <Alert message={error} />
-      <Select
-        value={selected}
-        onValueChange={(value) => {
-          setSelected(value);
-          onSelect(Number(value));
-        }}
-      >
-        <SelectTrigger aria-label={kind} className="w-full">
-          <SelectValue placeholder={`Select ${kind === 'candidates' ? 'candidate' : 'vacancy'}`} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup>
-            {data?.items.map((x) => (
-              <SelectItem key={x.id} value={String(x.id)}>
-                {'fullName' in x ? x.fullName : x.title}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      {data && data.total > 20 && <Pagination page={page} total={data.total} setPage={setPage} />}
+
+      <Combobox items={groupedData} value={selected} onValueChange={handleSelect}>
+        <ComboboxInput
+          aria-label={kind === 'candidates' ? 'Search candidate' : 'Search vacancy'}
+          placeholder={
+            kind === 'candidates' ? 'Select or search a candidate…' : 'Select or search a vacancy…'
+          }
+        />
+        <ComboboxContent>
+          <ComboboxEmpty>
+            {kind === 'candidates' ? 'No candidates found.' : 'No vacancies found.'}
+          </ComboboxEmpty>
+          <ComboboxList>
+            {(group: { value: string; items: (Candidate | Vacancy)[] }, index: number) => (
+              <ComboboxGroup key={group.value} items={group.items}>
+                <ComboboxLabel>{group.value}</ComboboxLabel>
+                <ComboboxCollection>
+                  {(item: Candidate | Vacancy) => {
+                    const title = 'fullName' in item ? item.fullName : item.title;
+                    const subtitle =
+                      'email' in item
+                        ? item.email || (item.resumeName ? 'CV attached' : 'No CV')
+                        : 'status' in item
+                          ? item.status
+                          : null;
+
+                    return (
+                      <ComboboxItem key={item.id} value={item}>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium text-slate-900 truncate">{title}</span>
+                          {subtitle && (
+                            <span className="text-xs text-slate-400 truncate font-normal">
+                              {subtitle}
+                            </span>
+                          )}
+                        </div>
+                      </ComboboxItem>
+                    );
+                  }}
+                </ComboboxCollection>
+                {index < groupedData.length - 1 && <ComboboxSeparator />}
+              </ComboboxGroup>
+            )}
+          </ComboboxList>
+        </ComboboxContent>
+      </Combobox>
     </div>
   );
 }
@@ -124,186 +219,609 @@ function ApplicationForm({ close, saved }: { close: () => void; saved: () => voi
     }
   }
   return (
-    <Modal title="Create an application" close={close}>
-      <form onSubmit={submit}>
+    <Modal
+      title="Create an application"
+      subtitle="Connect a candidate to a vacancy to begin reviewing their evidence."
+      close={close}
+      className="application-modal-custom"
+    >
+      <form onSubmit={submit} className="vacancy-modal-body">
         <Alert message={error} />
-        <p className="muted">Connect a candidate to a vacancy to begin reviewing their evidence.</p>
         <RecordSelect kind="candidates" onSelect={setCandidate} />
         <RecordSelect kind="vacancies" onSelect={setVacancy} />
-        <footer className="modal-actions">
-          <button type="button" className="secondary" onClick={close}>
+        <div className="modal-footer-actions">
+          <button type="button" className="btn-modal-cancel" onClick={close}>
             Cancel
           </button>
-          <button className="primary" disabled={busy || !candidateId || !vacancyId}>
+          <button
+            type="submit"
+            className="btn-modal-submit"
+            disabled={busy || !candidateId || !vacancyId}
+          >
             {busy ? 'Creating…' : 'Create application'}
           </button>
-        </footer>
+        </div>
       </form>
     </Modal>
   );
 }
 
+const stageDescriptions: Record<Stage, string> = {
+  NEW: 'Just arrived, not reviewed yet',
+  REVIEWING: 'Evidence and CV under review',
+  INTERVIEW: 'Interview in progress',
+  OFFER: 'Offer sent or being prepared',
+  HIRED: 'Successfully joined the team',
+  REJECTED: 'Closed applications',
+};
+
+function daysBetween(date?: string | null) {
+  if (!date) return 0;
+  const timestamp = new Date(date).getTime();
+  if (Number.isNaN(timestamp)) return 0;
+  return Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000));
+}
+
+function applicationOwner(application: Application) {
+  const history = application.stageHistory ?? [];
+  const latest = [...history].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  )[0];
+  return latest?.actorName || 'Unassigned';
+}
+
+function daysInCurrentStage(application: Application) {
+  const history = application.stageHistory ?? [];
+  const latestCurrentStage = [...history]
+    .filter((entry) => entry.toStatus === application.status)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
+  return daysBetween(latestCurrentStage?.createdAt || application.createdAt);
+}
+
+function nextActionFor(application: Application) {
+  const hasEvidence = Boolean(getEvidenceSummary(application.analysis));
+  switch (application.status) {
+    case 'NEW':
+      return hasEvidence ? 'Review evidence' : 'Review the CV';
+    case 'REVIEWING':
+      return 'Complete HR review';
+    case 'INTERVIEW':
+      return application.interviewReview?.scorecard?.finalDecision &&
+        application.interviewReview.scorecard.finalDecision !== 'UNDECIDED'
+        ? 'Prepare decision'
+        : 'Complete scorecard';
+    case 'OFFER':
+      return 'Follow up on offer';
+    case 'HIRED':
+      return 'Process completed';
+    case 'REJECTED':
+      return 'Application archived';
+  }
+}
+
+function sourceLabel(candidate: Candidate) {
+  if (!candidate.source) return 'Website';
+  return candidate.source.charAt(0) + candidate.source.slice(1).toLowerCase();
+}
+
+function initials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (parts.length > 1 ? parts[0][0] + parts.at(-1)![0] : name.slice(0, 2)).toUpperCase();
+}
+
+type PipelineViewMode = 'board' | 'list';
+
 export function Pipeline() {
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
-  const { data, error, reload } = useData<Page<Application>>(
-    `/applications?page=${page}&search=${encodeURIComponent(search)}`,
-  );
+  const sortBy: PipelineSortOption = 'created_desc';
+  const [selectedVacancy, setSelectedVacancy] = useState('all');
+  const [selectedStage, setSelectedStage] = useState<'all' | Stage>('all');
+  const [mobileStage, setMobileStage] = useState<Stage>('NEW');
+  const [viewMode, setViewMode] = useState<PipelineViewMode>('board');
+  const [draggingId, setDraggingId] = useState<number | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<Stage | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ app: Application; stage: Stage } | null>(null);
+  const [moving, setMoving] = useState(false);
 
-  async function handleMoveStage(app: Application, newStage: Stage) {
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  const { data, error, reload } = useData<Page<Application>>(
+    `/applications?page=${page}&search=${encodeURIComponent(debouncedSearch)}`,
+  );
+  const { data: vacanciesData } = useData<Page<Vacancy>>(
+    '/vacancies?excludeClosed=true&pageSize=100',
+  );
+  const [localItems, setLocalItems] = useState<Application[]>([]);
+
+  useEffect(() => {
+    if (data?.items) setLocalItems(data.items);
+  }, [data?.items]);
+
+  const vacanciesList = useMemo(() => {
+    const vacancyMap = new Map<number, string>();
+    for (const vacancy of vacanciesData?.items ?? []) {
+      if (vacancy.status !== 'CLOSED') vacancyMap.set(vacancy.id, vacancy.title);
+    }
+    for (const application of localItems) {
+      if (application.vacancy?.status !== 'CLOSED') {
+        vacancyMap.set(application.vacancy.id, application.vacancy.title);
+      }
+    }
+    return Array.from(vacancyMap, ([id, title]) => ({ id, title }));
+  }, [localItems, vacanciesData?.items]);
+
+  const filteredItems = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    const filtered = localItems.filter((application) => {
+      if (selectedVacancy !== 'all' && String(application.vacancyId) !== selectedVacancy) {
+        return false;
+      }
+      if (selectedStage !== 'all' && application.status !== selectedStage) return false;
+      if (!normalizedSearch) return true;
+      return [
+        application.candidate.fullName,
+        application.candidate.email,
+        application.candidate.phone,
+        application.vacancy.title,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
+    });
+    return sortApplications(filtered, sortBy);
+  }, [localItems, search, selectedStage, selectedVacancy, sortBy]);
+
+  const activeApplications = filteredItems.filter(
+    (application) => application.status !== 'HIRED' && application.status !== 'REJECTED',
+  );
+  const interviewCutoff = Date.now() - 7 * 86_400_000;
+  const interviewsThisWeek = filteredItems.filter((application) =>
+    (application.stageHistory ?? []).some(
+      (entry) =>
+        entry.toStatus === 'INTERVIEW' && new Date(entry.createdAt).getTime() >= interviewCutoff,
+    ),
+  ).length;
+  const offersPending = filteredItems.filter(
+    (application) => application.status === 'OFFER',
+  ).length;
+  const averageDays = activeApplications.length
+    ? Math.round(
+        activeApplications.reduce(
+          (sum, application) => sum + daysBetween(application.createdAt),
+          0,
+        ) / activeApplications.length,
+      )
+    : 0;
+
+  const summaryCards = [
+    {
+      label: 'Active candidates',
+      value: activeApplications.length,
+      detail: 'In an open stage',
+      icon: Users,
+    },
+    {
+      label: 'Interviews this week',
+      value: interviewsThisWeek,
+      detail: 'Moved to Interview in 7 days',
+      icon: CalendarDays,
+    },
+    {
+      label: 'Offers pending',
+      value: offersPending,
+      detail: 'Awaiting a reply',
+      icon: FileCheck2,
+    },
+    {
+      label: 'Avg. time in process',
+      value: `${averageDays}d`,
+      detail: 'From application to today',
+      icon: Clock3,
+    },
+  ];
+
+  async function moveApplication(application: Application, newStage: Stage) {
+    if (application.status === newStage) return;
+    const originalStatus = application.status;
+    setMoving(true);
+    setLocalItems((items) =>
+      items.map((item) => (item.id === application.id ? { ...item, status: newStage } : item)),
+    );
     try {
       await send(
-        `/applications/${app.id}/status`,
-        { status: newStage, expectedStatus: app.status },
+        `/applications/${application.id}/status`,
+        { status: newStage, expectedStatus: originalStatus },
         'PUT',
       );
-      toast.success(`Moved ${app.candidate.fullName} to ${label(newStage)}`);
+      toast.success(`${application.candidate.fullName} moved to ${label(newStage)}`);
+      setPendingMove(null);
       reload();
-    } catch (e) {
-      toast.error((e as Error).message);
+    } catch (moveError) {
+      setLocalItems((items) =>
+        items.map((item) =>
+          item.id === application.id ? { ...item, status: originalStatus } : item,
+        ),
+      );
+      toast.error((moveError as Error).message || 'Failed to update stage');
+    } finally {
+      setMoving(false);
     }
   }
 
+  function requestMove(application: Application, stage: Stage) {
+    if (application.status !== stage) setPendingMove({ app: application, stage });
+  }
+
+  function handleDragStart(event: React.DragEvent, application: Application) {
+    event.dataTransfer.setData('text/plain', String(application.id));
+    event.dataTransfer.effectAllowed = 'move';
+    setDraggingId(application.id);
+  }
+
+  function handleDragEnd() {
+    setDraggingId(null);
+    setDragOverColumn(null);
+  }
+
+  function handleDrop(event: React.DragEvent, stage: Stage) {
+    event.preventDefault();
+    const applicationId = Number(event.dataTransfer.getData('text/plain'));
+    const application = localItems.find((item) => item.id === applicationId);
+    setDraggingId(null);
+    setDragOverColumn(null);
+    if (application) requestMove(application, stage);
+  }
+
+  function renderCard(application: Application) {
+    const evidence = getEvidenceSummary(application.analysis);
+    const owner = applicationOwner(application);
+    const days = daysInCurrentStage(application);
+    const isDragging = draggingId === application.id;
+    return (
+      <article
+        className={`application-card pipeline-candidate-card ${isDragging ? 'is-dragging' : ''}`}
+        key={application.id}
+        draggable
+        onDragStart={(event) => handleDragStart(event, application)}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="application-card-head">
+          <span className="pipeline-drag-handle" aria-hidden="true">
+            <GripVertical size={15} />
+          </span>
+          <span className="avatar">{initials(application.candidate.fullName)}</span>
+          <div className="pipeline-card-person">
+            <Link to={`/applications/${application.id}`}>{application.candidate.fullName}</Link>
+            <span>{application.vacancy.title}</span>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="application-menu"
+                aria-label={`Actions for ${application.candidate.fullName}`}
+              >
+                <MoreHorizontal size={17} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {stages.map((stage) => (
+                <DropdownMenuItem
+                  key={stage}
+                  disabled={stage === application.status}
+                  onClick={() => requestMove(application, stage)}
+                >
+                  {label(stage)}
+                </DropdownMenuItem>
+              ))}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to={`/applications/${application.id}`}>Open application</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="pipeline-card-meta">
+          <span>{sourceLabel(application.candidate)}</span>
+          <span>
+            <UserRound size={12} /> {owner}
+          </span>
+          <span>
+            <Clock3 size={12} /> {days}d in stage
+          </span>
+        </div>
+
+        {(application.candidate.email || application.candidate.phone) && (
+          <div className="pipeline-card-contacts">
+            {application.candidate.email && (
+              <span title={application.candidate.email}>
+                <Mail size={12} />
+                {application.candidate.email}
+              </span>
+            )}
+            {application.candidate.phone && (
+              <span title={application.candidate.phone}>
+                <Phone size={12} />
+                {application.candidate.phone}
+              </span>
+            )}
+          </div>
+        )}
+
+        <div className="pipeline-card-review">
+          <span className={evidence ? 'is-reviewed' : 'needs-review'}>
+            {evidence ? 'Evidence reviewed' : 'Needs review'}
+          </span>
+          <span>{nextActionFor(application)}</span>
+        </div>
+
+        <Link className="pipeline-card-open" to={`/applications/${application.id}`}>
+          Open details <ArrowRight size={15} />
+        </Link>
+      </article>
+    );
+  }
+
   return (
-    <div className="pipeline-page">
+    <div className="pipeline-page pipeline-redesign">
       <PageTitle
-        eyebrow="HIRING WORKFLOW"
+        eyebrow="HIRING"
         title="Hiring pipeline"
-        text="Track every candidate and move applications through your hiring process."
+        text="Every application in one board. Stage changes are made by a person and recorded."
       >
         <button className="primary" onClick={() => setOpen(true)}>
-          <Plus size={17} /> New application
+          <Plus size={17} /> Add candidate
         </button>
       </PageTitle>
-      <div className="pipeline-toolbar">
-        <div className="pipeline-search search-field">
-          <Search size={18} aria-hidden="true" />
-          <input
-            aria-label="Search applications"
-            placeholder="Search candidates in the pipeline…"
+
+      <section className="pipeline-summary-grid" aria-label="Pipeline summary">
+        {summaryCards.map((card) => (
+          <article key={card.label} className="pipeline-summary-card">
+            <span className="pipeline-summary-icon">
+              <card.icon size={18} />
+            </span>
+            <div>
+              <span>{card.label}</span>
+              <strong>{card.value}</strong>
+              <small>{card.detail}</small>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="pipeline-filterbar" aria-label="Pipeline filters">
+        <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+          <SelectTrigger
+            value={selectedVacancy}
+            className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
+            aria-label="Filter by vacancy"
+          >
+            <SelectValue placeholder="All vacancies" />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="all">All vacancies</SelectItem>
+            {vacanciesList.map((vacancy) => (
+              <SelectItem key={vacancy.id} value={String(vacancy.id)}>
+                {vacancy.title}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="relative flex items-center w-full">
+          <Search size={16} className="absolute left-3 text-[#94a3b8] pointer-events-none" aria-hidden="true" />
+          <Input
+            id="pipeline-search-input"
+            aria-label="Search the pipeline"
+            placeholder="Search candidates…"
             value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+            onChange={(event) => {
+              setSearch(event.target.value);
               setPage(1);
             }}
+            className="h-10 w-full pl-9 pr-8 rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] placeholder:text-[#94a3b8] shadow-none hover:border-[#cbd5e1] focus-visible:border-[#1a5d4c] focus-visible:ring-2 focus-visible:ring-[#1a5d4c]/15"
           />
+          {search && (
+            <button
+              type="button"
+              className="absolute right-2.5 flex items-center justify-center w-5 h-5 rounded-full text-[#64748b] hover:text-[#0f172a] hover:bg-[#e2e8f0] transition-colors"
+              aria-label="Clear search"
+              onClick={() => {
+                setSearch('');
+                setPage(1);
+              }}
+            >
+              <X size={13} />
+            </button>
+          )}
         </div>
-        <div className="pipeline-total" aria-live="polite">
-          <strong>{data?.total ?? '—'}</strong>
-          <span>applications</span>
+
+        <Select value={selectedStage} onValueChange={(val) => setSelectedStage(val as 'all' | Stage)}>
+          <SelectTrigger
+            value={selectedStage}
+            className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
+            aria-label="Filter by stage"
+          >
+            <SelectValue placeholder="All stages" />
+          </SelectTrigger>
+          <SelectContent className="max-h-72">
+            <SelectItem value="all">All stages</SelectItem>
+            {stages.map((stage) => (
+              <SelectItem key={stage} value={stage}>
+                {label(stage)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <div className="pipeline-view-toggle" role="group" aria-label="View mode">
+          <button
+            type="button"
+            className={viewMode === 'board' ? 'active' : ''}
+            aria-pressed={viewMode === 'board'}
+            onClick={() => setViewMode('board')}
+          >
+            <LayoutGrid size={15} /> Board
+          </button>
+          <button
+            type="button"
+            className={viewMode === 'list' ? 'active' : ''}
+            aria-pressed={viewMode === 'list'}
+            onClick={() => setViewMode('list')}
+          >
+            <ListIcon size={15} /> List
+          </button>
         </div>
-      </div>
+      </section>
+
       <Alert message={error} />
-      {!data && !error ? (
+      {!data && !localItems.length && !error ? (
         <Loading />
-      ) : (
-        data && (
-          <>
-            {data.items.length ? (
-              <div className="pipeline-board-shell">
-                <div className="pipeline-board-heading">
-                  <div>
-                    <strong>Candidate journey</strong>
-                    <span>Use the card menu to update a candidate's stage.</span>
-                  </div>
-                  <span className="pipeline-board-hint">
-                    Scroll horizontally to see every stage
-                  </span>
+      ) : filteredItems.length ? (
+        <>
+          {viewMode === 'board' ? (
+            <section className="pipeline-board-shell">
+              <div className="pipeline-board-heading">
+                <div>
+                  <strong>Candidate journey</strong>
+                  <span>Drag a card or use its menu. Every move asks for confirmation.</span>
                 </div>
-                <div className="kanban" aria-label="Hiring pipeline board">
-                  {stages.map((stage) => {
-                    const applications = data.items.filter(
-                      (application) => application.status === stage,
-                    );
-                    return (
-                      <section className={`kanban-column stage-${stage.toLowerCase()}`} key={stage}>
-                        <header>
-                          <div className="pipeline-stage-title">
-                            <Badge value={stage} />
-                          </div>
-                          <span className="stage-count">{applications.length}</span>
-                        </header>
-                        <div className="kanban-card-list">
-                          {applications.map((a) => (
-                            <article className="application-card" key={a.id}>
-                              <div className="application-card-head">
-                                <span className="avatar">
-                                  {a.candidate.fullName.slice(0, 2).toUpperCase()}
-                                </span>
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button
-                                      type="button"
-                                      className="application-menu"
-                                      aria-label={`Actions for ${a.candidate.fullName}`}
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      <MoreHorizontal size={16} />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    {stages.map((s) => (
-                                      <DropdownMenuItem
-                                        key={s}
-                                        disabled={s === a.status}
-                                        onClick={() => void handleMoveStage(a, s)}
-                                      >
-                                        {label(s)}
-                                      </DropdownMenuItem>
-                                    ))}
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem asChild>
-                                      <Link to={`/applications/${a.id}`}>View application</Link>
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
-                              <Link className="application-card-body" to={`/applications/${a.id}`}>
-                                <h3 title={a.candidate.fullName}>{a.candidate.fullName}</h3>
-                                <p title={a.vacancy.title}>{a.vacancy.title}</p>
-                                <div className="application-review-state">
-                                  <span className={a.analysis ? 'has-evidence' : ''} />
-                                  {a.analysis ? 'Evidence available' : 'Ready for review'}
-                                </div>
-                                <footer>
-                                  <span>Open application</span>
-                                  <ArrowRight size={15} />
-                                </footer>
-                              </Link>
-                            </article>
-                          ))}
-                          {!applications.length && (
-                            <div className="empty-lane">
-                              <span aria-hidden="true" />
-                              <strong>No candidates yet</strong>
-                              <p>Applications moved here will appear in this column.</p>
-                            </div>
-                          )}
-                        </div>
-                      </section>
-                    );
-                  })}
-                </div>
+                <span className="pipeline-board-hint">
+                  Scroll horizontally to see every stage →
+                </span>
               </div>
-            ) : (
-              <section className="panel">
-                <Empty
-                  title="Start a conversation"
-                  text="Connect a candidate to a vacancy. Their application will begin in New."
-                />
-              </section>
-            )}
-            <Pagination page={page} total={data.total} setPage={setPage} />
-            <p className="muted small">
-              The board shows applications on the current page. Open an application to update its
-              stage.
-            </p>
-          </>
-        )
+
+              <div className="pipeline-mobile-stage">
+                <span>Stage</span>
+                <Select
+                  value={mobileStage}
+                  onValueChange={(val) => setMobileStage(val as Stage)}
+                >
+                  <SelectTrigger
+                    value={mobileStage}
+                    className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
+                    aria-label="Select stage view"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {stages.map((stage) => (
+                      <SelectItem key={stage} value={stage}>
+                        {label(stage)} ·{' '}
+                        {filteredItems.filter((item) => item.status === stage).length}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="kanban" aria-label="Hiring pipeline board">
+                {stages.map((stage) => {
+                  const applications = filteredItems.filter(
+                    (application) => application.status === stage,
+                  );
+                  return (
+                    <section
+                      key={stage}
+                      data-stage={stage}
+                      data-mobile-active={mobileStage === stage}
+                      className={`kanban-column stage-${stage.toLowerCase()} ${dragOverColumn === stage ? 'is-drag-over' : ''}`}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = 'move';
+                        setDragOverColumn(stage);
+                      }}
+                      onDragLeave={() => setDragOverColumn(null)}
+                      onDrop={(event) => handleDrop(event, stage)}
+                    >
+                      <header>
+                        <div className="pipeline-stage-heading">
+                          <span className="pipeline-stage-dot" />
+                          <div>
+                            <strong>{label(stage)}</strong>
+                            <small>{stageDescriptions[stage]}</small>
+                          </div>
+                        </div>
+                        <span className="stage-count">{applications.length}</span>
+                      </header>
+                      <div className="kanban-card-list">
+                        {applications.map(renderCard)}
+                        {!applications.length && (
+                          <div className="empty-lane">
+                            <span aria-hidden="true">
+                              <Users size={16} />
+                            </span>
+                            <strong>No candidates here</strong>
+                            <p>Move a candidate here when they reach this stage.</p>
+                          </div>
+                        )}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            </section>
+          ) : (
+            <section className="pipeline-list-shell" aria-label="Applications list">
+              <div className="pipeline-list-head">
+                <span>Candidate</span>
+                <span>Vacancy</span>
+                <span>Stage</span>
+                <span>Owner</span>
+                <span>Time</span>
+                <span>Next action</span>
+                <span />
+              </div>
+              {filteredItems.map((application) => (
+                <article className="pipeline-list-row" key={application.id}>
+                  <div className="pipeline-list-candidate">
+                    <span className="avatar">{initials(application.candidate.fullName)}</span>
+                    <div>
+                      <Link to={`/applications/${application.id}`}>
+                        {application.candidate.fullName}
+                      </Link>
+                      <small>
+                        {application.candidate.email || sourceLabel(application.candidate)}
+                      </small>
+                    </div>
+                  </div>
+                  <span data-label="Vacancy">{application.vacancy.title}</span>
+                  <span data-label="Stage">
+                    <Badge value={application.status} />
+                  </span>
+                  <span data-label="Owner">{applicationOwner(application)}</span>
+                  <span data-label="Time">{daysInCurrentStage(application)}d</span>
+                  <span data-label="Next action">{nextActionFor(application)}</span>
+                  <Link
+                    className="pipeline-list-open"
+                    to={`/applications/${application.id}`}
+                    aria-label={`Open ${application.candidate.fullName}`}
+                  >
+                    <ArrowRight size={16} />
+                  </Link>
+                </article>
+              ))}
+            </section>
+          )}
+          <Pagination page={page} total={data?.total ?? filteredItems.length} setPage={setPage} />
+        </>
+      ) : (
+        <section className="panel">
+          <Empty
+            title="No matching applications"
+            text="Change the filters or add a candidate to a vacancy."
+          />
+        </section>
       )}
+
       {open && (
         <ApplicationForm
           close={() => setOpen(false)}
@@ -313,6 +831,37 @@ export function Pipeline() {
           }}
         />
       )}
+
+      <AlertDialog
+        open={Boolean(pendingMove)}
+        onOpenChange={(isOpen) => !isOpen && !moving && setPendingMove(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Move candidate to {pendingMove ? label(pendingMove.stage) : ''}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingMove?.app.candidate.fullName} will move from{' '}
+              {pendingMove ? label(pendingMove.app.status) : ''} to{' '}
+              {pendingMove ? label(pendingMove.stage) : ''}. This change will be recorded in the
+              stage history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={moving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={moving}
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingMove) void moveApplication(pendingMove.app, pendingMove.stage);
+              }}
+            >
+              {moving ? 'Moving…' : 'Confirm move'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
@@ -326,6 +875,7 @@ export function ApplicationDetail() {
   const [actionError, setError] = useState('');
   const [reviewDirty, setReviewDirty] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const aiBlocked = Boolean(a?.candidate.publicSubmittedAt && !a?.candidate.aiConsentAt);
 
   async function action(kind: 'analyze' | 'questions') {
     setBusy(kind);
@@ -345,7 +895,13 @@ export function ApplicationDetail() {
     setError('');
     try {
       await send(`/applications/${id}/status`, { status, expectedStatus: a?.status }, 'PUT');
-      toast.success(`Moved application to ${label(status)}`);
+      if (status === 'INTERVIEW') {
+        toast.success(`Moved application to Interview · Auto-invitation sent`);
+      } else if (status === 'REJECTED') {
+        toast.success(`Moved application to Rejected · Rejection message sent`);
+      } else {
+        toast.success(`Moved application to ${label(status)}`);
+      }
       reload();
     } catch (e) {
       setError((e as Error).message);
@@ -449,59 +1005,60 @@ export function ApplicationDetail() {
             <div className="review-notice">
               <ShieldCheck size={22} />
               <div>
-                <strong>Evidence informs. People decide.</strong>
+                <strong>Faktik dalillar — Insoniy qaror</strong>
                 <span>
-                  These labels describe what the CV supports. They are not a candidate score or a
-                  hiring recommendation.
+                  Ushbu tahlil nomzod rezyumesidan olingan faktik dalillarni ko‘rsatadi. Bu ishga
+                  qabul qilish bo‘yicha AI tavsiyasi emas — yakuniy qarorni faqat interviewer qabul
+                  qiladi.
                 </span>
               </div>
               <Link to={`/candidates/${a.candidateId}`}>
-                View CV <ArrowRight size={16} />
+                CV ko‘rish <ArrowRight size={16} />
               </Link>
             </div>
-            <section className="panel padded">
-              <AiConsent checked={consent} onChange={setConsent} configured={user.aiConfigured} />
-              <div className="row wrap">
-                <button
-                  className="primary"
-                  disabled={
-                    !consent ||
-                    !user.aiConfigured ||
-                    !a.candidate.resumeText ||
-                    Boolean(busy) ||
-                    reviewDirty
-                  }
-                  onClick={() => void action('analyze')}
-                >
-                  <Sparkles size={16} />
-                  {busy === 'analyze' ? 'Checking evidence…' : 'Match CV evidence'}
-                </button>
-                <button
-                  className="secondary"
-                  disabled={
-                    !consent ||
-                    !user.aiConfigured ||
-                    !a.candidate.resumeText ||
-                    Boolean(busy) ||
-                    reviewDirty
-                  }
-                  onClick={() => void action('questions')}
-                >
-                  <Sparkles size={16} />
-                  {busy === 'questions' ? 'Preparing questions…' : 'Generate interview questions'}
-                </button>
-                {!a.candidate.resumeText && (
-                  <span className="muted">Upload a CV on the candidate profile first.</span>
-                )}
-              </div>
-            </section>
+
             <section className="panel evidence-panel">
               <div className="panel-heading">
                 <div>
-                  <h2>Requirement evidence</h2>
-                  <p>Exact CV excerpts alongside the requirements for this role.</p>
+                  <h2>AI topgan dalillar (CV Evidence Breakdown)</h2>
+                  <p>
+                    CV matnidan olingan faktik dalillar. AI nomzodlarni baholamaydi — qarorni faqat
+                    inson qabul qiladi.
+                  </p>
                 </div>
-                <span className="count-chip">{a.vacancy.requirements.length} requirements</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    className="primary"
+                    disabled={
+                      !consent ||
+                      aiBlocked ||
+                      !user?.aiConfigured ||
+                      !a.candidate.resumeText ||
+                      Boolean(busy) ||
+                      reviewDirty
+                    }
+                    onClick={() => void action('analyze')}
+                  >
+                    <Sparkles size={15} />
+                    {busy === 'analyze'
+                      ? 'Tahlil qilinmoqda…'
+                      : a.analysis
+                        ? 'Qayta tahlil qilish'
+                        : 'CV dalillarini tahlil qilish'}
+                  </button>
+                  <span className="count-chip">{a.vacancy.requirements.length} talab</span>
+                </div>
+              </div>
+              <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between">
+                <AiConsent
+                  checked={consent}
+                  onChange={setConsent}
+                  configured={Boolean(user?.aiConfigured)}
+                />
+                {aiBlocked && <span className="text-xs text-amber-700">Nomzod AI tahliliga rozilik bermagan.</span>}
+                {!a.candidate.resumeText && (
+                  <span className="text-xs text-amber-600">Avval nomzod profiliga CV yuklang.</span>
+                )}
               </div>
               {a.vacancy.requirements.length ? (
                 a.vacancy.requirements.map((r) => {
@@ -513,7 +1070,7 @@ export function ApplicationDetail() {
                           <h3>
                             {r.name}
                             <span className="required-label">
-                              {r.required ? 'Required' : 'Nice to have'}
+                              {r.required ? 'Majburiy' : 'Afzallik'}
                             </span>
                           </h3>
                           {r.description && <p className="muted">{r.description}</p>}
@@ -521,7 +1078,7 @@ export function ApplicationDetail() {
                         {evidence ? (
                           <Badge value={evidence.status} />
                         ) : (
-                          <span className="muted small">Not analyzed</span>
+                          <span className="muted small">Tahlil qilinmagan</span>
                         )}
                       </div>
                       {evidence && (
@@ -530,7 +1087,7 @@ export function ApplicationDetail() {
                           {evidence.quotes.map((q, i) => (
                             <blockquote key={i}>
                               {q}
-                              <small>Exact CV excerpt</small>
+                              <small>CV matnidan aniq parcha</small>
                             </blockquote>
                           ))}
                         </>
@@ -540,32 +1097,51 @@ export function ApplicationDetail() {
                 })
               ) : (
                 <Empty
-                  title="No requirements yet"
-                  text="Edit this vacancy to add job-related requirements."
+                  title="Vakansiyada talablar kiritilmagan"
+                  text="Ushbu vakansiyani tahrirlab, talablarni qo‘shing."
                 />
               )}
               <div className="evidence-legend">
                 <span>
-                  <b>Supported</b> Explicit evidence
+                  <b>Supported</b> Aniq tasdiqlangan dalil
                 </span>
                 <span>
-                  <b>Partial</b> Some evidence
+                  <b>Partial</b> Qisman dalil mavjud
                 </span>
                 <span>
-                  <b>Not found</b> No statement in CV
+                  <b>Not found</b> CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda
+                  aniqlashtirish zarur)
                 </span>
                 <span>
-                  <b>Unknown</b> Needs clarification
+                  <b>Unknown</b> Aniq xulosa yo‘q, suhbatda aniqlash zarur
                 </span>
               </div>
             </section>
             <section className="panel">
               <div className="panel-heading">
                 <div>
-                  <h2>Interview guide</h2>
-                  <p>Use these questions to explore experience and clarify gaps.</p>
+                  <h2>Interview guide & Scorecard</h2>
+                  <p>Suhbat savollari bo‘yicha javoblar va strukturaviy baholash scorecard.</p>
                 </div>
-                <Sparkles size={19} />
+                <button
+                  className="secondary"
+                  disabled={
+                    !consent ||
+                    aiBlocked ||
+                    !user?.aiConfigured ||
+                    !a.candidate.resumeText ||
+                    Boolean(busy) ||
+                    reviewDirty
+                  }
+                  onClick={() => void action('questions')}
+                >
+                  <Sparkles size={15} />
+                  {busy === 'questions'
+                    ? 'Savollar tayyorlanmoqda…'
+                    : a.interviewQuestions
+                      ? 'Savollarni qayta yaratish'
+                      : 'Suhbat savollarini yaratish'}
+                </button>
               </div>
               <InterviewReviewEditor
                 key={a.id + ':' + a.reviewRevision + ':' + JSON.stringify(a.interviewQuestions)}

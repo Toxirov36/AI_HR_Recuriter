@@ -15,9 +15,10 @@ export class TelegramQueueService implements OnModuleDestroy {
     const config = getConfig();
     if (config.NODE_ENV === 'test' || !config.TELEGRAM_BOT_TOKEN) return;
     this.connection = new Redis(config.REDIS_URL, {
-      maxRetriesPerRequest: 1,
+      maxRetriesPerRequest: null,
       enableOfflineQueue: false,
     });
+    this.connection.on('error', () => {});
     this.queue = new Queue<TelegramResumeJob>(TELEGRAM_RESUME_QUEUE, {
       connection: this.connection,
     });

@@ -23,6 +23,12 @@ import {
   invitationSchema,
   AcceptInviteDto,
   acceptInviteSchema,
+  MfaEnableDto,
+  mfaEnableSchema,
+  MfaVerifyDto,
+  mfaVerifySchema,
+  MfaDisableDto,
+  mfaDisableSchema,
 } from './dto';
 
 export { userSelect };
@@ -90,4 +96,37 @@ export class AuthController {
   ) {
     return this.authService.accept(dto, req.ip, res);
   }
+
+  @Get('mfa/setup')
+  @UseGuards(AuthGuard)
+  async setupMfa(@Req() req: AuthRequest) {
+    return this.authService.setupMfa(req.user.id);
+  }
+
+  @Post('mfa/enable')
+  @UseGuards(AuthGuard)
+  async enableMfa(
+    @Req() req: AuthRequest,
+    @Body(new ZodValidationPipe(mfaEnableSchema)) dto: MfaEnableDto,
+  ) {
+    return this.authService.enableMfa(req.user.id, dto.code);
+  }
+
+  @Post('mfa/verify')
+  async verifyMfa(
+    @Body(new ZodValidationPipe(mfaVerifySchema)) dto: MfaVerifyDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.authService.verifyMfaLogin(dto.challengeToken, dto.code, res);
+  }
+
+  @Post('mfa/disable')
+  @UseGuards(AuthGuard)
+  async disableMfa(
+    @Req() req: AuthRequest,
+    @Body(new ZodValidationPipe(mfaDisableSchema)) dto: MfaDisableDto,
+  ) {
+    return this.authService.disableMfa(req.user.id, dto.password);
+  }
 }
+

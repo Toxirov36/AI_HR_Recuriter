@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Headers,
   Inject,
@@ -27,6 +28,24 @@ export class TelegramController {
     if (!this.telegramService.verifySecret(secret)) throw new UnauthorizedException();
     await this.telegramService.handleUpdate(update);
     return { ok: true };
+  }
+
+  @Post('connect-link')
+  @UseGuards(AuthGuard)
+  connectLink(@Req() req: AuthRequest) {
+    return this.telegramService.createConnectLink(req.user);
+  }
+
+  @Get('status')
+  @UseGuards(AuthGuard)
+  status(@Req() req: AuthRequest) {
+    return this.telegramService.getStatus(req.user);
+  }
+
+  @Delete('connection')
+  @UseGuards(AuthGuard)
+  disconnect(@Req() req: AuthRequest) {
+    return this.telegramService.disconnect(req.user);
   }
 
   @Get('connections')

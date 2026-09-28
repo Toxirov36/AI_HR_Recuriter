@@ -1,0 +1,15 @@
+x-logging: &bounded-logs
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  postgres:
+    logging: *bounded-logs
+  redis:
+    logging: *bounded-logs
+  backend:
+    logging: *bounded-logs
+  frontend:
+    logging: *bounded-logs

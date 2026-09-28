@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react';
 import { ArrowLeft, ArrowRight, LoaderCircle, Inbox, AlertCircle } from 'lucide-react';
-import { label } from '../../lib/utils';
+import { cn, label } from '../../lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './dialog';
 import { Checkbox } from './checkbox';
 import { Badge as ShadcnBadge } from './badge';
 import { Alert as ShadcnAlert } from './alert';
 import { Skeleton } from './skeleton';
 
-export { label } from '../../lib/utils';
+export { cn, label } from '../../lib/utils';
 export { useData } from '../../lib/query-client';
 
 export const date = (value: string) =>
@@ -34,6 +34,9 @@ export * from './sheet';
 export * from './scroll-area';
 export * from './accordion';
 export * from './progress';
+export * from './combobox';
+export * from './popover';
+export * from '../resume-dropzone';
 export { Badge as ShadcnBadge, badgeVariants } from './badge';
 export { Alert as ShadcnAlert, AlertTitle, AlertDescription } from './alert';
 
@@ -175,11 +178,14 @@ export function Modal({
   return (
     <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent
-        className={`z-[100] max-h-[92vh] max-w-[620px] overflow-y-auto p-7 rounded-[18px] bg-white border border-[#e2e8f0] text-[#0f172a] shadow-2xl ${className}`}
+        className={cn(
+          'z-[100] max-h-[90vh] w-full max-w-[680px] flex flex-col overflow-hidden p-6 sm:p-7 rounded-[20px] bg-white border border-[#e2e8f0] text-[#0f172a] shadow-2xl',
+          className,
+        )}
       >
-        <DialogHeader className="text-left mb-4">
+        <DialogHeader className="text-left shrink-0 mb-3">
           <DialogTitle className="text-xl font-bold tracking-tight text-[#0f172a]">{title}</DialogTitle>
-          {subtitle && <p className="modal-subtitle text-sm text-[#64748b] mt-1">{subtitle}</p>}
+          {subtitle && <p className="modal-subtitle text-sm text-[#64748b] mt-1 leading-relaxed">{subtitle}</p>}
         </DialogHeader>
         {children}
       </DialogContent>

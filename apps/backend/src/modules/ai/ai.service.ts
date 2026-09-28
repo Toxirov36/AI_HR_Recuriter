@@ -2,9 +2,11 @@ import {
   BadGatewayException,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Inject,
   Injectable,
   Logger,
+  OnModuleInit,
   Optional,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -12,7 +14,7 @@ import { z } from 'zod';
 import { Prisma } from '../../generated/prisma/client';
 import { randomUUID } from 'node:crypto';
 import { Security } from '../../common/utils/security';
-import { RecruitingService } from '../../recruiting.service';
+import { RecruitingService } from '../recruiting/recruiting.service';
 import { vacancyBrief } from '../../common/pipes/validation';
 import { vacancyDraftSchema } from './schemas/vacancy.schema';
 import { resumeSchema } from './schemas/resume.schema';
@@ -21,6 +23,8 @@ import { questionsSchema } from './schemas/questions.schema';
 import { vacancyInstructions } from './prompts/vacancy.prompt';
 import { instructions } from './prompts/evidence.prompt';
 import { GeminiProvider } from './providers/gemini.provider';
+import { ResumeQueueService } from '../resumes/resume-queue.service';
+import { NotificationService } from '../notifications/notification.service';
 
 export {
   vacancyDraftSchema,
@@ -31,7 +35,7 @@ export {
 };
 
 @Injectable()
-export class AiService {
+export class AiService implements OnModuleInit {
   private readonly logger = new Logger(AiService.name);
   private geminiProvider: GeminiProvider;
 
@@ -39,8 +43,16 @@ export class AiService {
     @Inject(Security) private security: Security,
     @Inject(RecruitingService) private recruiting: RecruitingService,
     @Optional() @Inject(GeminiProvider) geminiProvider?: GeminiProvider,
+    @Optional() @Inject(ResumeQueueService) private resumeQueue?: ResumeQueueService,
+    @Optional() @Inject(NotificationService) private notifications?: NotificationService,
   ) {
     this.geminiProvider = geminiProvider ?? new GeminiProvider(this.security);
+  }
+
+  onModuleInit() {
+    this.resumeQueue?.registerWorker(async (data) => {
+      await this.parse(data.companyId, data.candidateId, data.userId);
+    });
   }
 
   async generateVacancy(companyId: number, userId: number, input: z.infer<typeof vacancyBrief>) {
@@ -110,32 +122,116 @@ export class AiService {
 
   async parse(companyId: number, candidateId: number, userId: number) {
     const candidate = await this.recruiting.candidate(companyId, candidateId);
+    if (candidate.publicSubmittedAt && !candidate.aiConsentAt)
+      throw new ForbiddenException('Candidate did not opt in to AI analysis');
     if (!candidate.resumeText) throw new BadRequestException('Upload a CV first');
-    return this.locked(`candidate:${companyId}:${candidateId}`, userId, async () => {
-      const result = await this.generate(
-        resumeSchema,
-        'Extract factual structured resume information. Do not extract contact details, age, gender, ethnicity, photos or other sensitive attributes.',
-        { cv: candidate.resumeText },
-      );
-      const embedding = await this.embed(result);
-      const updated = await this.recruiting.db.candidate.updateMany({
-        where: { id: candidateId, companyId, resumeRevision: candidate.resumeRevision },
-        data: {
-          parsedResume: { ...result, embedding },
-          skills: result.skills,
-          experience: result.experience,
-          education: result.education,
-          languages: result.languages,
-        },
-      });
-      if (!updated.count)
-        throw new ConflictException('The CV changed during processing. Retry with the current CV.');
-      return result;
+
+    await this.resumeQueue?.setProgress(companyId, candidateId, {
+      status: 'EXTRACTING',
+      step: 1,
+      totalSteps: 4,
+      message: "Matn o'qildi va kontaktlar ajratilmoqda…",
+      percent: 25,
     });
+
+    return this.locked(`candidate:${companyId}:${candidateId}`, userId, async () => {
+      try {
+        await this.resumeQueue?.setProgress(companyId, candidateId, {
+          status: 'PARSING',
+          step: 2,
+          totalSteps: 4,
+          message: "Ko'nikmalar va texnologiyalar aniqlanmoqda…",
+          percent: 60,
+        });
+
+        const result = await this.generate(
+          resumeSchema,
+          'Extract factual structured resume information. Do not extract contact details, age, gender, ethnicity, photos or other sensitive attributes.',
+          { cv: candidate.resumeText },
+        );
+
+        await this.resumeQueue?.setProgress(companyId, candidateId, {
+          status: 'STRUCTURING',
+          step: 3,
+          totalSteps: 4,
+          message: "Ish tajribasi va ta'lim tahlil qilinmoqda…",
+          percent: 85,
+        });
+
+        const embedding = await this.embed(result);
+        const updated = await this.recruiting.db.candidate.updateMany({
+          where: { id: candidateId, companyId, resumeRevision: candidate.resumeRevision },
+          data: {
+            parsedResume: { ...result, embedding },
+            skills: result.skills,
+            experience: result.experience,
+            education: result.education,
+            languages: result.languages,
+          },
+        });
+        if (!updated.count)
+          throw new ConflictException('The CV changed during processing. Retry with the current CV.');
+
+        await this.resumeQueue?.setProgress(companyId, candidateId, {
+          status: 'COMPLETED',
+          step: 4,
+          totalSteps: 4,
+          message: "Rezyume to'liq tahlil qilindi!",
+          percent: 100,
+        });
+
+        return result;
+      } catch (err: any) {
+        await this.resumeQueue?.setProgress(companyId, candidateId, {
+          status: 'FAILED',
+          step: 0,
+          totalSteps: 4,
+          message: err?.message || 'Tahlil jarayonida xatolik yuz berdi',
+          percent: 0,
+          error: err?.message,
+        });
+        throw err;
+      }
+    });
+  }
+
+  async parseAsync(companyId: number, candidateId: number, userId: number) {
+    const candidate = await this.recruiting.candidate(companyId, candidateId);
+    if (candidate.publicSubmittedAt && !candidate.aiConsentAt)
+      throw new ForbiddenException('Candidate did not opt in to AI analysis');
+    if (!candidate.resumeText) throw new BadRequestException('Upload a CV first');
+
+    await this.resumeQueue?.setProgress(companyId, candidateId, {
+      status: 'PENDING',
+      step: 1,
+      totalSteps: 4,
+      message: "Navbatga qo'yildi va tahlilga tayyorlanmoqda…",
+      percent: 10,
+    });
+
+    const queued = await this.resumeQueue?.addJob({ companyId, candidateId, userId });
+    if (!queued) {
+      setImmediate(async () => {
+        try {
+          await this.parse(companyId, candidateId, userId);
+        } catch (err: any) {
+          this.logger.error(`Async parse failed: ${err?.message}`);
+        }
+      });
+    }
+
+    return { queued: true, candidateId, status: 'PENDING' };
+  }
+
+  async getParseStatus(companyId: number, candidateId: number) {
+    const progress = await this.resumeQueue?.getProgress(companyId, candidateId);
+    return progress ?? { status: 'PENDING', step: 0, totalSteps: 4, message: '', percent: 0 };
   }
 
   async analyze(companyId: number, applicationId: number, userId: number, questions = false) {
     const app = await this.recruiting.application(companyId, applicationId);
+    if (app.candidate.publicSubmittedAt && !app.candidate.aiConsentAt)
+      throw new ForbiddenException('Candidate did not opt in to AI analysis');
     if (!app.candidate.resumeText) throw new BadRequestException('Upload a CV first');
     if (!app.vacancy.requirements.length)
       throw new BadRequestException('Add vacancy requirements first');
@@ -211,6 +307,37 @@ export class AiService {
         },
         { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
       );
+
+      if (
+        !questions &&
+        this.notifications &&
+        result &&
+        typeof result === 'object' &&
+        'requirements' in result
+      ) {
+        const reqs = (result as { requirements: Array<{ status: string }> }).requirements;
+        if (reqs.length > 0) {
+          const supported = reqs.filter((r) => r.status === 'SUPPORTED').length;
+          const partial = reqs.filter((r) => r.status === 'PARTIAL').length;
+          const notFound = reqs.filter((r) => r.status === 'NOT_FOUND').length;
+          const matchPercentage = Math.round(((supported + partial * 0.5) / reqs.length) * 100);
+
+          if (matchPercentage >= 85) {
+            void this.notifications.notifyRecruitersStrongCandidate({
+              applicationId,
+              companyId,
+              candidate: app.candidate,
+              vacancy: app.vacancy,
+              matchPercentage,
+              supported,
+              partial,
+              notFound,
+              total: reqs.length,
+            });
+          }
+        }
+      }
+
       return result;
     });
   }

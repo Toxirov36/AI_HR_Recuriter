@@ -4,6 +4,7 @@ RUN apt-get update && apt-get install -y openssl --no-install-recommends && rm -
 COPY package*.json ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages packages
 RUN npm ci
 COPY apps/backend apps/backend
 RUN npm run build -w apps/backend

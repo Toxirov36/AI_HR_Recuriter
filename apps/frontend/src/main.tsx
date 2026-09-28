@@ -23,12 +23,14 @@ import { prefetchData } from './lib/query-client';
 import { AppProviders } from './app/providers';
 import { AppRouter, preloadRoute } from './app/router';
 import { useAuth } from './features/auth';
+import { NotificationCenter } from './components/notification-center';
 import {
   Alert,
   Avatar,
   AvatarFallback,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -98,56 +100,6 @@ function SidebarNav({
           <strong>Human by design.</strong>
           <p>AI structures the evidence. Your team makes every hiring decision.</p>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="sidebar-settings-link"
-              aria-label="Profile and settings"
-            >
-              <Settings2 size={17} />
-              <span>Profile & settings</span>
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="profile-settings-popover w-60" side="right" sideOffset={12}>
-            <DropdownMenuLabel className="profile-popover-label">
-              <div className="flex flex-col space-y-1">
-                <p className="text-sm font-semibold text-slate-900 leading-none">{user.fullName}</p>
-                <p className="text-xs text-slate-500 leading-none mt-1">
-                  {user.email || user.role}
-                </p>
-              </div>
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator className="profile-popover-separator" />
-            <DropdownMenuItem asChild className="profile-popover-item">
-              <a
-                href="https://aistudio.google.com/apikey"
-                target="_blank"
-                rel="noreferrer"
-                className="cursor-pointer flex items-center"
-              >
-                <CircleHelp className="mr-2.5 h-4 w-4 text-slate-500" />
-                <span>Gemini API key</span>
-              </a>
-            </DropdownMenuItem>
-            {user.role === 'ADMIN' && (
-              <DropdownMenuItem asChild className="profile-popover-item">
-                <NavLink to="/team" className="cursor-pointer flex items-center" onClick={() => onNavigate?.()}>
-                  <Settings2 className="mr-2.5 h-4 w-4 text-slate-500" />
-                  <span>Team & access</span>
-                </NavLink>
-              </DropdownMenuItem>
-            )}
-            <DropdownMenuSeparator className="profile-popover-separator" />
-            <DropdownMenuItem
-              className="profile-popover-item text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer flex items-center"
-              onClick={() => logout()}
-            >
-              <LogOut className="mr-2.5 h-4 w-4 text-red-500" />
-              <span>Sign out</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
     </div>
   );
@@ -200,7 +152,8 @@ function AppShell() {
     { to: '/vacancies', title: 'Vacancies', icon: BriefcaseBusiness },
     { to: '/candidates', title: 'Candidates', icon: Users },
     { to: '/pipeline', title: 'Hiring pipeline', icon: GitBranch },
-    ...(user.role === 'ADMIN' ? [{ to: '/team', title: 'Team & access', icon: Settings2 }] : []),
+    ...(user.role === 'ADMIN' ? [{ to: '/admin', title: 'Admin panel', icon: Settings2 }] : []),
+    ...(user.platformRole === 'SUPER_ADMIN' ? [{ to: '/platform-admin', title: 'Platforma admini', icon: Layers3 }] : []),
   ];
 
   const current =
@@ -284,16 +237,61 @@ function AppShell() {
             <kbd className="search-pill-kbd">⌘K</kbd>
           </button>
           <div className="topbar-actions">
-            <button className="topbar-icon-btn" aria-label="Notifications">
-              <Bell size={18} />
-              <span className="notification-indicator-dot" />
-            </button>
-            <Link className="topbar-primary-btn" to="/vacancies?new=1">
-              <Plus size={16} /> Create vacancy
-            </Link>
-            <div className="topbar-avatar" title={user.fullName}>
-              <span>{userInitials || 'AK'}</span>
-            </div>
+            <NotificationCenter />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="topbar-avatar cursor-pointer outline-none hover:ring-2 hover:ring-[#1a5d4c]/20 transition-all"
+                  title={user.fullName}
+                  aria-label="User profile menu"
+                >
+                  <span>{userInitials || 'DT'}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56" sideOffset={8}>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="font-normal px-2.5 py-2">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-semibold text-slate-900 leading-none">
+                        {user.fullName}
+                      </p>
+                      <p className="text-xs text-slate-500 leading-none mt-1">
+                        {user.email || user.phone || user.role}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {user.role === 'ADMIN' && (
+                    <DropdownMenuItem asChild>
+                      <NavLink to="/admin" className="cursor-pointer flex items-center">
+                        <Users className="mr-2.5 h-4 w-4 text-slate-500" />
+                        <span>Admin panel</span>
+                      </NavLink>
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem asChild>
+                    <a
+                      href="https://aistudio.google.com/apikey"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="cursor-pointer flex items-center"
+                    >
+                      <CircleHelp className="mr-2.5 h-4 w-4 text-slate-500" />
+                      <span>Gemini API key</span>
+                    </a>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer flex items-center"
+                  onClick={() => logout()}
+                >
+                  <LogOut className="mr-2.5 h-4 w-4 text-red-500" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="main-content">

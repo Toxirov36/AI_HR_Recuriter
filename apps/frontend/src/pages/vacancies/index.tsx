@@ -1,8 +1,15 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, ChevronDown, Plus, Search, Pencil, Trash2, Sparkles } from 'lucide-react';
+import { Check, ChevronDown, Plus, Search, Pencil, Trash2, Sparkles, Link2 } from 'lucide-react';
+import { cn } from '../../lib/utils';
 import { api, send } from '../../lib/api';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import {
   Alert,
   AlertDialog,
@@ -365,7 +372,6 @@ export function VacancyForm({
                     <div className="requirement-fields">
                       <input
                         aria-label={`Requirement ${i + 1}`}
-                        required
                         maxLength={200}
                         value={r.name}
                         placeholder={`Requirement ${i + 1}`}
@@ -433,7 +439,7 @@ export function VacancyForm({
             style={{ padding: '16px 0' }}
           >
             <VacancyGenerator
-              configured={user.aiConfigured}
+              configured={Boolean(user?.aiConfigured)}
               disabled={busy}
               apply={(draft) => {
                 setTitle(draft.title);
@@ -585,8 +591,24 @@ export function Vacancies() {
   const [open, setOpen] = useState(params.has('new'));
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [openStatusAccordion, setOpenStatusAccordion] = useState<string>('');
+  const statusAccordionRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(1);
   const [actionError, setActionError] = useState('');
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (statusAccordionRef.current && !statusAccordionRef.current.contains(e.target as Node)) {
+        setOpenStatusAccordion('');
+      }
+    }
+    if (openStatusAccordion) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [openStatusAccordion]);
   const { data, error, reload } = useData<Page<Vacancy>>(
     `/vacancies?page=${page}&search=${encodeURIComponent(search)}`,
   );
@@ -664,35 +686,52 @@ export function Vacancies() {
           />
         </div>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="vacancies-filter-trigger"
-              aria-label="Filter vacancies by status"
-            >
-              <span>
-                {statusOptions.find((opt) => opt.value === statusFilter)?.label || 'All statuses'}
-              </span>
-              <ChevronDown size={15} className="filter-chevron" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="vacancies-filter-popover w-[170px]">
-            {statusOptions.map((opt) => {
-              const isSelected = statusFilter === opt.value;
-              return (
-                <DropdownMenuItem
-                  key={opt.value}
-                  onClick={() => setStatusFilter(opt.value)}
-                  className={`vacancies-filter-item ${isSelected ? 'active-filter' : ''}`}
-                >
-                  <span>{opt.label}</span>
-                  {isSelected && <Check size={15} className="filter-check-icon" />}
-                </DropdownMenuItem>
-              );
-            })}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="relative w-[170px]" ref={statusAccordionRef}>
+          <Accordion
+            type="single"
+            collapsible
+            value={openStatusAccordion}
+            onValueChange={setOpenStatusAccordion}
+            className="w-full"
+          >
+            <AccordionItem value="status" className="border-none">
+              <AccordionTrigger className="vacancies-filter-trigger h-10 px-3.5 py-0 text-xs font-normal text-slate-800 rounded-xl bg-white border border-slate-200 hover:no-underline hover:border-slate-300 shadow-sm transition-all flex items-center justify-between data-[state=open]:border-[#1a5d4c] data-[state=open]:ring-2 data-[state=open]:ring-[#1a5d4c]/15">
+                <span className="truncate pr-2 text-left">
+                  {statusOptions.find((opt) => opt.value === statusFilter)?.label || 'All statuses'}
+                </span>
+              </AccordionTrigger>
+              <AccordionContent
+                containerClassName="absolute right-0 top-[calc(100%+6px)] z-50 w-[170px] rounded-xl border border-slate-200 bg-white shadow-2xl animate-in fade-in-0 zoom-in-95"
+                className="p-1.5 space-y-0.5"
+              >
+                {statusOptions.map((opt) => {
+                  const isSelected = statusFilter === opt.value;
+                  return (
+                    <button
+                      type="button"
+                      key={opt.value}
+                      onClick={() => {
+                        setStatusFilter(opt.value);
+                        setOpenStatusAccordion('');
+                      }}
+                      className={cn(
+                        'w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer',
+                        isSelected
+                          ? 'bg-[#eaf5ef] text-[#165b4c] font-medium active-filter'
+                          : 'text-slate-700 hover:bg-slate-50',
+                      )}
+                    >
+                      <span>{opt.label}</span>
+                      {isSelected && (
+                        <Check size={14} className="text-[#1a5d4c] filter-check-icon shrink-0 ml-2" />
+                      )}
+                    </button>
+                  );
+                })}
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+        </div>
       </div>
 
       <Alert message={error || actionError} />
@@ -734,6 +773,21 @@ export function Vacancies() {
                       </div>
 
                       <div className="vacancy-quick-actions">
+                        {v.status === 'ACTIVE' && v.publicToken && (
+                          <button
+                            type="button"
+                            className="quick-action-btn"
+                            aria-label={`Copy application link for ${v.title}`}
+                            title="Ariza havolasini nusxalash"
+                            onClick={() => {
+                              void navigator.clipboard.writeText(`${window.location.origin}/apply/${v.publicToken}`)
+                                .then(() => toast.success('Ariza havolasi nusxalandi'))
+                                .catch(() => setActionError('Havolani nusxalab bo‘lmadi'));
+                            }}
+                          >
+                            <Link2 size={14} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="quick-action-btn"

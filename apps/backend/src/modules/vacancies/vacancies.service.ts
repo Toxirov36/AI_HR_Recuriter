@@ -13,7 +13,7 @@ export class VacanciesService {
       companyId,
       title: { contains: search, mode: 'insensitive' as const },
     };
-    const [items, total] = await this.db.$transaction([
+    const [items, total] = await Promise.all([
       this.db.vacancy.findMany({
         where,
         include: { requirements: true, _count: { select: { applications: true } } },

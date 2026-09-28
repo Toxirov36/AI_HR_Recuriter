@@ -26,9 +26,13 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     if (!this.config.TELEGRAM_BOT_TOKEN || !this.storage.enabled) return;
     this.connection = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: null });
+    this.connection.on('error', () => {});
     this.worker = new Worker<TelegramResumeJob>(TELEGRAM_RESUME_QUEUE, (job) => this.process(job), {
       connection: this.connection,
       concurrency: 2,
+    });
+    this.worker.on('error', (err) => {
+      this.logger.warn(`Telegram worker connection error: ${err.message}`);
     });
     this.worker.on('failed', (job) => {
       if (job) this.logger.warn(`Telegram resume job failed resumeId=${job.data.resumeId}`);
@@ -44,15 +48,15 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
       where: { id_companyId: { id: candidateId, companyId } },
       select: { email: true, phone: true },
     });
-    await this.db.$transaction([
-      this.db.resume.update({
+    await this.db.$transaction(async (tx) => {
+      await tx.resume.update({
         where: { id: resumeId },
         data: { status: 'PROCESSING', error: null },
-      }),
-      this.db.candidateEvent.create({
+      });
+      await tx.candidateEvent.create({
         data: { companyId, candidateId, type: 'RESUME_PROCESSING', label: 'CV parsing started' },
-      }),
-    ]);
+      });
+    });
 
     let objectKey: string | null = null;
     try {

@@ -6,8 +6,10 @@ import { TelegramQueueService } from './telegram-queue.service';
 import { TelegramResumeProcessor } from './telegram-resume.processor';
 import { BusinessConnectionHandler } from './handlers/business-connection.handler';
 import { BusinessMessageHandler } from './handlers/business-message.handler';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
+  imports: [AuditModule],
   controllers: [TelegramController],
   providers: [
     TelegramService,
@@ -17,6 +19,6 @@ import { BusinessMessageHandler } from './handlers/business-message.handler';
     BusinessConnectionHandler,
     BusinessMessageHandler,
   ],
-  exports: [TelegramService],
+  exports: [TelegramService, TelegramApiService],
 })
 export class TelegramModule {}

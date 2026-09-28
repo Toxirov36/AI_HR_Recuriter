@@ -4,7 +4,6 @@ import {
   BriefcaseBusiness,
   Users,
   GitBranch,
-  Plus,
   Sparkles,
   ArrowRight,
   FileCheck2,
@@ -36,14 +35,10 @@ export function Dashboard() {
   return (
     <>
       <PageTitle
-        eyebrow={`GOOD TO SEE YOU, ${user.fullName.split(' ')[0].toUpperCase()}`}
+        eyebrow={`GOOD TO SEE YOU, ${user?.fullName ? user.fullName.split(' ')[0].toUpperCase() : 'THERE'}`}
         title="Recruiting overview"
         text="Everything waiting for a human decision, in one place."
-      >
-        <Link className="primary" to="/vacancies?new=1">
-          <Plus size={17} /> Create vacancy
-        </Link>
-      </PageTitle>
+      />
       <Alert message={error} />
       {error && (
         <Button variant="outline" className="mt-3" onClick={reload}>

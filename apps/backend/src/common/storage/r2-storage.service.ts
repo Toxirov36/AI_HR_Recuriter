@@ -86,6 +86,7 @@ export class R2Storage {
     try {
       await this.ready().send(
         new DeleteObjectCommand({ Bucket: this.config.R2_BUCKET_NAME, Key: key }),
+        { abortSignal: AbortSignal.timeout(10000) },
       );
     } catch {
       throw new ServiceUnavailableException('Unable to delete the CV from R2. Please retry.');

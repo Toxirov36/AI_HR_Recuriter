@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "prisma generate",
-    "dev": "tsx watch src/main.ts",
+    "dev": "tsx watch --exclude src/generated/** src/main.ts",
     "prebuild": "prisma generate",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/main.js",
@@ -14,7 +14,9 @@
     "db:dev": "prisma migrate dev",
     "storage:migrate": "prisma generate && tsx src/scripts/migrate-resumes-to-r2.ts",
     "contacts:backfill": "prisma generate && tsx src/scripts/backfill-candidate-contacts.ts",
-    "telegram:webhook": "tsx src/scripts/setup-telegram-webhook.ts"
+    "telegram:webhook": "tsx src/scripts/setup-telegram-webhook.ts",
+    "smtp:check": "tsx src/scripts/check-smtp.ts",
+    "platform:grant": "tsx src/scripts/grant-platform-admin.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1136.0",
@@ -33,6 +35,7 @@
     "jszip": "^3.10.1",
     "mammoth": "^1.11.0",
     "multer": "^2.0.2",
+    "nodemailer": "^10.0.10",
     "pdf-parse": "^2.4.5",
     "pg": "^8.23.0",
     "reflect-metadata": "^0.2.2",
@@ -45,6 +48,7 @@
     "@types/express": "^5.0.3",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.0",
+    "@types/nodemailer": "^8.0.2",
     "@types/supertest": "^6.0.3",
     "ioredis-mock": "^8.13.1",
     "supertest": "^7.1.4",

@@ -19,6 +19,7 @@ import { Security } from './common/utils/security';
 import { CommonModule } from './common/common.module';
 import { ErrorFilter } from './common/filters/error.filter';
 import { getConfig } from './config/app.config';
+import { isAllowedOrigin } from './common/utils/origin';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { VacanciesModule } from './modules/vacancies/vacancies.module';
@@ -28,6 +29,12 @@ import { ResumesModule } from './modules/resumes/resumes.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { AiModule } from './modules/ai/ai.module';
 import { TelegramModule } from './modules/telegram/telegram.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { RetentionModule } from './modules/retention/retention.module';
+import { PublicApplicationsModule } from './modules/public-applications/public-applications.module';
+import { CompanyAdminModule } from './modules/company-admin/company-admin.module';
+import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 
 @Controller('health')
 export class HealthController {
@@ -59,6 +66,12 @@ export class HealthController {
     DashboardModule,
     AiModule,
     TelegramModule,
+    NotificationsModule,
+    AuditModule,
+    RetentionModule,
+    PublicApplicationsModule,
+    CompanyAdminModule,
+    PlatformAdminModule,
   ],
   controllers: [HealthController],
 })
@@ -76,7 +89,8 @@ export function configureApp(app: INestApplication) {
   app.use(cookieParser());
   app.use(json({ limit: '128kb' }));
   app.enableCors({
-    origin: config.FRONTEND_ORIGIN,
+    origin: (origin: string | undefined, callback: (error: Error | null, allow: boolean) => void) =>
+      callback(null, !origin || isAllowedOrigin(origin, config.FRONTEND_ORIGIN, config.NODE_ENV)),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'X-Requested-With'],
@@ -88,7 +102,7 @@ export function configureApp(app: INestApplication) {
       !telegramWebhook &&
       !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
       (req.headers['x-requested-with'] !== 'recruiter-web' ||
-        (req.headers.origin && req.headers.origin !== config.FRONTEND_ORIGIN))
+        (req.headers.origin && !isAllowedOrigin(req.headers.origin, config.FRONTEND_ORIGIN, config.NODE_ENV)))
     ) {
       res.status(403).json({ message: 'Invalid request origin or CSRF header' });
       return;

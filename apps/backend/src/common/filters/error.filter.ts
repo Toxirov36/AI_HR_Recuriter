@@ -1,6 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter, HttpException, Logger } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 
 @Catch()
 export class ErrorFilter implements ExceptionFilter {
@@ -43,7 +43,13 @@ export class ErrorFilter implements ExceptionFilter {
       }
     }
 
-    if (status === 500) this.logger.error(error instanceof Error ? error.name : 'UnknownError');
+    if (status === 500) {
+      const req = host.switchToHttp().getRequest<Request>();
+      const method = req?.method || 'UNKNOWN';
+      const url = req?.url || 'UNKNOWN';
+      const errStr = error instanceof Error ? `${error.message}\n${error.stack}` : String(error);
+      this.logger.error(`500 Internal Server Error [${method} ${url}]: ${errStr}`);
+    }
     response.status(status).json({ statusCode: status, message });
   }
 }

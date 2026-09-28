@@ -4,7 +4,7 @@ import { email } from '../../../common/pipes/validation';
 export const invitationSchema = z
   .object({
     email,
-    role: z.enum(['HR', 'RECRUITER']),
+    role: z.enum(['HR', 'RECRUITER', 'INTERVIEWER']),
   })
   .strict();
 

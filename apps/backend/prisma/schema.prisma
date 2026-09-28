@@ -10,6 +10,11 @@ enum UserRole {
   ADMIN
   HR
   RECRUITER
+  INTERVIEWER
+}
+
+enum PlatformRole {
+  SUPER_ADMIN
 }
 enum VacancyStatus {
   DRAFT
@@ -39,25 +44,62 @@ enum ResumeStatus {
 model Company {
   id Int @id @default(autoincrement())
   name String
+  isActive Boolean @default(true)
   users User[]
   vacancies Vacancy[]
   candidates Candidate[]
   applications Application[]
   invitations Invitation[]
   telegramConnections TelegramBusinessConnection[]
+  telegramConnectRequests TelegramConnectRequest[]
+  retentionDays Int @default(180)
+  auditLogs AuditLog[]
   createdAt DateTime @default(now())
 }
 model User {
   id Int @id @default(autoincrement())
   fullName String
-  email String @unique
+  email String? @unique
+  phone String? @unique
   password String
   role UserRole @default(HR)
+  isActive Boolean @default(true)
+  platformRole PlatformRole?
+  mfaEnabled Boolean @default(false)
+  mfaSecret String?
+  mfaRecoveryCodes String[] @default([])
   companyId Int
   company Company @relation(fields: [companyId], references: [id])
+  telegramConnections TelegramBusinessConnection[]
+  telegramConnectRequests TelegramConnectRequest[]
+  auditLogs AuditLog[]
   createdAt DateTime @default(now())
   @@index([companyId])
 }
+model PlatformAuditLog {
+  id Int @id @default(autoincrement())
+  actorId Int
+  actorName String
+  companyId Int
+  companyName String
+  action String
+  reason String
+  previousActive Boolean?
+  newActive Boolean?
+  createdAt DateTime @default(now())
+  @@index([createdAt, id])
+  @@index([companyId, createdAt])
+}
+
+model CompanyFileCleanup {
+  id Int @id @default(autoincrement())
+  companyId Int
+  companyName String
+  objectKey String @unique
+  createdAt DateTime @default(now())
+  @@index([companyId])
+}
+
 model Invitation {
   id Int @id @default(autoincrement())
   email String
@@ -71,6 +113,7 @@ model Invitation {
 }
 model Vacancy {
   id Int @id @default(autoincrement())
+  publicToken String @unique @default(uuid())
   title String
   description String
   status VacancyStatus @default(ACTIVE)
@@ -103,6 +146,12 @@ model Candidate {
   telegramUserId String?
   telegramUsername String?
   source CandidateSource @default(WEBSITE)
+  publicSubmittedAt DateTime?
+  privacyAcceptedAt DateTime?
+  aiConsentAt DateTime?
+  mergedIntoId Int?
+  mergedInto Candidate? @relation("CandidateMerges", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedCandidates Candidate[] @relation("CandidateMerges")
   resumeName String?
   resumeMime String?
   resumeData Bytes?
@@ -115,6 +164,9 @@ model Candidate {
   education Json?
   languages Json?
   parsedResume Json?
+  isAnonymized Boolean @default(false)
+  anonymizedAt DateTime?
+  isOcrProcessed Boolean @default(false)
   applications Application[]
   resumes Resume[]
   events CandidateEvent[]
@@ -123,6 +175,7 @@ model Candidate {
   @@unique([id, companyId])
   @@unique([companyId, telegramUserId])
   @@index([companyId, createdAt])
+  @@index([companyId, mergedIntoId])
 }
 model Resume {
   id Int @id @default(autoincrement())
@@ -155,14 +208,35 @@ model CandidateEvent {
 model TelegramBusinessConnection {
   id String @id
   companyId Int?
+  userId Int?
   telegramUserId BigInt
+  telegramUsername String?
   userChatId BigInt
   canReply Boolean @default(false)
   canReadMessages Boolean @default(false)
   enabled Boolean @default(true)
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  @@index([companyId])
+  @@index([userId])
+  @@index([telegramUserId])
+}
+model TelegramConnectRequest {
+  id Int @id @default(autoincrement())
+  companyId Int
+  userId Int
+  token String @unique
+  telegramUserId String?
+  telegramUsername String?
+  expiresAt DateTime
+  used Boolean @default(false)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([token])
   @@index([companyId])
   @@index([telegramUserId])
 }
@@ -202,4 +276,25 @@ model ApplicationStageChange {
   actorName String
   createdAt DateTime @default(now())
   @@index([applicationId, createdAt])
+}
+
+model AuditLog {
+  id Int @id @default(autoincrement())
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId Int?
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  actorName String
+  actorRole String
+  action String
+  resourceType String
+  resourceId String
+  details Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([companyId, createdAt])
+  @@index([companyId, action])
+  @@index([userId])
 }

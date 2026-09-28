@@ -42,10 +42,11 @@ export class AuthGuard implements CanActivate {
     if (active !== String(claims.sub)) throw new UnauthorizedException('Session expired');
     const user = await this.db.user.findUnique({
       where: { id: claims.sub },
-      select: { id: true, companyId: true, role: true, fullName: true, email: true },
+      select: { id: true, companyId: true, role: true, fullName: true, email: true, phone: true, isActive: true, platformRole: true, company: { select: { isActive: true } } },
     });
-    if (!user) throw new UnauthorizedException();
-    req.user = user;
+    if (!user || user.isActive === false || user.company?.isActive === false) throw new UnauthorizedException('Account unavailable');
+    const { company: _company, ...identity } = user;
+    req.user = identity;
     req.sessionId = claims.sid;
     await this.security.limit(`user:${user.id}`);
     return true;

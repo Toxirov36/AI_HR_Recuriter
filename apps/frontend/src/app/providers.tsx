@@ -4,8 +4,10 @@ import { api, ApiError } from '../lib/api';
 import { AuthContext, AuthPage } from '../features/auth';
 import { Alert, Loading, Toaster } from '../components/ui';
 import type { User } from '../types';
+import { PublicApplyPage } from '../pages/public-apply';
 
 export function AppProviders({ children }: { children: ReactNode }) {
+  const isPublicApply = window.location.pathname.startsWith('/apply/');
   const [user, setUser] = useState<User>();
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
@@ -24,11 +26,14 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (isPublicApply) return;
     void refresh();
     const expired = () => setUser(undefined);
     window.addEventListener('session-expired', expired);
     return () => window.removeEventListener('session-expired', expired);
-  }, [refresh]);
+  }, [refresh, isPublicApply]);
+
+  if (isPublicApply) return <PublicApplyPage />;
 
   if (!ready) return <Loading />;
   if (!user)

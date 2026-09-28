@@ -15,7 +15,9 @@ export type Identity = {
   companyId: number;
   role: string;
   fullName: string;
-  email: string;
+  email: string | null;
+  phone?: string | null;
+  platformRole?: 'SUPER_ADMIN' | null;
 };
 
 export type AuthRequest = Request & { user: Identity; sessionId: string };

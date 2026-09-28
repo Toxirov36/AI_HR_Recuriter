@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 COPY apps/backend/package.json apps/backend/package.json
 COPY apps/frontend/package.json apps/frontend/package.json
+COPY packages packages
 RUN npm ci --ignore-scripts
 COPY apps/frontend apps/frontend
 RUN npm run build -w apps/frontend

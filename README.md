@@ -26,11 +26,13 @@ To enable AI, add your key to the root `.env`, confirm `GEMINI_MODEL` is availab
 1. Register a company and administrator from the sign-in page.
 2. In **Team & access**, create a single-use, email-bound invitation link for an HR user or recruiter. Share it yourself. Invitations expire after 24 hours; public registration cannot join an arbitrary company.
 3. Create a vacancy with job-related requirements. Mark each as required or optional.
-4. Add a candidate, then upload their PDF/DOCX from their profile. Text extraction works without AI.
+4. Add a candidate and upload their PDF/DOCX, or copy an active vacancy's application link so a candidate can apply directly. Public applicants see the data-use notice and choose separately whether to allow AI analysis. Text extraction works without AI.
 5. Optionally parse the resume into structured skills, experience, education, and languages.
 6. In **Hiring pipeline**, create an application linking a candidate to a vacancy.
 7. Open the application to match CV evidence and generate interview questions.
 8. Your team manually selects NEW, REVIEWING, INTERVIEW, OFFER, HIRED, or REJECTED.
+
+Candidate profiles suggest possible duplicates when an email or normalized phone number matches within the same company. A recruiter with candidate-management permission can review both records and confirm a merge. The source profile remains available for historical CVs; applications and resume records move to the primary profile. Merging stops if both records have applications for the same vacancy.
 
 Evidence statuses mean:
 
@@ -118,7 +120,9 @@ All routes are under `/api`. Sessions use an HttpOnly, SameSite=Lax JWT cookie w
 | `GET /auth/team`, `POST /auth/invitations`               | Administrator-only team listing and invitations (`email`, `role`: HR/RECRUITER) |
 | `POST /auth/accept-invitation`                           | HR registration (`token`, `fullName`, `password`)                               |
 | `GET/POST /vacancies`, `GET/PUT/DELETE /vacancies/:id`   | Vacancy CRUD; full replacement PUT includes `requirements` array                |
+| `GET /public/vacancies/:token`, `POST /public/vacancies/:token/apply` | Public active-vacancy details and PDF/DOCX application form; consent and rate limits required |
 | `GET/POST /candidates`, `GET/PUT/DELETE /candidates/:id` | Candidate CRUD                                                                  |
+| `GET /candidates/:id/duplicates`, `POST /candidates/:id/merge` | Company-scoped duplicate suggestions and reviewer-confirmed merge |
 | `POST /candidates/:id/resume`                            | Multipart upload, field `file`                                                  |
 | `GET /candidates/:id/resume`                             | Private CV download                                                             |
 | `POST /candidates/:id/parse`                             | Structured resume parsing, JSON `{ "consent": true }`                           |
@@ -169,6 +173,90 @@ For production, use `docker compose --profile app up --build -d` without the dev
 In **Create vacancy** or **Edit vacancy**, enter a short brief such as “Middle NestJS developer kerak” and choose Uzbek, English, or Russian. **Generate job description** uses the configured Gemini model to prepare a title, professional description, and structured requirements. Preview the output, click **Use draft** to replace those form fields, edit as needed, and click **Save vacancy**. Generation alone never creates or updates a vacancy, and does not change its status.
 
 The authenticated `POST /api/vacancies/generate-description` endpoint accepts `{ "brief": "Middle NestJS developer kerak", "language": "uz" }`; the brief must contain 5–3000 characters. It shares the existing AI rate limit, request timeout and retry handling. No new API key or database migration is needed.
+
+## Platform admin panel
+
+The separate `/platform-admin` page provides platform-wide counts, searchable
+company lists with status filters and pagination, company suspension/reactivation,
+and a paginated platform audit history. It exposes company metadata and counts,
+not candidate profiles or CVs. Company changes require a reason and an explicit
+confirmation; stale changes are rejected. Each change is committed atomically
+with a platform audit record.
+
+`User.platformRole=SUPER_ADMIN` is separate from company roles. Registration,
+invitations, and company member management cannot grant it. A trusted operator
+can grant access to an existing active account locally:
+
+```sh
+npm run db:migrate
+npm run prisma:generate
+npm run platform:grant -w apps/backend -- owner@example.com
+```
+
+Restart the backend after the migration and refresh the browser to load the role.
+The grant command is idempotent and records the grant in the platform audit.
+Companies containing platform administrators are protected from suspension, and
+company admins cannot change platform administrators' member access.
+
+Suspended companies cannot authenticate, use existing sessions, accept team
+invitations, receive new public applications, or submit new Telegram CVs.
+Existing data is retained. Work already in progress or queued is not cancelled by
+suspension. Reactivation restores access without changing individual member status.
+Platform audit records retain actor and company snapshots independently of tenant
+audit logs; the UI offers no deletion or editing of these records.
+
+Company deletion requires the exact company name and a reason. It permanently
+removes company users, candidates, CV records, vacancies, applications, invitations,
+Telegram links, and tenant audit logs in one transaction. Platform audit history
+is preserved. Operators cannot delete their own company or any company containing
+a platform administrator.
+
+External CV files are queued for deletion in the same database transaction and
+removed from R2 only after it commits. Pending cleanup survives storage outages
+and backend restarts. The panel lists remaining files and offers a retry button
+that processes up to ten files per attempt; configure working R2 access to finish
+cleanup. Database backups are governed by their separate retention policy.
+
+Platform routes are under `/api/platform-admin`: `GET /overview`, `GET /companies`,
+`PUT /companies/:id/status`, `DELETE /companies/:id`, `GET /file-cleanups`,
+`POST /file-cleanups/:id/retry`, and `GET /audit`. Each request reads platform privileges
+from the database, so changing a role affects existing sessions.
+
+## Company admin panel
+
+Administrators can open **Admin panel** at `/admin` (`/team` redirects there).
+The overview shows company-scoped recruiting counts, application stages, and
+integration configuration status. Status badges do not claim live connectivity.
+Administrators can edit the company name and retention period, search members,
+change their roles, and disable or restore access. Self-access changes are rejected;
+at least one active administrator must remain. Disabled members cannot sign in,
+complete MFA, or use existing sessions. Access changes and company settings are
+saved atomically with audit events. Existing invitations, MFA, audit export,
+retention controls, and Telegram setup remain available in the panel.
+
+Apply `npm run db:migrate` and restart the backend after updating; the additive
+migration creates `User.isActive` with a default of `true` for existing accounts.
+API: `GET /api/company-admin`, `PUT /api/company-admin/settings`, and
+`PUT /api/company-admin/members/:id`. All require an active company administrator.
+
+## SMTP email delivery
+
+Set `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, and
+`SMTP_FROM` in the root `.env`, then restart the backend. Gmail uses
+`SMTP_HOST=smtp.gmail.com`, port `587`, `SMTP_SECURE=false`, the full Gmail address
+as `SMTP_USER`, and a Google App Password as `SMTP_PASSWORD`. Use the authenticated
+address or a provider-authorized sender for `SMTP_FROM`.
+
+Run `npm run smtp:check -w apps/backend` to verify the connection, TLS, and login
+without sending a message. This does not verify sender authorization or inbox
+delivery. [Nodemailer SMTP documentation](https://nodemailer.com/smtp).
+[Google App Password setup](https://support.google.com/accounts/answer/185833).
+
+Interview and rejection notifications use real SMTP in development and production.
+Missing configuration or rejected delivery returns failure; no simulated success
+is reported. SMTP acceptance is recorded only after the server accepts recipients.
+Passwords, message contents, and raw provider errors are not logged. TLS and bounded
+connection timeouts are enabled. Automated tests mock SMTP and send no real mail.
 
 ## Telegram Business CV intake
 

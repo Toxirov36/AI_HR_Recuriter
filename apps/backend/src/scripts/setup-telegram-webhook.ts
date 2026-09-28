@@ -16,6 +16,7 @@ async function main() {
         url: config.TELEGRAM_WEBHOOK_URL,
         secret_token: config.TELEGRAM_WEBHOOK_SECRET,
         allowed_updates: [
+          'message',
           'business_connection',
           'business_message',
           'edited_business_message',

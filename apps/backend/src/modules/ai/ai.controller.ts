@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Inject,
   Param,
   ParseIntPipe,
@@ -30,6 +31,23 @@ export class AiController {
     @Body(new ZodValidationPipe(vacancyBriefSchema)) dto: VacancyBriefDto,
   ) {
     return this.ai.generateVacancy(req.user.companyId, req.user.id, dto);
+  }
+
+  @Get('candidates/:id/parse-status')
+  getParseStatus(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.ai.getParseStatus(req.user.companyId, id);
+  }
+
+  @Post('candidates/:id/parse-async')
+  parseResumeAsync(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(consentSchema)) _dto: AiConsentDto,
+  ) {
+    return this.ai.parseAsync(req.user.companyId, id, req.user.id);
   }
 
   @Post('candidates/:id/parse')

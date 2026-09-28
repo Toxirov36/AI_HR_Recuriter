@@ -15,6 +15,8 @@ import {
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { AuthRequest } from '../../common/utils/security';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { Permission, RbacGuard, RequirePermissions } from '../../common/guards/rbac.guard';
+import { z } from 'zod';
 import { CandidatesService, candidateListSelect, candidateSelect } from './candidates.service';
 import {
   CandidateDto,
@@ -43,6 +45,22 @@ export class CandidatesController {
   @Get(':id')
   getCandidate(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) {
     return this.service.candidate(req.user.companyId, id);
+  }
+
+  @Get(':id/duplicates')
+  duplicates(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.service.duplicates(req.user.companyId, id);
+  }
+
+  @Post(':id/merge')
+  @UseGuards(RbacGuard)
+  @RequirePermissions(Permission.MANAGE_CANDIDATES)
+  merge(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(z.object({ duplicateId: z.number().int().positive() }).strict())) body: { duplicateId: number },
+  ) {
+    return this.service.merge(req.user.companyId, id, body.duplicateId, req.user.fullName);
   }
 
   @Post()

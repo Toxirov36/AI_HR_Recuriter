@@ -1,8 +1,11 @@
 export type User = {
   id: number;
   fullName: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
   role: string;
+  isActive?: boolean;
+  platformRole?: 'SUPER_ADMIN' | null;
   companyId: number;
   company: { name: string };
   aiConfigured: boolean;
@@ -15,6 +18,7 @@ export type Requirement = {
 };
 export type Vacancy = {
   id: number;
+  publicToken?: string;
   title: string;
   description: string;
   status: string;
@@ -36,6 +40,10 @@ export type ParsedResume = {
 };
 export type Candidate = {
   id: number;
+  mergedIntoId?: number | null;
+  mergedCandidates?: Array<{ id: number; fullName: string; source: string; resumeName: string | null }>;
+  publicSubmittedAt?: string | null;
+  aiConsentAt?: string | null;
   fullName: string;
   email: string | null;
   phone?: string | null;
@@ -65,12 +73,38 @@ export const nextStage: Partial<Record<Stage, Stage>> = {
   INTERVIEW: 'OFFER',
   OFFER: 'HIRED',
 };
+export type ScorecardCriterion = {
+  id: string;
+  name: string;
+  category: 'TECHNICAL' | 'CORE' | 'CUSTOM';
+  score: number | null;
+  evidence: string;
+};
+
+export type ScorecardDecision =
+  | 'STRONG_HIRE'
+  | 'HIRE'
+  | 'NO_HIRE'
+  | 'STRONG_NO_HIRE'
+  | 'UNDECIDED';
+
+export type StructuredScorecard = {
+  criteria: ScorecardCriterion[];
+  finalDecision: ScorecardDecision;
+  decisionNotes?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  averageScore?: number;
+};
+
 export type InterviewReview = {
   answers: { question: string; answer: string; notes: string }[];
   notes: string;
+  scorecard?: StructuredScorecard;
   updatedBy: string;
   updatedAt: string;
 };
+
 export type Evidence = {
   requirementId: number;
   status: 'SUPPORTED' | 'PARTIAL' | 'NOT_FOUND' | 'UNKNOWN';

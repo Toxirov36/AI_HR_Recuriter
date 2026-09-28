@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
@@ -14,9 +14,11 @@ import {
   FileText,
   Mail,
   Phone,
+  ShieldAlert,
 } from 'lucide-react';
 import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
+import { ParseProgress, type ParseStatusResponse } from '../../components/parse-progress';
 import {
   AiConsent,
   Alert,
@@ -39,6 +41,7 @@ import {
   PageTitle,
   Pagination,
   Progress,
+  ResumeDropzone,
   Separator,
   Table,
   TableBody,
@@ -380,10 +383,53 @@ export function CandidateDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const { data: c, error, reload } = useData<Candidate>(`/candidates/${id}`);
+  const { data: duplicates, reload: reloadDuplicates } = useData<Array<Pick<Candidate, 'id' | 'fullName' | 'email' | 'phone' | 'source' | 'resumeName'>>>(`/candidates/${id}/duplicates`);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
   const [consent, setConsent] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [anonymizeOpen, setAnonymizeOpen] = useState(false);
+  const [mergeCandidate, setMergeCandidate] = useState<NonNullable<typeof duplicates>[number] | null>(null);
+  const [parseProgress, setParseProgress] = useState<ParseStatusResponse | null>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+    };
+  }, []);
+
+  async function confirmAnonymize() {
+    setBusy('anonymize');
+    try {
+      await send(`/v1/candidates/${id}/anonymize`, {});
+      toast.success('Nomzod shaxsiy ma‘lumotlari anonimlashtirildi (GDPR)');
+      setAnonymizeOpen(false);
+      reload();
+    } catch (e) {
+      setActionError((e as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+
+  async function confirmMerge() {
+    if (!mergeCandidate) return;
+    setBusy('merge');
+    setActionError('');
+    try {
+      await send(`/candidates/${id}/merge`, { duplicateId: mergeCandidate.id });
+      toast.success('Nomzod profillari birlashtirildi');
+      setMergeCandidate(null);
+      reload();
+      reloadDuplicates();
+    } catch (cause) {
+      setActionError((cause as Error).message);
+    } finally {
+      setBusy('');
+    }
+  }
+
   async function upload(file: File | undefined) {
     if (!file) return;
     setActionError('');
@@ -405,17 +451,59 @@ export function CandidateDetail() {
       setBusy('');
     }
   }
+
   async function parseResume() {
     setBusy('parse');
     setActionError('');
+    setParseProgress({
+      status: 'PENDING',
+      step: 1,
+      totalSteps: 4,
+      message: "Navbatga qo'yildi va tahlilga tayyorlanmoqda…",
+      percent: 0,
+    });
+
+    if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+
     try {
-      await send(`/candidates/${id}/parse`, { consent });
-      toast.success('Resume parsed with AI successfully!');
-      reload();
+      await send(`/candidates/${id}/parse-async`, { consent });
+
+      const pollInterval = 800;
+      let attempts = 0;
+      const maxAttempts = 60;
+
+      pollTimerRef.current = setInterval(async () => {
+        attempts++;
+        try {
+          const status = await api<ParseStatusResponse>(`/candidates/${id}/parse-status`);
+          if (status && status.status) {
+            setParseProgress(status);
+
+            if (status.status === 'COMPLETED') {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+              setBusy('');
+              toast.success("Rezyume AI orqali to'liq tahlil qilindi!");
+              reload();
+            } else if (status.status === 'FAILED') {
+              if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+              setBusy('');
+              setActionError(status.error || 'Rezyumeni tahlil qilishda xatolik yuz berdi.');
+            }
+          }
+        } catch {
+          // Ignore transient polling failure
+        }
+
+        if (attempts >= maxAttempts) {
+          if (pollTimerRef.current) clearInterval(pollTimerRef.current);
+          setBusy('');
+          setActionError("Tahlil vaqti tugadi. Qayta urinib ko'ring.");
+        }
+      }, pollInterval);
     } catch (e) {
-      setActionError((e as Error).message);
-    } finally {
       setBusy('');
+      setParseProgress(null);
+      setActionError((e as Error).message);
     }
   }
   return (
@@ -439,14 +527,63 @@ export function CandidateDetail() {
                 .filter(Boolean)
                 .join(' · ')}
             >
-              <Button
-                variant="outline"
-                onClick={() => setEditing(true)}
-                className="flex items-center gap-1.5"
-              >
-                <Pencil size={16} /> Edit profile
-              </Button>
+              <div className="flex items-center gap-2">
+                {(c as any).isAnonymized && (
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                    Anonimlashtirilgan (GDPR)
+                  </span>
+                )}
+                {(c as any).isOcrProcessed && (
+                  <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                    OCR orqali o'qilgan
+                  </span>
+                )}
+                {!(c as any).isAnonymized && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setEditing(true)}
+                      className="flex items-center gap-1.5"
+                    >
+                      <Pencil size={16} /> Edit profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setAnonymizeOpen(true)}
+                      className="flex items-center gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      <ShieldAlert size={16} /> PII Anonymize
+                    </Button>
+                  </>
+                )}
+              </div>
             </PageTitle>
+            {c.mergedIntoId && (
+              <section className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Bu profil boshqa nomzod profiliga birlashtirilgan. <Link className="font-semibold underline" to={`/candidates/${c.mergedIntoId}`}>Asosiy profilni ochish</Link>
+              </section>
+            )}
+            {!c.mergedIntoId && Boolean(duplicates?.length) && (
+              <section className="mb-5 rounded-xl border border-[#cce3d7] bg-[#f4faf6] p-5" aria-label="Potential duplicate candidates">
+                <h2 className="text-base font-semibold text-[#183d30]">O‘xshash nomzod profillari</h2>
+                <p className="mt-1 text-sm text-[#60736b]">Email yoki telefon bir xil. Ma’lumotlarni tekshiring; birlashtirish faqat siz tasdiqlaganingizdan keyin amalga oshadi.</p>
+                <div className="mt-3 space-y-2">
+                  {duplicates?.map((match) => (
+                    <div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#dce7e0] bg-white p-3 text-sm">
+                      <div><Link className="font-semibold text-[#245e4f] underline" to={`/candidates/${match.id}`}>{match.fullName}</Link><p className="text-xs text-[#60736b]">{match.source} · {match.email || match.phone} {match.resumeName ? '· CV mavjud' : ''}</p></div>
+                      <Button variant="outline" disabled={Boolean(busy)} onClick={() => setMergeCandidate(match)}>Shu profilga birlashtirish</Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+            {Boolean(c.mergedCandidates?.length) && (
+              <section className="mb-5 rounded-xl border border-[#dce7e0] bg-white p-4 text-sm">
+                <strong>Birlashtirilgan eski profillar</strong>
+                <p className="mt-1 text-[#60736b]">Eski CV va tarixni tekshirish uchun profilni oching.</p>
+                <div className="mt-2 flex flex-wrap gap-3">{c.mergedCandidates?.map((source) => <Link key={source.id} className="text-[#245e4f] underline" to={`/candidates/${source.id}`}>{source.fullName} #{source.id}</Link>)}</div>
+              </section>
+            )}
             <section className="candidate-contact-panel" aria-label="Candidate contact information">
               <div className="candidate-contact-item">
                 <span className="candidate-contact-icon">
@@ -484,46 +621,28 @@ export function CandidateDetail() {
                   </div>
                   <FileText size={20} />
                 </div>
-                <label className={`upload-zone ${busy ? 'disabled' : ''}`}>
-                  <Upload size={27} />
-                  <strong>
-                    {busy === 'upload'
-                      ? 'Extracting CV text…'
-                      : c.resumeName
-                        ? 'Replace CV'
-                        : 'Upload a CV'}
-                  </strong>
-                  <span>PDF or DOCX · up to 5 MB · text-based documents</span>
-                  <input
-                    aria-label="Upload CV"
-                    type="file"
-                    accept=".pdf,.docx"
-                    disabled={Boolean(busy)}
-                    onChange={(e) => {
-                      void upload(e.target.files?.[0]);
-                      e.target.value = '';
-                    }}
-                  />
-                </label>
-                {busy === 'upload' && (
-                  <div className="mt-3 space-y-1.5">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Extracting document text…</span>
-                      <span>60%</span>
-                    </div>
-                    <Progress value={60} className="h-1.5 w-full" />
-                  </div>
-                )}
+                <ResumeDropzone
+                  onFileSelect={(file) => void upload(file)}
+                  disabled={Boolean(busy)}
+                  uploading={busy === 'upload'}
+                  hasExistingFile={Boolean(c.resumeName)}
+                  fileName={c.resumeName}
+                />
                 {c.resumeName && (
-                  <div className="file-row">
-                    <FileText size={18} />
-                    <span>{c.resumeName}</span>
+                  <div className="flex items-center justify-between p-3.5 mt-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="h-8 w-8 rounded-lg bg-[#1a5d4c]/10 text-[#1a5d4c] flex items-center justify-center shrink-0">
+                        <FileText size={18} />
+                      </div>
+                      <span className="text-xs font-semibold truncate text-slate-700">{c.resumeName}</span>
+                    </div>
                     <a
                       aria-label="Download CV"
                       href={`/api/candidates/${c.id}/resume`}
-                      className="icon-button"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors shrink-0 ml-2"
+                      title="Yuklab olish"
                     >
-                      <Download size={18} />
+                      <Download size={17} />
                     </a>
                   </div>
                 )}
@@ -547,10 +666,11 @@ export function CandidateDetail() {
                     <p>Organize experience into a readable profile.</p>
                   </div>
                 </div>
-                <AiConsent checked={consent} onChange={setConsent} configured={user.aiConfigured} />
+                <AiConsent checked={consent} onChange={setConsent} configured={Boolean(user?.aiConfigured)} />
+                {c.publicSubmittedAt && !c.aiConsentAt && <p className="mt-2 text-sm text-amber-700">Nomzod AI tahliliga rozilik bermagan. CV faqat HR tomonidan ko‘rib chiqiladi.</p>}
                 <Button
                   className="bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
-                  disabled={!consent || !user.aiConfigured || !c.resumeText || Boolean(busy)}
+                  disabled={!consent || !user?.aiConfigured || !c.resumeText || Boolean(busy) || Boolean(c.publicSubmittedAt && !c.aiConsentAt)}
                   onClick={() => void parseResume()}
                 >
                   <Sparkles size={16} />
@@ -560,13 +680,12 @@ export function CandidateDetail() {
                       ? 'Parse again'
                       : 'Parse resume with AI'}
                 </Button>
-                {busy === 'parse' && (
-                  <div className="mt-3 space-y-1.5">
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Analyzing experience and skills with Gemini…</span>
-                      <span>80%</span>
-                    </div>
-                    <Progress value={80} className="h-1.5 w-full" />
+                {parseProgress && (
+                  <div className="mt-4">
+                    <ParseProgress
+                      progress={parseProgress}
+                      onRetry={() => void parseResume()}
+                    />
                   </div>
                 )}
                 {c.parsedResume ? (
@@ -636,6 +755,41 @@ export function CandidateDetail() {
                 }}
               />
             )}
+            <AlertDialog open={anonymizeOpen} onOpenChange={setAnonymizeOpen}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Nomzod ma‘lumotlarini anonimlashtirish?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Ushbu amal nomzodning ism-familiyasi, telefoni, emaili, Telegram ma'lumotlari va barcha yuklangan rezyume fayllarini butunlay o'chiradi. Bu jarayonni ortga qaytarib bo'lmaydi (GDPR Art. 17).
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 text-white hover:bg-red-700"
+                    onClick={() => void confirmAnonymize()}
+                  >
+                    {busy === 'anonymize' ? 'Anonimlashtirilmoqda…' : 'Anonimlashtirish'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={Boolean(mergeCandidate)} onOpenChange={(open) => !open && setMergeCandidate(null)}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Nomzod profillarini birlashtirish?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    <strong>{mergeCandidate?.fullName}</strong> profilidagi arizalar va CV yozuvlari <strong>{c.fullName}</strong> profiliga o‘tkaziladi. Eski profil tarix uchun saqlanadi. Ikkala profil bir vakansiyaga ariza yuborgan bo‘lsa, birlashtirish to‘xtatiladi.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                  <AlertDialogAction disabled={busy === 'merge'} className="bg-[#245e4f] text-white hover:bg-[#1b4338]" onClick={() => void confirmMerge()}>
+                    {busy === 'merge' ? 'Birlashtirilmoqda…' : 'Birlashtirish'}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )
       )}

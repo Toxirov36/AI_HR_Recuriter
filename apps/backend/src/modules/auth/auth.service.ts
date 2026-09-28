@@ -8,12 +8,18 @@ import { admin } from '../../common/guards/auth.guard';
 import { acceptInvite, invitation, login, registration } from '../../common/pipes/validation';
 import { z } from 'zod';
 
+import { TotpService } from './totp.service';
+
 export const userSelect = {
   id: true,
   fullName: true,
   email: true,
+  phone: true,
   role: true,
   companyId: true,
+  mfaEnabled: true,
+  isActive: true,
+  platformRole: true,
 } as const;
 
 @Injectable()
@@ -21,6 +27,7 @@ export class AuthService {
   constructor(
     @Inject(Database) private db: Database,
     @Inject(Security) private security: Security,
+    @Inject(TotpService) private totp: TotpService,
   ) {}
 
   private async limitAuth(action: string, ip: string | undefined, identity: string) {
@@ -29,11 +36,12 @@ export class AuthService {
   }
 
   async register(data: z.infer<typeof registration>, ip: string | undefined, res: Response) {
-    await this.limitAuth('register', ip, data.email);
+    await this.limitAuth('register', ip, data.email ?? data.phone!);
     const user = await this.db.user.create({
       data: {
         fullName: data.fullName,
-        email: data.email,
+        email: data.email ?? null,
+        phone: data.phone ?? null,
         password: await hash(data.password, 12),
         role: 'ADMIN',
         company: { create: { name: data.companyName } },
@@ -44,16 +52,95 @@ export class AuthService {
   }
 
   async login(data: z.infer<typeof login>, ip: string | undefined, res: Response) {
-    await this.limitAuth('login', ip, data.email);
-    const user = await this.db.user.findUnique({ where: { email: data.email } });
+    await this.limitAuth('login', ip, data.email ?? data.phone!);
+    const user = await this.db.user.findUnique({
+      where: data.email ? { email: data.email } : { phone: data.phone! },
+      include: { company: { select: { isActive: true } } },
+    });
     // Fixed valid bcrypt hash ensures unknown accounts also perform password work.
     const valid = await compare(
       data.password,
       user?.password ?? '$2b$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW',
     );
-    if (!user || !valid) throw new UnauthorizedException('Invalid email or password');
-    const { password: _, ...safe } = user;
+    if (!user || user.isActive === false || user.company?.isActive === false || !valid) throw new UnauthorizedException('Invalid credentials');
+
+    if (user.mfaEnabled) {
+      const challengeToken = randomBytes(32).toString('hex');
+      await this.security.redis.set(`mfa:challenge:${challengeToken}`, String(user.id), 'EX', 300);
+      return { mfaRequired: true, challengeToken };
+    }
+
+    const { password: _, mfaSecret: _secret, mfaRecoveryCodes: _codes, company: _company, ...safe } = user;
     return this.security.issue(safe, res);
+  }
+
+  async setupMfa(userId: number) {
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } });
+    const secret = this.totp.generateSecret();
+    await this.security.redis.set(`mfa:setup:${userId}`, secret, 'EX', 600);
+    const otpAuthUri = this.totp.getOtpAuthUri(user.email ?? user.phone ?? String(user.id), secret, 'Shortlist HR');
+    return { secret, otpAuthUri };
+  }
+
+  async enableMfa(userId: number, code: string) {
+    const secret = await this.security.redis.get(`mfa:setup:${userId}`);
+    if (!secret) throw new UnauthorizedException('MFA setup session expired. Start setup again.');
+    if (!this.totp.verifyCode(code, secret)) {
+      throw new UnauthorizedException('Invalid 6-digit code. Check your authenticator app.');
+    }
+    const { plainCodes, hashedCodes } = this.totp.generateRecoveryCodes(8);
+    await this.db.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: true,
+        mfaSecret: secret,
+        mfaRecoveryCodes: hashedCodes,
+      },
+    });
+    await this.security.redis.del(`mfa:setup:${userId}`);
+    return { enabled: true, recoveryCodes: plainCodes };
+  }
+
+  async verifyMfaLogin(challengeToken: string, code: string, res: Response) {
+    const userIdStr = await this.security.redis.get(`mfa:challenge:${challengeToken}`);
+    if (!userIdStr) throw new UnauthorizedException('MFA challenge expired or invalid');
+    const user = await this.db.user.findUnique({ where: { id: parseInt(userIdStr, 10) }, include: { company: { select: { isActive: true } } } });
+    if (!user || user.isActive === false || user.company?.isActive === false || !user.mfaSecret) throw new UnauthorizedException('MFA not configured');
+
+    const isTotpValid = this.totp.verifyCode(code, user.mfaSecret);
+    const recIndex = !isTotpValid ? this.totp.findRecoveryCodeIndex(code, user.mfaRecoveryCodes) : -1;
+
+    if (!isTotpValid && recIndex === -1) {
+      throw new UnauthorizedException('Invalid 6-digit code or recovery code');
+    }
+
+    if (recIndex !== -1) {
+      const updatedCodes = [...user.mfaRecoveryCodes];
+      updatedCodes.splice(recIndex, 1);
+      await this.db.user.update({
+        where: { id: user.id },
+        data: { mfaRecoveryCodes: updatedCodes },
+      });
+    }
+
+    await this.security.redis.del(`mfa:challenge:${challengeToken}`);
+    const { password: _, mfaSecret: _secret, mfaRecoveryCodes: _codes, company: _company, ...safe } = user;
+    return this.security.issue(safe, res);
+  }
+
+  async disableMfa(userId: number, password: string) {
+    const user = await this.db.user.findUniqueOrThrow({ where: { id: userId } });
+    const valid = await compare(password, user.password);
+    if (!valid) throw new UnauthorizedException('Invalid password');
+    await this.db.user.update({
+      where: { id: userId },
+      data: {
+        mfaEnabled: false,
+        mfaSecret: null,
+        mfaRecoveryCodes: [],
+      },
+    });
+    return { disabled: true };
   }
 
   async me(user: Identity) {
@@ -103,6 +190,8 @@ export class AuthService {
       });
       if (!invite || invite.usedAt || invite.expiresAt < new Date())
         throw new UnauthorizedException('Invitation is invalid or expired');
+      const company = await tx.company.findUnique({ where: { id: invite.companyId }, select: { isActive: true } });
+      if (!company?.isActive) throw new UnauthorizedException('Invitation is unavailable');
       const claimed = await tx.invitation.updateMany({
         where: { id: invite.id, usedAt: null, expiresAt: { gt: new Date() } },
         data: { usedAt: new Date() },

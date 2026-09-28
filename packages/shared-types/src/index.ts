@@ -1,4 +1,4 @@
-export type Role = 'ADMIN' | 'HR' | 'RECRUITER';
+export type Role = 'ADMIN' | 'HR' | 'RECRUITER' | 'INTERVIEWER';
 
 export type PipelineStage = 'NEW' | 'REVIEWING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED';
 
@@ -7,7 +7,8 @@ export type User = {
   companyId: number;
   role: Role;
   fullName: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
 };
 
 export type Requirement = {
@@ -46,6 +47,38 @@ export type Candidate = {
   updatedAt: string;
 };
 
+export type ScorecardCriterion = {
+  id: string;
+  name: string;
+  category: 'TECHNICAL' | 'CORE' | 'CUSTOM';
+  score: number | null;
+  evidence: string;
+};
+
+export type ScorecardDecision =
+  | 'STRONG_HIRE'
+  | 'HIRE'
+  | 'NO_HIRE'
+  | 'STRONG_NO_HIRE'
+  | 'UNDECIDED';
+
+export type StructuredScorecard = {
+  criteria: ScorecardCriterion[];
+  finalDecision: ScorecardDecision;
+  decisionNotes?: string;
+  decidedBy?: string;
+  decidedAt?: string;
+  averageScore?: number;
+};
+
+export type InterviewReview = {
+  answers: { question: string; answer: string; notes: string }[];
+  notes: string;
+  scorecard?: StructuredScorecard;
+  updatedBy: string;
+  updatedAt: string;
+};
+
 export type Application = {
   id: number;
   companyId: number;
@@ -55,7 +88,7 @@ export type Application = {
   reviewRevision: number;
   analysis?: unknown;
   interviewQuestions?: unknown;
-  interviewReview?: unknown;
+  interviewReview?: InterviewReview | null;
   createdAt: string;
   updatedAt: string;
 };
