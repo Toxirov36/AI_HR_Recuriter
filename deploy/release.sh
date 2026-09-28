@@ -17,7 +17,9 @@ if grep -Eq '(^|/)\.env$|(^|/)\.\.(/|$)|^/' <<< "$entries"; then
   echo 'Archive contains a protected or unsafe path'
   exit 1
 fi
-tar -xzf "$base/incoming/$revision.tar.gz" -C "$source_dir" --no-same-owner
+# Git archive files must stay readable by the non-root user inside the image.
+# The surrounding umask keeps backups private; do not apply it to source modes.
+tar -xzf "$base/incoming/$revision.tar.gz" -C "$source_dir" --no-same-owner --same-permissions
 if [[ -L "$source_dir/.env" && "$(readlink "$source_dir/.env")" == "$base/.env" ]]; then
   : # Allow retrying the same release.
 elif [[ -e "$source_dir/.env" || -L "$source_dir/.env" ]]; then
@@ -36,6 +38,8 @@ if (( available < 1048576 )); then
   exit 1
 fi
 "${compose[@]}" build backend frontend
+"${compose[@]}" run --rm --no-deps --entrypoint node backend -e \
+  "require('fs').accessSync('/app/package.json', 4); require('fs').accessSync('/app/apps/backend/dist/main.js', 4)" < /dev/null
 
 # Back up before startup applies migrations. A schema rollback is never automatic.
 backup="$base/backups/pre-$revision-$(date -u +%Y%m%dT%H%M%SZ).dump"
@@ -56,6 +60,11 @@ if [[ "$healthy" != true ]]; then
   echo "Deployment health check failed. Previous release and database backup are retained: $backup"
   exit 1
 fi
+for service in backend frontend; do
+  container=$("${compose[@]}" ps -q "$service")
+  actual=$(docker inspect --format '{{.Config.Image}}' "$container")
+  [[ "$actual" == "ai-hr-recruiter-$service:$revision" ]] || { echo 'Running image does not match release'; exit 1; }
+done
 ln -sfn "$source_dir" "$base/current"
 printf '%s\n' "$revision" > "$base/deployed-sha"
 rm -f "$base/incoming/$revision.tar.gz"
