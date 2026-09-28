@@ -89,6 +89,11 @@ export class ApplicationsService {
     data: z.infer<typeof application>,
   ) {
     const created = await this.db.$transaction(async (tx) => {
+      const [candidate, vacancy] = await Promise.all([
+        tx.candidate.findFirst({ where: { id: data.candidateId, companyId }, select: { id: true } }),
+        tx.vacancy.findFirst({ where: { id: data.vacancyId, companyId }, select: { id: true } }),
+      ]);
+      if (!candidate || !vacancy) throw new NotFoundException('Candidate or vacancy not found');
       const app = await tx.application.create({
         data: {
           companyId,
