@@ -4,6 +4,14 @@ umask 077
 
 revision=${1:?Commit SHA required}
 [[ "$revision" =~ ^[a-f0-9]{40}$ ]] || { echo 'Invalid commit SHA'; exit 1; }
+export IMAGE_PREFIX=${2:?Registry image prefix required}
+registry_user=${3:?Registry user required}
+[[ "$IMAGE_PREFIX" == ghcr.io/toxirov36/ai_hr_recuriter ]] || exit 1
+# Credentials expire with the job and are removed even when deployment fails.
+export DOCKER_CONFIG
+DOCKER_CONFIG=$(mktemp -d)
+trap 'rm -rf -- "$DOCKER_CONFIG"' EXIT
+docker login ghcr.io -u "$registry_user" --password-stdin
 base="$HOME/hr-recruiter"
 test -s "$base/.env"
 mkdir -p "$base/releases" "$base/backups"
@@ -37,7 +45,8 @@ if (( available < 1048576 )); then
   echo 'Less than 1 GiB free. Expand disk or review Docker build cache before deploying.'
   exit 1
 fi
-"${compose[@]}" build backend frontend
+previous_images=$(docker inspect --format '{{.Config.Image}}' ai-hr-recruiter-backend-1 ai-hr-recruiter-frontend-1)
+"${compose[@]}" pull backend frontend < /dev/null
 "${compose[@]}" run --rm --no-deps --entrypoint node backend -e \
   "require('fs').accessSync('/app/package.json', 4); require('fs').accessSync('/app/apps/backend/dist/main.js', 4)" < /dev/null
 
@@ -63,10 +72,24 @@ fi
 for service in backend frontend; do
   container=$("${compose[@]}" ps -q "$service")
   actual=$(docker inspect --format '{{.Config.Image}}' "$container")
-  [[ "$actual" == "ai-hr-recruiter-$service:$revision" ]] || { echo 'Running image does not match release'; exit 1; }
+  [[ "$actual" == "$IMAGE_PREFIX-$service:$revision" ]] || { echo 'Running image does not match release'; exit 1; }
 done
+if [[ ! -f "$base/deployed-sha" || "$(cat "$base/deployed-sha")" != "$revision" ]]; then
+  printf '%s\n' "$previous_images" > "$base/previous-images"
+fi
 ln -sfn "$source_dir" "$base/current"
 printf '%s\n' "$revision" > "$base/deployed-sha"
 rm -f "$base/incoming/$revision.tar.gz"
 rm -f "$base/incoming/$revision.sh"
+# Only remove this project's obsolete tags after a verified deployment.
+# Docker refuses removal of images used by containers; never use --force.
+while read -r ref; do
+  case "$ref" in
+    "$IMAGE_PREFIX-backend:"*|"$IMAGE_PREFIX-frontend:"*|ai-hr-recruiter-backend:*|ai-hr-recruiter-frontend:*) ;;
+    *) continue ;;
+  esac
+  [[ "$ref" == *":$revision" ]] && continue
+  if [[ -f "$base/previous-images" ]] && grep -Fxq "$ref" "$base/previous-images"; then continue; fi
+  docker image rm "$ref" || echo "Retained image still in use: $ref"
+done < <(docker image ls --format '{{.Repository}}:{{.Tag}}')
 echo "Deployed $revision successfully."

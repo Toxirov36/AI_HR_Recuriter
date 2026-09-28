@@ -1,5 +1,5 @@
 services:
   backend:
-    image: ai-hr-recruiter-backend:${DEPLOY_SHA:?Set DEPLOY_SHA}
+    image: ${IMAGE_PREFIX:-ghcr.io/toxirov36/ai_hr_recuriter}-backend:${DEPLOY_SHA:?Set DEPLOY_SHA}
   frontend:
-    image: ai-hr-recruiter-frontend:${DEPLOY_SHA:?Set DEPLOY_SHA}
+    image: ${IMAGE_PREFIX:-ghcr.io/toxirov36/ai_hr_recuriter}-frontend:${DEPLOY_SHA:?Set DEPLOY_SHA}

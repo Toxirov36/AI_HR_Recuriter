@@ -41,6 +41,9 @@ jobs:
       - run: npm test
       - run: npm audit --audit-level=high
   deploy:
+    permissions:
+      contents: read
+      packages: write
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
@@ -58,6 +61,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+      - name: Build and publish images on GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          registry="ghcr.io/${GITHUB_REPOSITORY,,}"
+          printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          for service in backend frontend; do
+            docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
+              --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              -f "apps/$service/Dockerfile" -t "$registry-$service:$GITHUB_SHA" .
+            docker push "$registry-$service:$GITHUB_SHA"
+          done
       - name: Configure SSH
         shell: bash
         run: |
@@ -90,7 +106,9 @@ jobs:
           ssh "${ssh_opts[@]}" "$target" 'mkdir -p ~/hr-recruiter/incoming'
           scp "${ssh_opts[@]}" "$RUNNER_TEMP/release.tar.gz" "$target:hr-recruiter/incoming/$GITHUB_SHA.tar.gz"
           scp "${ssh_opts[@]}" deploy/release.sh "$target:hr-recruiter/incoming/$GITHUB_SHA.sh"
-          ssh -n "${ssh_opts[@]}" "$target" "bash ~/hr-recruiter/incoming/$GITHUB_SHA.sh '$GITHUB_SHA'"
+          # Send the short-lived job token over SSH stdin, never in process arguments.
+          printf '%s' "$GH_TOKEN" | ssh "${ssh_opts[@]}" "$target" \
+            "bash ~/hr-recruiter/incoming/$GITHUB_SHA.sh '$GITHUB_SHA' 'ghcr.io/${GITHUB_REPOSITORY,,}' '$GITHUB_ACTOR'"
           deployed=$(ssh -n "${ssh_opts[@]}" "$target" 'cat ~/hr-recruiter/deployed-sha')
           [[ "$deployed" == "$GITHUB_SHA" ]] || { echo 'Server did not activate the tested commit'; exit 1; }
       - name: Remove runner SSH key

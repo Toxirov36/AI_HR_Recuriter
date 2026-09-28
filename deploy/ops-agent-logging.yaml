@@ -1,0 +1,6 @@
+# Merge this global section into /etc/google-cloud-ops-agent/config.yaml.
+global:
+  default_self_log_file_rotation:
+    enabled: true
+    max_file_size_megabytes: 10
+    backup_count: 2
