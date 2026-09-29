@@ -77,7 +77,8 @@ jobs:
               -f "apps/$service/Dockerfile" -t "$registry-$service:$GITHUB_SHA" .
             if [[ "$service" == backend ]]; then
               docker run --rm --entrypoint node "$registry-$service:$GITHUB_SHA" -e \
-                "require('./apps/backend/dist/app.module.js'); require.resolve('prisma'); try { require.resolve('vitest'); process.exit(1); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }"
+                "require('./apps/backend/dist/app.module.js'); try { require.resolve('vitest'); process.exit(1); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }"
+              docker run --rm --entrypoint /app/node_modules/.bin/prisma "$registry-$service:$GITHUB_SHA" --version
             fi
             docker push "$registry-$service:$GITHUB_SHA"
           done
