@@ -97,9 +97,11 @@ export function configureApp(app: INestApplication) {
   });
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader('Cache-Control', 'no-store');
-    const telegramWebhook = req.path === '/api/v1/integrations/telegram/webhook';
+    // Telegram webhook path — global prefix + controller + endpoint dan tuzilgan.
+    // Regex ishlatiladi: hardcode satr o'zgarsa ham moslik saqlansin.
+    const isTelegramWebhook = /^\/api\/v1\/integrations\/telegram\/webhook\/?$/.test(req.path);
     if (
-      !telegramWebhook &&
+      !isTelegramWebhook &&
       !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
       (req.headers['x-requested-with'] !== 'recruiter-web' ||
         (req.headers.origin && !isAllowedOrigin(req.headers.origin, config.FRONTEND_ORIGIN, config.NODE_ENV)))

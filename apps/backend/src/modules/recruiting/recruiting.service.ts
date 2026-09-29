@@ -4,6 +4,7 @@ import { Database } from '../../database/prisma.service';
 import { z } from 'zod';
 import { candidate, vacancy, pipeline, interviewReview } from '../../common/pipes/validation';
 import { NotificationService } from '../notifications/notification.service';
+
 export const candidateSelect = {
   id: true,
   companyId: true,
@@ -23,6 +24,7 @@ export const candidateSelect = {
   createdAt: true,
   updatedAt: true,
 } as const;
+
 export const candidateListSelect = {
   id: true,
   fullName: true,
@@ -32,12 +34,14 @@ export const candidateListSelect = {
   createdAt: true,
   _count: { select: { applications: true } },
 } as const;
+
 @Injectable()
 export class RecruitingService {
   constructor(
     @Inject(Database) readonly db: Database,
     @Optional() @Inject(NotificationService) private readonly notifications?: NotificationService,
   ) {}
+
   async vacancy(companyId: number, id: number) {
     const found = await this.db.vacancy.findFirst({
       where: { id, companyId },
@@ -46,6 +50,7 @@ export class RecruitingService {
     if (!found) throw new NotFoundException('Vacancy not found');
     return found;
   }
+
   async candidate(companyId: number, id: number) {
     const found = await this.db.candidate.findFirst({
       where: { id, companyId },
@@ -54,6 +59,7 @@ export class RecruitingService {
     if (!found) throw new NotFoundException('Candidate not found');
     return found;
   }
+
   async application(companyId: number, id: number) {
     const found = await this.db.application.findFirst({
       where: { id, companyId },
@@ -66,6 +72,7 @@ export class RecruitingService {
     if (!found) throw new NotFoundException('Application not found');
     return found;
   }
+
   async changeStage(
     companyId: number,
     id: number,
@@ -135,6 +142,7 @@ export class RecruitingService {
 
     return updated;
   }
+
   async saveInterviewReview(
     companyId: number,
     id: number,
@@ -189,6 +197,7 @@ export class RecruitingService {
       );
     return { interviewReview: review, reviewRevision: data.revision + 1 };
   }
+
   async saveVacancy(companyId: number, id: number | null, data: z.infer<typeof vacancy>) {
     const { requirements, ...fields } = data;
     if (id === null)
@@ -219,6 +228,7 @@ export class RecruitingService {
       return saved;
     });
   }
+
   async saveCandidate(companyId: number, id: number | null, data: z.infer<typeof candidate>) {
     if (id === null)
       return this.db.candidate.create({ data: { ...data, companyId }, select: candidateSelect });

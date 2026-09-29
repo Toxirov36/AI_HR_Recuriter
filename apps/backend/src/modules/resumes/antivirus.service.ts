@@ -12,6 +12,16 @@ export interface ScanResult {
 const EICAR_STRING =
   'X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*';
 
+// Pre-compiled byte patterns — buffer.toString('binary') ni butunlay almashtiradi.
+// Har fayl yuklashda string konversiyasi o'rniga to'g'ridan-to'g'ri buffer ichida qidirish.
+const EICAR_BUF = Buffer.from(EICAR_STRING, 'ascii');
+const VBA_PROJECT_BUF = Buffer.from('vbaProject.bin', 'ascii');
+const VBA_DATA_BUF = Buffer.from('word/vbaData.xml', 'ascii');
+const PDF_LAUNCH_BUF = Buffer.from('/Launch', 'ascii');
+const PDF_JS_BUF = Buffer.from('/JavaScript', 'ascii');
+const PDF_EMBEDDED_BUF = Buffer.from('/EmbeddedFiles', 'ascii');
+
+
 @Injectable()
 export class AntivirusService {
   private readonly logger = new Logger(AntivirusService.name);
@@ -117,10 +127,9 @@ export class AntivirusService {
    * - Optional ClamAV daemon via TCP socket
    */
   async scanBuffer(buffer: Buffer, originalname: string): Promise<ScanResult> {
-    const rawString = buffer.toString('binary');
-
     // 1. EICAR Standard Antivirus Test Pattern
-    if (rawString.includes(EICAR_STRING)) {
+    // Buffer.includes() — string konversiyasisiz to'g'ridan-to'g'ri byte qidirish.
+    if (buffer.includes(EICAR_BUF)) {
       this.logger.warn(`Malware detected: EICAR test string found in ${originalname}`);
       return {
         isClean: false,
@@ -131,7 +140,7 @@ export class AntivirusService {
 
     // 2. Check for VBA macros in DOCX archives
     if (/\.docx$/i.test(originalname)) {
-      if (rawString.includes('vbaProject.bin') || rawString.includes('word/vbaData.xml')) {
+      if (buffer.includes(VBA_PROJECT_BUF) || buffer.includes(VBA_DATA_BUF)) {
         this.logger.warn(`Malicious active macro detected in DOCX: ${originalname}`);
         return {
           isClean: false,
@@ -144,8 +153,8 @@ export class AntivirusService {
     // 3. Check for hostile PDF action dictionaries
     if (/\.pdf$/i.test(originalname)) {
       if (
-        rawString.includes('/Launch') ||
-        (rawString.includes('/JavaScript') && rawString.includes('/EmbeddedFiles'))
+        buffer.includes(PDF_LAUNCH_BUF) ||
+        (buffer.includes(PDF_JS_BUF) && buffer.includes(PDF_EMBEDDED_BUF))
       ) {
         this.logger.warn(`Suspicious PDF executable action detected: ${originalname}`);
         return {

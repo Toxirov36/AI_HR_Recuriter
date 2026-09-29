@@ -20,6 +20,7 @@ export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1),
+  DB_POOL_MAX: z.coerce.number().int().min(2).max(100).default(20),
   REDIS_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must contain at least 32 characters'),
   FRONTEND_ORIGIN: z.url().default('http://localhost:5173'),
@@ -39,7 +40,11 @@ export const envSchema = z.object({
 
 export type AppConfig = z.infer<typeof envSchema>;
 
+// Modul darajasida cache — getConfig() faqat bir marta parse qiladi.
+let _config: AppConfig | undefined;
+
 export function getConfig(): AppConfig {
+  if (_config) return _config;
   const result = envSchema.safeParse(process.env);
   if (!result.success) {
     throw new Error(
@@ -62,5 +67,10 @@ export function getConfig(): AppConfig {
   if (r2Values.some(Boolean) && !r2Values.every(Boolean)) {
     throw new Error('R2 configuration is incomplete. Set all five R2 environment variables.');
   }
-  return result.data;
+  return (_config = result.data);
+}
+
+/** Faqat testlarda ishlatish uchun — cache ni tozalaydi. */
+export function resetConfigCache(): void {
+  _config = undefined;
 }

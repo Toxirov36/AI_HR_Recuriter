@@ -144,12 +144,36 @@ export class AuthService {
   }
 
   async me(user: Identity) {
-    return {
-      ...user,
-      company: await this.db.company.findUnique({
+    const cacheKey = `company:${user.companyId}`;
+
+    // Kompaniya ma'lumotlari kamdan-kam o'zgaradi — 5 daqiqa cache yetarli.
+    let company: { id: number; name: string } | null = null;
+    try {
+      const cached = await this.security.redis.get(cacheKey);
+      if (cached) {
+        company = JSON.parse(cached) as { id: number; name: string };
+      }
+    } catch {
+      // Redis mavjud bo'lmasa DB dan yuklaymiz
+    }
+
+    if (!company) {
+      company = await this.db.company.findUnique({
         where: { id: user.companyId },
         select: { id: true, name: true },
-      }),
+      });
+      if (company) {
+        try {
+          await this.security.redis.set(cacheKey, JSON.stringify(company), 'EX', 300);
+        } catch {
+          // Cache yozish muvaffaqiyatsiz — davom etamiz
+        }
+      }
+    }
+
+    return {
+      ...user,
+      company,
       aiConfigured: Boolean(this.security.config.GEMINI_API_KEY),
     };
   }

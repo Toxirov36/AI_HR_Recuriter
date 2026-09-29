@@ -1,7 +1,6 @@
-import { Inject, Injectable, Logger, OnModuleDestroy, forwardRef } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { Queue, Worker, Job } from 'bullmq';
 import Redis from 'ioredis';
-import { getConfig } from '../../config/app.config';
 import { Database } from '../../database/prisma.service';
 import { Security } from '../../common/utils/security';
 
@@ -26,7 +25,6 @@ export interface ResumeParseJobData {
 @Injectable()
 export class ResumeQueueService implements OnModuleDestroy {
   private readonly logger = new Logger(ResumeQueueService.name);
-  private readonly config = getConfig();
   private readonly memoryProgress = new Map<string, ParseProgress>();
   private readonly connection?: Redis;
   private workerConnection?: Redis;
@@ -37,13 +35,11 @@ export class ResumeQueueService implements OnModuleDestroy {
     @Inject(Database) private db: Database,
     @Inject(Security) private security: Security,
   ) {
-    if (this.config.NODE_ENV !== 'test') {
+    // test muhitida BullMQ connection ochilmaydi — in-memory fallback ishlaydi.
+    if (this.security.config.NODE_ENV !== 'test') {
       try {
-        this.connection = new Redis(this.config.REDIS_URL, {
-          maxRetriesPerRequest: null,
-          enableOfflineQueue: false,
-        });
-        this.connection.on('error', () => {});
+        // Security orqali BullMQ connection yaratiladi — URL manbai yagona.
+        this.connection = this.security.createBullMqConnection();
         this.queue = new Queue<ResumeParseJobData>(RESUME_PARSE_QUEUE, {
           connection: this.connection,
         });
@@ -52,6 +48,7 @@ export class ResumeQueueService implements OnModuleDestroy {
       }
     }
   }
+
 
   async setProgress(
     companyId: number,
@@ -102,14 +99,11 @@ export class ResumeQueueService implements OnModuleDestroy {
   }
 
   registerWorker(processor: (data: ResumeParseJobData) => Promise<void>) {
-    if (this.config.NODE_ENV === 'test') return;
+    if (this.security.config.NODE_ENV === 'test') return;
     if (!this.worker) {
       try {
-        this.workerConnection = new Redis(this.config.REDIS_URL, {
-          maxRetriesPerRequest: null,
-          enableOfflineQueue: false,
-        });
-        this.workerConnection.on('error', () => {});
+        // Worker ham Security factory orqali — URL manbai yagona.
+        this.workerConnection = this.security.createBullMqConnection();
 
         this.worker = new Worker<ResumeParseJobData>(
           RESUME_PARSE_QUEUE,

@@ -44,6 +44,23 @@ export class Security implements OnModuleDestroy {
     });
   }
 
+  /**
+   * BullMQ Queue va Worker uchun alohida Redis connection yaratadi.
+   * BullMQ blocking commandlar ishlatgani uchun maxRetriesPerRequest: null talab qilinadi
+   * va this.redis bilan bir xil ulanishni qayta ishlatib bo'lmaydi.
+   * Connection egasi (ResumeQueueService) uni onModuleDestroy da o'zi yopadi.
+   */
+  createBullMqConnection(): Redis {
+    const conn = new Redis(this.config.REDIS_URL, {
+      maxRetriesPerRequest: null,
+      enableOfflineQueue: false,
+    });
+    conn.on('error', () => {
+      /* BullMQ connection xatolari silent — worker o'zi qayta urinadi. */
+    });
+    return conn;
+  }
+
   async onModuleDestroy() {
     this.redis.disconnect();
   }
@@ -91,7 +108,8 @@ export class Security implements OnModuleDestroy {
 
   async logout(sid: string, res: Response) {
     try {
-      await this.redis.del(`session:${sid}`);
+      // Session va user cache ikkalasini bir vaqtda o'chirish
+      await this.redis.del(`session:${sid}`, `session-user:${sid}`);
     } catch {
       this.unavailable();
     }

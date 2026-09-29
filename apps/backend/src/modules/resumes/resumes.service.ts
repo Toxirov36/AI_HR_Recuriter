@@ -5,6 +5,8 @@ import JSZip from 'jszip';
 import { Prisma } from '../../generated/prisma/client';
 import { Database } from '../../database/prisma.service';
 import { R2Storage } from '../../common/storage/r2-storage.service';
+import { AntivirusService } from './antivirus.service';
+import { OcrService } from './ocr.service';
 
 export function extractContactDetails(text: string) {
   const email =
@@ -83,8 +85,6 @@ export async function extractResume(file: Express.Multer.File, maxSize = 5 * 102
   return { text, mime, contacts: extractContactDetails(text) };
 }
 
-import { AntivirusService } from './antivirus.service';
-import { OcrService } from './ocr.service';
 
 @Injectable()
 export class ResumesService {

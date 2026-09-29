@@ -33,22 +33,75 @@ export class AuthGuard implements CanActivate {
     } catch {
       throw new UnauthorizedException('Please sign in');
     }
-    let active: string | null;
+
+    // Redis dan session va user ma'lumotlarini bir vaqtda olish
+    let sessionValue: string | null;
+    let cachedUser: string | null;
     try {
-      active = await this.security.redis.get(`session:${claims.sid}`);
+      [sessionValue, cachedUser] = await this.security.redis.mget(
+        `session:${claims.sid}`,
+        `session-user:${claims.sid}`,
+      );
     } catch {
       this.security.unavailable();
     }
-    if (active !== String(claims.sub)) throw new UnauthorizedException('Session expired');
-    const user = await this.db.user.findUnique({
-      where: { id: claims.sub },
-      select: { id: true, companyId: true, role: true, fullName: true, email: true, phone: true, isActive: true, platformRole: true, company: { select: { isActive: true } } },
-    });
-    if (!user || user.isActive === false || user.company?.isActive === false) throw new UnauthorizedException('Account unavailable');
-    const { company: _company, ...identity } = user;
+
+    if (sessionValue !== String(claims.sub)) throw new UnauthorizedException('Session expired');
+
+    let identity: Identity;
+
+    if (cachedUser) {
+      // Cache hit — DB ga murojaat shart emas
+      try {
+        identity = JSON.parse(cachedUser) as Identity;
+      } catch {
+        // Buzilgan cache — DB dan qayta yuklaymiz
+        identity = await this.loadUserFromDb(claims.sub, claims.sid);
+      }
+    } else {
+      // Cache miss — DB dan yuklab, Redis ga yozamiz
+      identity = await this.loadUserFromDb(claims.sub, claims.sid);
+    }
+
     req.user = identity;
     req.sessionId = claims.sid;
-    await this.security.limit(`user:${user.id}`);
+    // Rate limiting bu yerda emas — har endpoint o'z chegarasini o'zi boshqaradi.
+    // Masalan: AI, auth va resume endpointlari allaqachon security.limit() chaqiradi.
     return true;
   }
+
+  private async loadUserFromDb(userId: number, sid: string): Promise<Identity> {
+    const user = await this.db.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        companyId: true,
+        role: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        isActive: true,
+        platformRole: true,
+        company: { select: { isActive: true } },
+      },
+    });
+    if (!user || user.isActive === false || user.company?.isActive === false)
+      throw new UnauthorizedException('Account unavailable');
+    const { company: _company, ...identity } = user;
+
+    // User Identity ni session bilan bir xil TTL (8 soat) bilan cache qilamiz
+    try {
+      await this.security.redis.set(
+        `session-user:${sid}`,
+        JSON.stringify(identity),
+        'EX',
+        28800,
+      );
+    } catch {
+      // Cache yozish muvaffaqiyatsiz bo'lsa ham davom etamiz
+    }
+
+    return identity;
+  }
 }
+

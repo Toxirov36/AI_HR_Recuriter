@@ -76,8 +76,10 @@ export class GeminiProvider {
     body: unknown,
   ): Promise<unknown> {
     const config = this.security.config;
-    const signal = AbortSignal.timeout(config.AI_TIMEOUT_MS);
+    // Har urinish uchun mustaqil signal — birinchisi timeout bo'lsa,
+    // ikkinchi retry yangi to'liq vaqt bilan boshlanadi.
     for (let attempt = 0; attempt < 2; attempt++) {
+      const signal = AbortSignal.timeout(config.AI_TIMEOUT_MS);
       try {
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:${method}`,
