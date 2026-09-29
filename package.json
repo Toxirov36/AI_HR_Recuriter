@@ -26,8 +26,10 @@
   "devDependencies": {
     "concurrently": "^9.2.1",
     "deepmerge-ts": "^8.0.2",
-    "prisma": "7.10.0",
     "prettier": "^3.9.7"
+  },
+  "dependencies": {
+    "prisma": "7.10.0"
   },
   "engines": {
     "node": ">=22.12.0"

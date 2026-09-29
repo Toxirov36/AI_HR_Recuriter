@@ -1,0 +1,59 @@
+name: Production monitoring
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+    inputs:
+      send_test:
+        description: Send one monitoring test email
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths: ['.github/workflows/monitor.yml', 'deploy/ops/monitor.py']
+permissions:
+  contents: read
+concurrency:
+  group: production-monitoring
+  cancel-in-progress: false
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      MONITOR_EMAIL: dilshodbektohirov40@gmail.com
+      MONITOR_SMTP_CONFIG: ${{ secrets.MONITOR_SMTP_CONFIG }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .monitor-state
+          key: monitor-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: monitor-
+      - name: Configure verified SSH
+        env:
+          SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+      - run: python3 deploy/ops/monitor_test.py
+      - name: Send requested test email
+        if: github.event_name == 'workflow_dispatch' && inputs.send_test
+        run: python3 deploy/ops/monitor.py --test-email
+      - name: Check site, disk and verified R2 backup
+        run: python3 deploy/ops/monitor.py
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: .monitor-state
+          key: monitor-${{ github.run_id }}-${{ github.run_attempt }}
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/id_ed25519

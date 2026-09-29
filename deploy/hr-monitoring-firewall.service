@@ -1,0 +1,13 @@
+[Unit]
+Description=Restrict Ops Agent metrics ports to loopback
+After=network-pre.target
+Before=google-cloud-ops-agent.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/sbin/nft -f /etc/hr-monitoring-ports.nft
+ExecStop=/usr/sbin/nft delete table inet hr_monitoring
+
+[Install]
+WantedBy=multi-user.target

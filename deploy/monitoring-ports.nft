@@ -1,0 +1,6 @@
+table inet hr_monitoring {
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname != "lo" tcp dport { 20201, 20202 } counter drop
+  }
+}

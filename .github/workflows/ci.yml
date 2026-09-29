@@ -40,6 +40,9 @@ jobs:
       - run: npm run build
       - run: npm test
       - run: npm audit --audit-level=high
+      - run: npm ci --prefix deploy/ops
+      - run: npm test --prefix deploy/ops
+      - run: python3 deploy/ops/monitor_test.py
   deploy:
     permissions:
       contents: read
@@ -72,6 +75,10 @@ jobs:
             docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" \
               -f "apps/$service/Dockerfile" -t "$registry-$service:$GITHUB_SHA" .
+            if [[ "$service" == backend ]]; then
+              docker run --rm --entrypoint node "$registry-$service:$GITHUB_SHA" -e \
+                "require('./apps/backend/dist/app.module.js'); require.resolve('prisma'); try { require.resolve('vitest'); process.exit(1); } catch (e) { if (e.code !== 'MODULE_NOT_FOUND') throw e; }"
+            fi
             docker push "$registry-$service:$GITHUB_SHA"
           done
       - name: Configure SSH
