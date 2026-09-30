@@ -35,15 +35,22 @@ export class AuthGuard implements CanActivate {
     }
 
     // Redis dan session va user ma'lumotlarini bir vaqtda olish
-    let sessionValue: string | null;
-    let cachedUser: string | null;
+    let sessionValue: string | null = null;
+    let cachedUser: string | null = null;
     try {
-      [sessionValue, cachedUser] = await this.security.redis.mget(
-        `session:${claims.sid}`,
-        `session-user:${claims.sid}`,
-      );
+      if (typeof this.security?.redis?.mget === 'function') {
+        [sessionValue, cachedUser] = await this.security.redis.mget(
+          `session:${claims.sid}`,
+          `session-user:${claims.sid}`,
+        );
+      } else if (typeof this.security?.redis?.get === 'function') {
+        sessionValue = await this.security.redis.get(`session:${claims.sid}`);
+      }
     } catch {
-      this.security.unavailable();
+      if (typeof this.security?.unavailable === 'function') {
+        this.security.unavailable();
+      }
+      throw new UnauthorizedException('Session expired');
     }
 
     if (sessionValue !== String(claims.sub)) throw new UnauthorizedException('Session expired');

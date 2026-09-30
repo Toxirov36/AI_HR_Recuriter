@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Building2, Search, ShieldCheck, RefreshCw, LockKeyhole, Activity } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Building2, Search, ShieldCheck, RefreshCw, LockKeyhole, Activity, ChevronDown, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Alert,
@@ -13,7 +13,6 @@ import {
   DialogTitle,
   Input,
   Loading,
-  Textarea,
   useData,
 } from '../components/ui';
 import { send } from '../lib/api';
@@ -89,7 +88,133 @@ function Pagination({
   );
 }
 
+
+type StatusOption = { value: string; label: string; color: string; dot: string; count?: number };
+
+function StatusFilter({
+  value,
+  onChange,
+  summary,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  summary?: Overview | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Tashqarida klik yoki Escape — yopish
+  useEffect(() => {
+    function handle(e: MouseEvent | KeyboardEvent) {
+      if (e instanceof KeyboardEvent && e.key === 'Escape') { setOpen(false); return; }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handle);
+    document.addEventListener('keydown', handle);
+    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handle); };
+  }, []);
+
+  const options: StatusOption[] = [
+    {
+      value: 'all',
+      label: 'Barcha holatlar',
+      color: 'text-slate-700 bg-slate-50 hover:bg-slate-100',
+      dot: 'bg-slate-400',
+      count: summary?.companies,
+    },
+    {
+      value: 'active',
+      label: 'Faol',
+      color: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100',
+      dot: 'bg-emerald-500',
+      count: summary?.activeCompanies,
+    },
+    {
+      value: 'blocked',
+      label: 'Bloklangan',
+      color: 'text-amber-700 bg-amber-50 hover:bg-amber-100',
+      dot: 'bg-amber-500',
+      count: summary?.blockedCompanies,
+    },
+  ];
+
+  const active = options.find((o) => o.value === value) ?? options[0];
+
+  return (
+    <div ref={ref} className="relative" aria-label="Holat filtri">
+      {/* Trigger tugmasi */}
+      <button
+        type="button"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((p) => !p)}
+        className={`
+          flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium
+          transition-all duration-150 select-none cursor-pointer
+          ${open
+            ? 'border-emerald-400 ring-2 ring-emerald-100 bg-white shadow-sm'
+            : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'}
+        `}
+      >
+        <span className={`w-2 h-2 rounded-full shrink-0 ${active.dot}`} />
+        <span>{active.label}</span>
+        {active.count !== undefined && (
+          <span className="ml-0.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 font-normal">
+            {active.count}
+          </span>
+        )}
+        <ChevronDown
+          size={14}
+          className={`ml-1 text-slate-400 transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {/* Accordion panel */}
+      <div
+        role="listbox"
+        aria-label="Holat tanlash"
+        className={`
+          absolute left-0 z-30 mt-2 w-52 rounded-xl border border-slate-200
+          bg-white shadow-lg overflow-hidden
+          transition-all duration-200 origin-top
+          ${open ? 'opacity-100 scale-y-100 pointer-events-auto' : 'opacity-0 scale-y-95 pointer-events-none'}
+        `}
+        style={{ transformOrigin: 'top' }}
+      >
+        <div className="py-1.5">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              role="option"
+              type="button"
+              aria-selected={value === opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false); }}
+              className={`
+                w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left
+                transition-colors duration-100
+                ${value === opt.value ? opt.color : 'hover:bg-slate-50 text-slate-700'}
+              `}
+            >
+              <span className={`w-2 h-2 rounded-full shrink-0 ${opt.dot}`} />
+              <span className="flex-1 font-medium">{opt.label}</span>
+              {opt.count !== undefined && (
+                <span className="rounded-full bg-white/70 border border-current/10 px-2 py-0.5 text-xs opacity-75">
+                  {opt.count}
+                </span>
+              )}
+              {value === opt.value && (
+                <Check size={13} className="shrink-0 text-emerald-600" />
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PlatformAudit() {
+
   const [page, setPage] = useState(1);
   const { data, error, reload } = useData<Page<AuditItem>>(`/platform-admin/audit?page=${page}`);
   return (
@@ -137,7 +262,6 @@ export function PlatformAdmin() {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Company | null>(null);
-  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
   const [cleanupRevision, setCleanupRevision] = useState(0);
@@ -145,8 +269,7 @@ export function PlatformAdmin() {
   const companies = useData<Page<Company>>(
     `/platform-admin/companies?page=${page}&status=${status}&search=${encodeURIComponent(search)}`,
   );
-  async function changeStatus(event: FormEvent) {
-    event.preventDefault();
+  async function changeStatus() {
     if (!selected) return;
     setBusy(true);
     setActionError('');
@@ -156,7 +279,6 @@ export function PlatformAdmin() {
         {
           isActive: !selected.isActive,
           expectedIsActive: selected.isActive,
-          reason: reason.trim(),
         },
         'PUT',
       );
@@ -260,19 +382,12 @@ export function PlatformAdmin() {
               onChange={(e) => setDraftSearch(e.target.value)}
               className="flex-1 min-w-0 w-full sm:min-w-60"
             />
-            <select
-              aria-label="Kompaniya holati"
+            {/* Accordion holat filtri */}
+            <StatusFilter
               value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-            >
-              <option value="all">Barcha holatlar</option>
-              <option value="active">Faol</option>
-              <option value="blocked">Bloklangan</option>
-            </select>
+              onChange={(val) => { setStatus(val); setPage(1); }}
+              summary={summary.data}
+            />
             <Button type="submit" variant="outline">
               <Search size={15} className="mr-2" /> Qidirish
             </Button>
@@ -326,7 +441,6 @@ export function PlatformAdmin() {
                     size="sm"
                     onClick={() => {
                       setSelected(company);
-                      setReason('');
                       setActionError('');
                     }}
                   >
@@ -370,27 +484,12 @@ export function PlatformAdmin() {
             </DialogTitle>
             <DialogDescription>{selected?.name}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={changeStatus} className="space-y-4">
+          <div className="space-y-4">
             <Alert message={actionError} />
             <p className="text-sm text-slate-600">
               {selected?.isActive
                 ? 'Xodimlarning kirishi va ochiq sessiyalari cheklanadi. Yangi ommaviy arizalar va Telegram CV qabul qilish to‘xtatiladi. Ma’lumotlar saqlanadi.'
                 : 'Kompaniya xodimlari tizimdan yana foydalana oladi.'}
-            </p>
-            <label className="block text-sm font-medium">
-              Sabab
-              <Textarea
-                required
-                minLength={5}
-                maxLength={300}
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                className="mt-2"
-                placeholder="O‘zgarish sababini yozing…"
-              />
-            </label>
-            <p className="text-xs text-slate-500">
-              Bu amal ismingiz va sabab bilan platforma tarixiga yoziladi.
             </p>
             <DialogFooter>
               <Button
@@ -401,11 +500,11 @@ export function PlatformAdmin() {
               >
                 Bekor qilish
               </Button>
-              <Button type="submit" disabled={busy || reason.trim().length < 5}>
-                {busy ? 'Saqlanmoqda…' : 'Tasdiqlash'}
+              <Button type="button" disabled={busy} variant={selected?.isActive ? 'destructive' : 'default'} onClick={changeStatus}>
+                {busy ? 'Saqlanmoqda…' : selected?.isActive ? 'Bloklash' : 'Faollashtirish'}
               </Button>
             </DialogFooter>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

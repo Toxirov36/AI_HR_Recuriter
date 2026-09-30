@@ -53,7 +53,6 @@ export class Security implements OnModuleDestroy {
   createBullMqConnection(): Redis {
     const conn = new Redis(this.config.REDIS_URL, {
       maxRetriesPerRequest: null,
-      enableOfflineQueue: false,
     });
     conn.on('error', () => {
       /* BullMQ connection xatolari silent — worker o'zi qayta urinadi. */

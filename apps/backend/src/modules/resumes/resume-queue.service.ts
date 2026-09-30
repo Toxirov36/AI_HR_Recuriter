@@ -36,7 +36,7 @@ export class ResumeQueueService implements OnModuleDestroy {
     @Inject(Security) private security: Security,
   ) {
     // test muhitida BullMQ connection ochilmaydi — in-memory fallback ishlaydi.
-    if (this.security.config.NODE_ENV !== 'test') {
+    if (this.security?.config?.NODE_ENV !== 'test') {
       try {
         // Security orqali BullMQ connection yaratiladi — URL manbai yagona.
         this.connection = this.security.createBullMqConnection();
@@ -99,7 +99,7 @@ export class ResumeQueueService implements OnModuleDestroy {
   }
 
   registerWorker(processor: (data: ResumeParseJobData) => Promise<void>) {
-    if (this.security.config.NODE_ENV === 'test') return;
+    if (this.security?.config?.NODE_ENV === 'test') return;
     if (!this.worker) {
       try {
         // Worker ham Security factory orqali — URL manbai yagona.
@@ -113,7 +113,7 @@ export class ResumeQueueService implements OnModuleDestroy {
           { connection: this.workerConnection },
         );
         this.worker.on('error', (err) => {
-          this.logger.error(`BullMQ worker error: ${err.message}`);
+          this.logger.warn(`BullMQ worker error: ${err.message}`);
         });
       } catch (err) {
         this.logger.warn(`Failed to start BullMQ worker: ${(err as Error).message}`);

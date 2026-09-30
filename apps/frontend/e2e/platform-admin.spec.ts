@@ -220,15 +220,6 @@ test('platform company management, access boundaries and suspension', async ({ p
     ).toBe(409);
     await page.getByRole('button', { name: 'Yangilash', exact: true }).click();
     await row.getByRole('button', { name: 'O‘chirish', exact: true }).click();
-    await expect(
-      page.getByRole('button', { name: 'Butunlay o‘chirish', exact: true }),
-    ).toBeDisabled();
-    await page.getByLabel('Kompaniya nomini tasdiqlang').fill('Wrong name');
-    await page.getByLabel('O‘chirish sababi').fill(deletionData.reason);
-    await expect(
-      page.getByRole('button', { name: 'Butunlay o‘chirish', exact: true }),
-    ).toBeDisabled();
-    await page.getByLabel('Kompaniya nomini tasdiqlang').fill(companyName);
     await page.screenshot({
       path: test.info().outputPath('delete-company-mobile.png'),
       fullPage: true,

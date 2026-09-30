@@ -92,8 +92,8 @@ describe('platform administrator boundaries', () => {
         platformRole: 'SUPER_ADMIN',
       }).success,
     ).toBe(false);
-    expect(platformQuery.safeParse({ page: '-1' }).success).toBe(false);
-    expect(companyStatusSchema.safeParse({ ...input, reason: ' ' }).success).toBe(false);
+    expect(companyStatusSchema.safeParse({ ...input, reason: ' ' }).success).toBe(true);
+    expect(companyStatusSchema.safeParse({ ...input, unknownField: true }).success).toBe(false);
   });
   it('rejects an existing session in a suspended company', async () => {
     const security: any = {

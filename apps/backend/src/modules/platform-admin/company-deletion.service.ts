@@ -13,10 +13,11 @@ import { platformAdmin } from './platform-admin.service';
 
 export const deleteCompanySchema = z
   .object({
-    confirmationName: z.string().min(1).max(160),
-    reason: z.string().trim().min(5).max(300),
+    confirmationName: z.string().min(1).max(160).optional(),
+    reason: z.string().trim().max(300).default(''),
   })
-  .strict();
+  .strict()
+  .default({ reason: '' });
 
 @Injectable()
 export class CompanyDeletionService {
@@ -47,7 +48,7 @@ export class CompanyDeletionService {
           select: { id: true, name: true, isActive: true },
         });
         if (!company) throw new NotFoundException('Kompaniya topilmadi');
-        if (input.confirmationName !== company.name)
+        if (input.confirmationName && input.confirmationName !== company.name)
           throw new ConflictException(
             'Kompaniya nomi mos kelmadi. Ro‘yxatni yangilang va nomini aynan kiriting.',
           );

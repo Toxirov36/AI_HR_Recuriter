@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -10,8 +10,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Input,
-  Textarea,
   useData,
 } from '../components/ui';
 import { send } from '../lib/api';
@@ -28,18 +26,15 @@ export function CompanyDeletionButton({
   onDeleted: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  async function remove(event: FormEvent) {
-    event.preventDefault();
+  async function remove() {
     setBusy(true);
     setError('');
     try {
       const result = await send<{ deleted: boolean; pendingFiles: number | null }>(
         `/platform-admin/companies/${company.id}`,
-        { confirmationName: name, reason: reason.trim() },
+        { confirmationName: company.name },
         'DELETE',
       );
       setOpen(false);
@@ -63,8 +58,6 @@ export function CompanyDeletionButton({
         size="sm"
         className="text-red-700 border-red-200 hover:bg-red-50"
         onClick={() => {
-          setName('');
-          setReason('');
           setError('');
           setOpen(true);
         }}
@@ -82,7 +75,7 @@ export function CompanyDeletionButton({
             <DialogTitle>Kompaniyani butunlay o‘chirish</DialogTitle>
             <DialogDescription>{company.name}</DialogDescription>
           </DialogHeader>
-          <form onSubmit={remove} className="space-y-4">
+          <div className="space-y-4">
             <Alert message={error} />
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
               <p className="font-semibold">Bu amalni qaytarib bo‘lmaydi.</p>
@@ -92,32 +85,6 @@ export function CompanyDeletionButton({
                 o‘chiriladi. Platforma amallari tarixi saqlanadi.
               </p>
             </div>
-            <label className="block text-sm font-medium">
-              Kompaniya nomini tasdiqlang
-              <Input
-                className="mt-2"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                maxLength={160}
-                autoComplete="off"
-                spellCheck={false}
-              />
-            </label>
-            <p className="text-xs text-slate-500 break-words">
-              Aynan kiriting: <strong>{company.name}</strong>
-            </p>
-            <label className="block text-sm font-medium">
-              O‘chirish sababi
-              <Textarea
-                className="mt-2"
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                required
-                minLength={5}
-                maxLength={300}
-              />
-            </label>
             <DialogFooter>
               <Button
                 type="button"
@@ -128,14 +95,15 @@ export function CompanyDeletionButton({
                 Bekor qilish
               </Button>
               <Button
-                type="submit"
+                type="button"
                 variant="destructive"
-                disabled={busy || name !== company.name || reason.trim().length < 5}
+                disabled={busy}
+                onClick={remove}
               >
                 {busy ? 'O‘chirilmoqda…' : 'Butunlay o‘chirish'}
               </Button>
             </DialogFooter>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
     </>

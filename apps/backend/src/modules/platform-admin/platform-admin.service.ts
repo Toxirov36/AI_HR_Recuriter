@@ -27,7 +27,7 @@ export const companyStatusSchema = z
   .object({
     isActive: z.boolean(),
     expectedIsActive: z.boolean(),
-    reason: z.string().trim().min(5).max(300),
+    reason: z.string().trim().max(300).default(''),
   })
   .strict();
 const pageSize = 20;

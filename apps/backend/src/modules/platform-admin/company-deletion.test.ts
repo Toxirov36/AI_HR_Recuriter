@@ -137,8 +137,9 @@ describe('company deletion', () => {
     expect(storage.delete).not.toHaveBeenCalled();
     expect(tx.company.delete).not.toHaveBeenCalled();
   });
-  it('requires a reason and rejects injected fields', () => {
-    expect(deleteCompanySchema.safeParse({ ...input, reason: '' }).success).toBe(false);
+  it('allows optional reason/confirmation and rejects injected fields', () => {
+    expect(deleteCompanySchema.safeParse({ ...input, reason: '' }).success).toBe(true);
+    expect(deleteCompanySchema.safeParse({}).success).toBe(true);
     expect(deleteCompanySchema.safeParse({ ...input, companyId: 99 }).success).toBe(false);
   });
 });
