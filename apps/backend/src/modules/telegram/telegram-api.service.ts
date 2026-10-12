@@ -2,11 +2,12 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { getConfig } from '../../config/app.config';
 
 type TelegramResponse<T> = { ok: boolean; result?: T; description?: string };
+type BotIdentity = { id: number; username: string; first_name: string };
 
 @Injectable()
 export class TelegramApiService {
   private readonly config = getConfig();
-  private cachedBotUsername: string | null = null;
+  private cachedBot: BotIdentity | null = null;
 
   private get baseUrl() {
     if (!this.config.TELEGRAM_BOT_TOKEN)
@@ -14,12 +15,10 @@ export class TelegramApiService {
     return `https://api.telegram.org/bot${this.config.TELEGRAM_BOT_TOKEN}`;
   }
 
-  async getMe(): Promise<{ id: number; username: string; first_name: string }> {
-    if (this.cachedBotUsername) {
-      return { id: 0, username: this.cachedBotUsername, first_name: 'Recruiter Bot' };
-    }
+  async getMe(): Promise<BotIdentity> {
+    if (this.cachedBot) return this.cachedBot;
     if (!this.config.TELEGRAM_BOT_TOKEN) {
-      return { id: 0, username: 'recruiter_bot', first_name: 'Recruiter Bot' };
+      throw new ServiceUnavailableException('Telegram bot is not configured');
     }
     try {
       const response = await fetch(`${this.baseUrl}/getMe`, {
@@ -30,13 +29,13 @@ export class TelegramApiService {
         username: string;
         first_name: string;
       }>;
-      if (data.ok && data.result?.username) {
-        this.cachedBotUsername = data.result.username;
+      if (response.ok && data.ok && data.result?.username) {
+        this.cachedBot = data.result;
         return data.result;
       }
-      return { id: 0, username: 'recruiter_bot', first_name: 'Recruiter Bot' };
+      throw new ServiceUnavailableException('Telegram bot identity could not be verified');
     } catch {
-      return { id: 0, username: 'recruiter_bot', first_name: 'Recruiter Bot' };
+      throw new ServiceUnavailableException('Telegram bot identity could not be verified');
     }
   }
 

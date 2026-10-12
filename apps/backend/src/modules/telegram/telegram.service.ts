@@ -37,6 +37,7 @@ export class TelegramService {
   }
 
   async createConnectLink(user: Identity) {
+    const bot = await this.telegramApi.getMe();
     const token = `connect_${randomBytes(8).toString('hex')}`;
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes validity
 
@@ -49,7 +50,6 @@ export class TelegramService {
       },
     });
 
-    const bot = await this.telegramApi.getMe();
     const connectUrl = `https://t.me/${bot.username}?start=${token}`;
 
     return {

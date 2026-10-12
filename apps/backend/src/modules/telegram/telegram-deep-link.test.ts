@@ -7,6 +7,18 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
     process.env.TELEGRAM_WEBHOOK_SECRET = 'test_webhook_secret_123';
   });
 
+  it('does not create a connect request when bot identity verification fails', async () => {
+    const create = vi.fn();
+    const service = new TelegramService(
+      { telegramConnectRequest: { create } } as never,
+      {} as never, {} as never,
+      { getMe: vi.fn().mockRejectedValue(new Error('Bot unavailable')) } as never,
+      {} as never,
+    );
+    await expect(service.createConnectLink({ id: 10, companyId: 2 } as never)).rejects.toThrow('Bot unavailable');
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it('generates a one-time connect token and deep link URL', async () => {
     const create = vi.fn().mockResolvedValue({ id: 1 });
     const db = {
