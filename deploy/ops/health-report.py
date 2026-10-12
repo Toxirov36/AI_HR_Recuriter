@@ -1,6 +1,6 @@
-import datetime, json, pathlib, shutil, subprocess
+import datetime, json, os, pathlib, shutil, subprocess
 
-base = pathlib.Path('/home/dilshodbektohirov40/hr-recruiter')
+base = pathlib.Path(os.environ.get('HR_BASE', str(pathlib.Path.home() / 'hr-recruiter')))
 issues = []
 total, used, free = shutil.disk_usage('/')
 disk_percent = round(used * 100 / total, 1)

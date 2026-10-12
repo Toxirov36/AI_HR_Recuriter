@@ -45,21 +45,30 @@ if (( available < 1048576 )); then
   echo 'Less than 1 GiB free. Expand disk or review Docker build cache before deploying.'
   exit 1
 fi
-previous_images=$(docker inspect --format '{{.Config.Image}}' ai-hr-recruiter-backend-1 ai-hr-recruiter-frontend-1)
+previous_images=''
+for service in backend frontend; do
+  container=$("${compose[@]}" ps -aq "$service")
+  if [[ -n "$container" ]]; then
+    previous_images+="$(docker inspect --format '{{.Config.Image}}' "$container")"$'\n'
+  fi
+done
 "${compose[@]}" pull backend frontend < /dev/null
 "${compose[@]}" run --rm --no-deps --entrypoint node backend -e \
   "require('fs').accessSync('/app/package.json', 4); require('fs').accessSync('/app/apps/backend/dist/main.js', 4)" < /dev/null
 
 # Back up before startup applies migrations. A schema rollback is never automatic.
+"${compose[@]}" up -d --wait --wait-timeout 90 postgres redis
 backup="$base/backups/pre-$revision-$(date -u +%Y%m%dT%H%M%SZ).dump"
 "${compose[@]}" exec -T postgres pg_dump -U recruiter -d recruiter -Fc < /dev/null > "$backup"
 test -s "$backup"
 "${compose[@]}" up -d --no-build
+frontend_address=$("${compose[@]}" port frontend 80)
+backend_address=$("${compose[@]}" port backend 3000)
 
 healthy=false
 for attempt in {1..24}; do
-  if curl --fail --silent --max-time 5 http://127.0.0.1:3000/api/health >/dev/null &&
-     curl --fail --silent --max-time 5 http://127.0.0.1:8080/ >/dev/null; then
+  if curl --fail --silent --max-time 5 "http://$backend_address/api/health" >/dev/null &&
+     curl --fail --silent --max-time 5 "http://$frontend_address/" >/dev/null; then
     healthy=true
     break
   fi

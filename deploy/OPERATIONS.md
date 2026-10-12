@@ -65,3 +65,8 @@ Scripts/dependencies are installed separately in `~/hr-recruiter/ops` so backups
 can run when the backend is stopped. To update, copy `deploy/ops/*` excluding
 node_modules, then run `npm ci --omit=dev` there and run its tests. Systemd units
 live in `/etc/systemd/system`; use daemon-reload after changing them.
+
+Production was moved to `37.60.247.120`, account `hrdeploy`, root directory
+`/home/hrdeploy/hr-recruiter`. The host Node binary is `/usr/local/bin/node`.
+Existing applications share the server, so HR has separate loopback ports 3300,
+8081, 6433 and 6381. The domain remains `hr-recruiter.ddns.net`.

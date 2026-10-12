@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync, renameSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { createHash } from 'node:crypto';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { S3Client, PutObjectCommand, GetObjectCommand, ListObjectsV2Command, DeleteObjectCommand } from '@aws-sdk/client-s3';
@@ -8,7 +9,7 @@ import dotenv from 'dotenv';
 import { encrypt, decrypt } from './crypto.mjs';
 
 process.umask(0o077);
-const base = process.env.HR_BASE || '/home/dilshodbektohirov40/hr-recruiter';
+const base = process.env.HR_BASE || join(homedir(), 'hr-recruiter');
 dotenv.config({ path: join(base, '.env'), quiet: true });
 const env = process.env;
 const dir = join(base, 'backups', 'daily');

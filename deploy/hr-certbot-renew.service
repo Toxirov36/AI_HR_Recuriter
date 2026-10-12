@@ -5,4 +5,4 @@ After=network-online.target nginx.service
 
 [Service]
 Type=oneshot
-ExecStart=/opt/certbot/bin/certbot renew --quiet --deploy-hook "/usr/sbin/nginx -t && /usr/bin/systemctl reload nginx"
+ExecStart=/usr/bin/certbot renew --cert-name hr-recruiter.ddns.net --quiet --deploy-hook "/www/server/nginx/sbin/nginx -t -c /www/server/nginx/conf/nginx.conf && /www/server/nginx/sbin/nginx -s reload -c /www/server/nginx/conf/nginx.conf"

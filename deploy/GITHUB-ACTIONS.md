@@ -6,17 +6,17 @@ Pull requestlar serverga chiqarilmaydi. Bir vaqtda faqat bitta deploy ishlaydi.
 
 ## Bir martalik sozlash
 
-1. Google Cloud → hr-recuriter → Edit → SSH keys → Add item: mahalliy
-   `.local/deploy/github_actions_ed25519.pub` faylining to'liq mazmunini kiriting.
-   Eski kalitlarni o'chirmang. Save bosing.
+1. Production server: `37.60.247.120`, deploy foydalanuvchisi `hrdeploy`.
+   `.local/deploy/github_actions_ed25519.pub` kaliti uning authorized_keys faylida.
+   Foydalanuvchi Docker guruhiga qo'shilgan.
 2. GitHub → Settings → Secrets and variables → Actions → New repository secret:
 
 | Secret | Qiymat |
 |---|---|
-| `DEPLOY_HOST` | `34.176.204.70` |
-| `DEPLOY_USER` | `dilshodbektohirov40` |
+| `DEPLOY_HOST` | `37.60.247.120` |
+| `DEPLOY_USER` | `hrdeploy` |
 | `DEPLOY_SSH_KEY` | `.local/deploy/github_actions_ed25519` faylining to'liq mazmuni |
-| `DEPLOY_KNOWN_HOSTS` | `.local/deploy/github_known_hosts` faylining to'liq mazmuni |
+| `DEPLOY_KNOWN_HOSTS` | `.local/deploy/new_known_hosts` faylining to'liq mazmuni |
 
 Private keyni faqat GitHub Secret maydoniga kiriting. Chatga yubormang va Git'ga
 qo'shmang. `.local` allaqachon `.gitignore` orqali chiqarilgan.
@@ -60,6 +60,13 @@ Joriy va avvalgi muvaffaqiyatli versiya saqlanadi; avvalgi image nomlari
 GHCR'dagi versiyalar saqlanadi; bu tozalash faqat server diskiga tegishli.
 IP o'zgarsa, DEPLOY_HOST va tekshirilgan known_hosts
 qiymatini ham yangilang.
+
+Yangi serverda boshqa loyihalar bor. HR servislarining host portlari `.env`da:
+BACKEND_PORT=3300, FRONTEND_PORT=8081, POSTGRES_PORT=6433, REDIS_PORT=6381.
+Hammasi localhostga bog'langan. Mavjud loyihalarning portlarini o'zgartirmang.
+Nginx aaPanel orqali ishlaydi: `/www/server/nginx/sbin/nginx`, konfiguratsiya
+`/www/server/nginx/conf/nginx.conf`. HR vhost fayli
+`/www/server/panel/vhost/nginx/hr-recruiter.ddns.net.conf`.
 
 ## Log chegaralari
 

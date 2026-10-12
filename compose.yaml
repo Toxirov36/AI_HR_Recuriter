@@ -19,7 +19,7 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
     command: ['sh', '-c', 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
-    ports: ['127.0.0.1:6379:6379']
+    ports: ['127.0.0.1:${REDIS_PORT:-6379}:6379']
     volumes: ['redis_data:/data']
     healthcheck:
       test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep PONG']
@@ -38,7 +38,7 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-recruiter}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-recruiter}?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-    ports: ['127.0.0.1:3000:3000']
+    ports: ['127.0.0.1:${BACKEND_PORT:-3000}:3000']
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -48,7 +48,7 @@ services:
     build:
       context: .
       dockerfile: apps/frontend/Dockerfile
-    ports: ['127.0.0.1:8080:80']
+    ports: ['127.0.0.1:${FRONTEND_PORT:-8080}:80']
     depends_on: [backend]
     restart: unless-stopped
 volumes:

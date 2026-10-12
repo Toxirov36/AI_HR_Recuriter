@@ -6,9 +6,9 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=dilshodbektohirov40
-WorkingDirectory=/home/dilshodbektohirov40/hr-recruiter/ops
-ExecStart=/usr/bin/flock -w 1200 /home/dilshodbektohirov40/hr-recruiter/.deploy.lock /usr/bin/node backup.mjs
+User=hrdeploy
+WorkingDirectory=/home/hrdeploy/hr-recruiter/ops
+ExecStart=/usr/bin/flock -w 1200 /home/hrdeploy/hr-recruiter/.deploy.lock /usr/local/bin/node backup.mjs
 TimeoutStartSec=35min
 UMask=0077
 Nice=10
