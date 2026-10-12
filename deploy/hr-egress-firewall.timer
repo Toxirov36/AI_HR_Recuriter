@@ -1,0 +1,9 @@
+[Unit]
+Description=Maintain HR network permissions after reboot or panel firewall reset
+
+[Timer]
+OnBootSec=15s
+OnUnitActiveSec=1min
+
+[Install]
+WantedBy=timers.target

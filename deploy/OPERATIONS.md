@@ -70,3 +70,21 @@ Production was moved to `37.60.247.120`, account `hrdeploy`, root directory
 `/home/hrdeploy/hr-recruiter`. The host Node binary is `/usr/local/bin/node`.
 Existing applications share the server, so HR has separate loopback ports 3300,
 8081, 6433 and 6381. The domain remains `hr-recruiter.ddns.net`.
+
+## Hosting firewall and container internet access
+
+The aaPanel server has `inet profile_hosting` with a forward policy of drop.
+Docker's own forwarding rules do not override that policy. HR therefore needs
+`hr-egress-firewall.service` and its timer. Install `hr-egress-firewall.sh` as
+`/usr/local/sbin/hr-egress-firewall`, install the service/timer in
+`/etc/systemd/system`, then daemon-reload, enable/start the timer and start the
+service. The script discovers the HR bridge/subnet and default WAN interface.
+It manages only `hr_recruiter_egress` and its jump from the panel's forward chain.
+It allows internal HR traffic, outbound DNS (TCP/UDP 53), HTTPS (443), SMTP
+(465/587), and established replies. The timer restores it every minute after
+reboots, Docker network recreation or panel firewall resets.
+
+Verify Telegram from inside `ai-hr-recruiter-backend-1`, not just on the host.
+A working host `getMe` does not prove Docker DNS/HTTPS access. Telegram identity
+is verified using the protected TELEGRAM_BOT_TOKEN in production `.env`;
+the bot must resolve to `my_Ai_hr_recruiter_bot` for this installation.
