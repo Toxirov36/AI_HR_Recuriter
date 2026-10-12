@@ -477,60 +477,6 @@ export function VacancyForm({
   );
 }
 
-const SAMPLE_VACANCIES: Vacancy[] = [
-  {
-    id: 101,
-    title: 'Senior Backend Engineer',
-    description:
-      'We are looking for a senior backend engineer to own our billing and integrations services. You will design APIs, mentor mid-level engineers and...',
-    status: 'ACTIVE',
-    createdAt: '2026-08-20T10:00:00.000Z',
-    requirements: [
-      { id: 1, name: 'Billing and integrations services', required: true },
-      { id: 2, name: 'API design & mentoring', required: true },
-    ],
-    _count: { applications: 3 },
-  },
-  {
-    id: 102,
-    title: 'Middle NestJS Developer',
-    description:
-      'Join the platform team to build and maintain REST services, work on API design, testing and integrations with interna...',
-    status: 'ACTIVE',
-    createdAt: '2026-09-08T10:00:00.000Z',
-    requirements: [
-      { id: 3, name: 'REST service architecture', required: true },
-      { id: 4, name: 'API design and testing', required: true },
-    ],
-    _count: { applications: 1 },
-  },
-  {
-    id: 103,
-    title: 'Product Designer',
-    description:
-      'Own end-to-end product design for our HR platform: research, flows, interface design and design-system upkeep.',
-    status: 'ACTIVE',
-    createdAt: '2026-09-01T10:00:00.000Z',
-    requirements: [
-      { id: 5, name: 'Interface design and design system upkeep', required: true },
-      { id: 6, name: 'End-to-end research and user flows', required: true },
-    ],
-    _count: { applications: 1 },
-  },
-  {
-    id: 104,
-    title: 'Technical Recruiter',
-    description: 'Help us grow the engineering team with structured, humane hiring processes.',
-    status: 'DRAFT',
-    createdAt: '2026-09-13T10:00:00.000Z',
-    requirements: [
-      { id: 7, name: 'Structured hiring processes', required: true },
-      { id: 8, name: 'Engineering talent screening', required: true },
-    ],
-    _count: { applications: 1 },
-  },
-];
-
 interface VacancyMeta {
   department: string;
   location: string;
@@ -615,7 +561,7 @@ export function Vacancies() {
     `/vacancies?page=${page}&search=${encodeURIComponent(search)}`,
   );
 
-  const rawList = data?.items && data.items.length > 0 ? data.items : SAMPLE_VACANCIES;
+  const rawList = data?.items ?? [];
 
   const filteredItems = rawList.filter((vacancy) => {
     const matchesStatus = statusFilter === 'ALL' || vacancy.status === statusFilter;
