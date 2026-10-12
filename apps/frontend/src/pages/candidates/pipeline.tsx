@@ -6,7 +6,9 @@ import {
   ArrowRight,
   CalendarDays,
   Clock3,
+  Download,
   FileCheck2,
+  FileText,
   GripVertical,
   LayoutGrid,
   List as ListIcon,
@@ -14,6 +16,7 @@ import {
   MoreHorizontal,
   Phone,
   Plus,
+  Printer,
   Search,
   Sparkles,
   ShieldCheck,
@@ -27,12 +30,13 @@ import {
 import { toast } from 'sonner';
 import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
-import { InterviewReviewEditor } from '../../features/interview-generator';
 import {
   getEvidenceSummary,
   sortApplications,
   type PipelineSortOption,
 } from '../../lib/match-score';
+import { exportApplicationsToCsv } from '../../lib/export';
+import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import {
   AiConsent,
   Alert,
@@ -45,6 +49,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Badge,
+  Button,
   Combobox,
   ComboboxCollection,
   ComboboxContent,
@@ -286,10 +291,7 @@ function nextActionFor(application: Application) {
     case 'REVIEWING':
       return 'Complete HR review';
     case 'INTERVIEW':
-      return application.interviewReview?.scorecard?.finalDecision &&
-        application.interviewReview.scorecard.finalDecision !== 'UNDECIDED'
-        ? 'Prepare decision'
-        : 'Complete scorecard';
+      return 'Review interview outcome';
     case 'OFFER':
       return 'Follow up on offer';
     case 'HIRED':
@@ -316,6 +318,7 @@ export function Pipeline() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
+  const [dossierApp, setDossierApp] = useState<Application | null>(null);
   const sortBy: PipelineSortOption = 'created_desc';
   const [selectedVacancy, setSelectedVacancy] = useState('all');
   const [selectedStage, setSelectedStage] = useState<'all' | Stage>('all');
@@ -563,9 +566,23 @@ export function Pipeline() {
           <span>{nextActionFor(application)}</span>
         </div>
 
-        <Link className="pipeline-card-open" to={`/applications/${application.id}`}>
-          Open details <ArrowRight size={15} />
-        </Link>
+        <div className="flex items-center gap-1.5 mt-2">
+          <Link className="pipeline-card-open flex-1" to={`/applications/${application.id}`}>
+            Open details <ArrowRight size={15} />
+          </Link>
+          <button
+            type="button"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] hover:bg-[#1a5d4c]/10 transition-colors border border-transparent hover:border-[#1a5d4c]/20"
+            title="Nomzod A4 dosyesini ko‘rish va chop etish"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDossierApp(application);
+            }}
+          >
+            <Printer size={15} />
+          </button>
+        </div>
       </article>
     );
   }
@@ -680,6 +697,23 @@ export function Pipeline() {
             <ListIcon size={15} /> List
           </button>
         </div>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            if (!filteredItems.length) {
+              toast.error('Eksport qilish uchun arizalar mavjud emas');
+              return;
+            }
+            exportApplicationsToCsv(filteredItems);
+            toast.success(`${filteredItems.length} ta ariza CSV/Excel faylga yuklandi`);
+          }}
+          className="h-10 px-3.5 rounded-xl border border-[#e2e8f0] bg-white text-sm font-semibold text-[#0f172a] hover:bg-slate-50 hover:border-[#cbd5e1] flex items-center gap-1.5 shadow-none shrink-0"
+          title="Arizalarni Excel/CSV fayl sifatida yuklab olish"
+        >
+          <Download size={15} /> Eksport (CSV)
+        </Button>
       </section>
 
       <Alert message={error} />
@@ -800,13 +834,23 @@ export function Pipeline() {
                   <span data-label="Owner">{applicationOwner(application)}</span>
                   <span data-label="Time">{daysInCurrentStage(application)}d</span>
                   <span data-label="Next action">{nextActionFor(application)}</span>
-                  <Link
-                    className="pipeline-list-open"
-                    to={`/applications/${application.id}`}
-                    aria-label={`Open ${application.candidate.fullName}`}
-                  >
-                    <ArrowRight size={16} />
-                  </Link>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] hover:bg-[#1a5d4c]/10 transition-colors"
+                      title="Nomzod A4 dosyesini ko‘rish va chop etish"
+                      onClick={() => setDossierApp(application)}
+                    >
+                      <Printer size={15} />
+                    </button>
+                    <Link
+                      className="pipeline-list-open"
+                      to={`/applications/${application.id}`}
+                      aria-label={`Open ${application.candidate.fullName}`}
+                    >
+                      <ArrowRight size={16} />
+                    </Link>
+                  </div>
                 </article>
               ))}
             </section>
@@ -831,6 +875,12 @@ export function Pipeline() {
           }}
         />
       )}
+
+      <CandidateDossierModal
+        open={Boolean(dossierApp)}
+        onClose={() => setDossierApp(null)}
+        application={dossierApp}
+      />
 
       <AlertDialog
         open={Boolean(pendingMove)}
@@ -873,16 +923,16 @@ export function ApplicationDetail() {
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState('');
   const [actionError, setError] = useState('');
-  const [reviewDirty, setReviewDirty] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [dossierOpen, setDossierOpen] = useState(false);
   const aiBlocked = Boolean(a?.candidate.publicSubmittedAt && !a?.candidate.aiConsentAt);
 
-  async function action(kind: 'analyze' | 'questions') {
-    setBusy(kind);
+  async function analyzeCv() {
+    setBusy('analyze');
     setError('');
     try {
-      await send(`/applications/${id}/${kind}`, { consent });
-      toast.success(kind === 'analyze' ? 'CV evidence matched' : 'Interview questions generated');
+      await send(`/applications/${id}/analyze`, { consent });
+      toast.success('CV evidence matched');
       reload();
     } catch (e) {
       setError((e as Error).message);
@@ -937,10 +987,18 @@ export function ApplicationDetail() {
               text={a.vacancy.title}
             >
               <div className="row wrap stage-actions">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setDossierOpen(true)}
+                  className="flex items-center gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-50 font-medium"
+                >
+                  <Printer size={16} /> Dossier (A4 PDF)
+                </Button>
                 {nextStage[a.status] && (
                   <button
                     className="primary"
-                    disabled={Boolean(busy) || reviewDirty}
+                    disabled={Boolean(busy)}
                     onClick={() => void changeStatus(nextStage[a.status]!)}
                   >
                     {busy === 'status' ? 'Moving…' : 'Move to ' + label(nextStage[a.status]!)}{' '}
@@ -953,7 +1011,7 @@ export function ApplicationDetail() {
                       type="button"
                       className="vacancies-filter-trigger stage-filter-trigger"
                       aria-label="Pipeline stage"
-                      disabled={Boolean(busy) || reviewDirty}
+                      disabled={Boolean(busy)}
                     >
                       <span>{label(a.status)}</span>
                       <ChevronDown size={15} className="filter-chevron" />
@@ -978,7 +1036,7 @@ export function ApplicationDetail() {
                 <button
                   className="icon-button danger"
                   aria-label="Delete application"
-                  disabled={Boolean(busy) || reviewDirty}
+                  disabled={Boolean(busy)}
                   onClick={() => setDeleteConfirmOpen(true)}
                 >
                   <Trash2 size={18} />
@@ -995,11 +1053,6 @@ export function ApplicationDetail() {
                 </>
               ) : (
                 <span>Final stage</span>
-              )}
-              {reviewDirty && (
-                <span className="muted">
-                  Save interview notes to change stage or regenerate AI results.
-                </span>
               )}
             </div>
             <div className="review-notice">
@@ -1034,10 +1087,9 @@ export function ApplicationDetail() {
                       aiBlocked ||
                       !user?.aiConfigured ||
                       !a.candidate.resumeText ||
-                      Boolean(busy) ||
-                      reviewDirty
+                      Boolean(busy)
                     }
-                    onClick={() => void action('analyze')}
+                    onClick={() => void analyzeCv()}
                   >
                     <Sparkles size={15} />
                     {busy === 'analyze'
@@ -1117,40 +1169,6 @@ export function ApplicationDetail() {
                 </span>
               </div>
             </section>
-            <section className="panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>Interview guide & Scorecard</h2>
-                  <p>Suhbat savollari bo‘yicha javoblar va strukturaviy baholash scorecard.</p>
-                </div>
-                <button
-                  className="secondary"
-                  disabled={
-                    !consent ||
-                    aiBlocked ||
-                    !user?.aiConfigured ||
-                    !a.candidate.resumeText ||
-                    Boolean(busy) ||
-                    reviewDirty
-                  }
-                  onClick={() => void action('questions')}
-                >
-                  <Sparkles size={15} />
-                  {busy === 'questions'
-                    ? 'Savollar tayyorlanmoqda…'
-                    : a.interviewQuestions
-                      ? 'Savollarni qayta yaratish'
-                      : 'Suhbat savollarini yaratish'}
-                </button>
-              </div>
-              <InterviewReviewEditor
-                key={a.id + ':' + a.reviewRevision + ':' + JSON.stringify(a.interviewQuestions)}
-                application={a}
-                disabled={Boolean(busy)}
-                onDirty={setReviewDirty}
-                onSaving={(saving) => setBusy(saving ? 'review' : '')}
-              />
-            </section>
             <section className="panel padded stage-history">
               <h2>Stage history</h2>
               <p className="muted">Who moved this application, and when.</p>
@@ -1200,6 +1218,11 @@ export function ApplicationDetail() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            <CandidateDossierModal
+              open={dossierOpen}
+              onClose={() => setDossierOpen(false)}
+              application={a}
+            />
           </>
         )
       )}

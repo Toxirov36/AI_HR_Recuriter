@@ -157,7 +157,7 @@ For production, use `docker compose --profile app up --build -d` without the dev
 - AI requests are explicit and synchronous with a configurable timeout (default 60 seconds), per-user limits, and per-record Redis locks. The SDK does not retry automatically. No background job queue is included.
 - Gemini structured JSON outputs are validated with Zod before saving. [Official structured output documentation](https://ai.google.dev/gemini-api/docs/structured-output).
 - Evidence/parsed profiles are advisory and require human verification. Prompts avoid sensitive attributes and hiring recommendations. The application never automatically advances or rejects an application.
-- No billing, password-reset email service, email verification, SSO/MFA, automated invitation delivery, calendar integration, or audit-event export is included. An administrator’s email is not verified at initial workspace creation.
+- No billing, password-reset email service, email verification, automated invitation delivery, calendar integration, or audit-event export is included. An administrator’s email is not verified at initial workspace creation.
 - Redis is required for sessions/rate limiting. Failures prevent authenticated operations rather than silently disabling security. Logout revokes the current session.
 - Delete controls request confirmation. Deleting a candidate deletes their CV and applications; deleting a vacancy deletes its applications. Production operators should configure backups and retention before enabling deletion for a team.
 
@@ -229,9 +229,9 @@ The overview shows company-scoped recruiting counts, application stages, and
 integration configuration status. Status badges do not claim live connectivity.
 Administrators can edit the company name and retention period, search members,
 change their roles, and disable or restore access. Self-access changes are rejected;
-at least one active administrator must remain. Disabled members cannot sign in,
-complete MFA, or use existing sessions. Access changes and company settings are
-saved atomically with audit events. Existing invitations, MFA, audit export,
+at least one active administrator must remain. Disabled members cannot sign in
+or use existing sessions. Access changes and company settings are
+saved atomically with audit events. Existing invitations, audit export,
 retention controls, and Telegram setup remain available in the panel.
 
 Apply `npm run db:migrate` and restart the backend after updating; the additive

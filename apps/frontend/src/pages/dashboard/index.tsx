@@ -8,6 +8,7 @@ import {
   ArrowRight,
   FileCheck2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth';
 import {
   Alert,
@@ -30,19 +31,24 @@ import { stages } from '../../types';
 import type { DashboardData } from '../../types';
 
 export function Dashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { data, error, reload } = useData<DashboardData>('/dashboard');
+
+  const firstName = user?.fullName ? user.fullName.split(' ')[0].toUpperCase() : '';
+  const greeting = firstName ? t('dashboard.greeting', { name: firstName }) : t('dashboard.greetingFallback');
+
   return (
     <>
       <PageTitle
-        eyebrow={`GOOD TO SEE YOU, ${user?.fullName ? user.fullName.split(' ')[0].toUpperCase() : 'THERE'}`}
-        title="Recruiting overview"
-        text="Everything waiting for a human decision, in one place."
+        eyebrow={greeting}
+        title={t('dashboard.overviewTitle')}
+        text={t('dashboard.overviewSubtitle')}
       />
       <Alert message={error} />
       {error && (
         <Button variant="outline" className="mt-3" onClick={reload}>
-          Try again
+          {t('common.tryAgain')}
         </Button>
       )}
       {!data && !error ? (
@@ -53,31 +59,31 @@ export function Dashboard() {
             <div className="stats stats-four">
               {[
                 {
-                  title: 'Active vacancies',
+                  title: t('dashboard.activeVacancies'),
                   value: data.vacancies,
                   icon: BriefcaseBusiness,
-                  text: 'Opportunities open',
+                  text: t('dashboard.opportunitiesOpen'),
                   to: '/vacancies',
                 },
                 {
-                  title: 'Your candidates',
+                  title: t('dashboard.yourCandidates'),
                   value: data.candidates,
                   icon: Users,
-                  text: 'People in your talent pool',
+                  text: t('dashboard.talentPool'),
                   to: '/candidates',
                 },
                 {
-                  title: 'Applications',
+                  title: t('dashboard.applications'),
                   value: data.applications,
                   icon: GitBranch,
-                  text: 'Across your hiring pipeline',
+                  text: t('dashboard.acrossPipeline'),
                   to: '/pipeline',
                 },
                 {
-                  title: 'Hired',
+                  title: t('dashboard.hired'),
                   value: data.stages.find((stage) => stage.status === 'HIRED')?._count || 0,
                   icon: FileCheck2,
-                  text: 'Confirmed by your team',
+                  text: t('dashboard.confirmedByTeam'),
                   to: '/pipeline',
                 },
               ].map((s) => (
@@ -98,11 +104,11 @@ export function Dashboard() {
               <section className="panel">
                 <div className="panel-heading">
                   <div>
-                    <h2>Hiring pipeline</h2>
-                    <p>Every application, a clear next step.</p>
+                    <h2>{t('dashboard.pipelineHeading')}</h2>
+                    <p>{t('dashboard.pipelineSubheading')}</p>
                   </div>
                   <Link to="/pipeline" className="text-link">
-                    View pipeline <ArrowRight size={15} />
+                    {t('dashboard.viewPipeline')} <ArrowRight size={15} />
                   </Link>
                 </div>
                 <div className="pipeline-chart">
@@ -125,14 +131,14 @@ export function Dashboard() {
                   })}
                 </div>
                 <div className="panel-foot">
-                  <span className="live-dot" /> Pipeline stages are updated by your team.
+                  <span className="live-dot" /> {t('dashboard.pipelineLiveFoot')}
                 </div>
               </section>
               <section className="panel quick-actions-panel">
                 <div className="panel-heading">
                   <div>
-                    <h2>Quick actions</h2>
-                    <p>Continue the work that needs attention.</p>
+                    <h2>{t('dashboard.quickActions')}</h2>
+                    <p>{t('dashboard.quickActionsSubtitle')}</p>
                   </div>
                 </div>
                 <div className="quick-actions-list">
@@ -140,20 +146,20 @@ export function Dashboard() {
                     {
                       to: '/vacancies?new=1',
                       icon: Sparkles,
-                      title: 'Draft a job description',
-                      text: 'AI prepares, you approve',
+                      title: t('dashboard.draftJob'),
+                      text: t('dashboard.draftJobSub'),
                     },
                     {
                       to: '/candidates',
                       icon: Users,
-                      title: 'Review candidates',
-                      text: 'CV structure and profiles',
+                      title: t('dashboard.reviewCandidates'),
+                      text: t('dashboard.reviewCandidatesSub'),
                     },
                     {
                       to: '/pipeline',
                       icon: GitBranch,
-                      title: 'Open hiring pipeline',
-                      text: 'Confirm every stage change',
+                      title: t('dashboard.openPipeline'),
+                      text: t('dashboard.openPipelineSub'),
                     },
                   ].map((action) => (
                     <Link key={action.title} to={action.to}>
@@ -173,11 +179,11 @@ export function Dashboard() {
             <section className="panel">
               <div className="panel-heading">
                 <div>
-                  <h2>Recent applications</h2>
-                  <p>The latest movement in your workspace.</p>
+                  <h2>{t('dashboard.recentApplications')}</h2>
+                  <p>{t('dashboard.recentApplicationsSubtitle')}</p>
                 </div>
                 <Link className="text-link" to="/pipeline">
-                  View all <ArrowRight size={15} />
+                  {t('common.viewAll')} <ArrowRight size={15} />
                 </Link>
               </div>
               {data.recent.length ? (
@@ -185,9 +191,9 @@ export function Dashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Candidate</TableHead>
-                        <TableHead>Vacancy</TableHead>
-                        <TableHead>Stage</TableHead>
+                        <TableHead>{t('dashboard.tableCandidate')}</TableHead>
+                        <TableHead>{t('dashboard.tableVacancy')}</TableHead>
+                        <TableHead>{t('dashboard.tableStage')}</TableHead>
                         <TableHead className="w-[50px]" />
                       </TableRow>
                     </TableHeader>
@@ -227,11 +233,11 @@ export function Dashboard() {
                 </div>
               ) : (
                 <Empty
-                  title="Your next great hire starts here"
-                  text="Create a vacancy, add a candidate, and connect them with an application."
+                  title={t('dashboard.emptyTitle')}
+                  text={t('dashboard.emptySubtitle')}
                 >
                   <Link className="secondary" to="/candidates">
-                    Add your first candidate <ArrowRight size={16} />
+                    {t('dashboard.addFirstCandidate')} <ArrowRight size={16} />
                   </Link>
                 </Empty>
               )}

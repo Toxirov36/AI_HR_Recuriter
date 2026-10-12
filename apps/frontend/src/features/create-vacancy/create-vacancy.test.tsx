@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { VacancyGenerator } from './index';
 import { send } from '../../lib/api';
+import { changeLanguage } from '../../i18n';
 
 vi.mock('../../lib/api', () => ({ send: vi.fn() }));
 
@@ -12,8 +13,14 @@ const draft = {
 };
 
 describe('VacancyGenerator feature', () => {
-  beforeEach(() => vi.resetAllMocks());
-  afterEach(cleanup);
+  beforeEach(async () => {
+    vi.resetAllMocks();
+    await changeLanguage('en');
+  });
+  afterEach(async () => {
+    cleanup();
+    await changeLanguage('uz');
+  });
 
   it('generates a draft and calls apply when use draft is clicked', async () => {
     vi.mocked(send).mockResolvedValue(draft);

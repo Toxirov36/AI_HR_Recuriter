@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { UploadCloud, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
@@ -22,6 +23,7 @@ export function ResumeDropzone({
   fileName,
   className = '',
 }: ResumeDropzoneProps) {
+  const { t } = useTranslation();
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0 && !disabled && !uploading) {
@@ -56,7 +58,7 @@ export function ResumeDropzone({
                 : 'border-slate-200 hover:border-[#1a5d4c] hover:bg-[#f8fafc] bg-white'
         }`}
       >
-        <input {...getInputProps()} aria-label="Upload CV" />
+        <input {...getInputProps()} aria-label={t('resumeDropzone.uploadLabel')} />
 
         <div
           className={`flex h-14 w-14 items-center justify-center rounded-2xl mb-3.5 transition-all duration-200 ${
@@ -79,15 +81,15 @@ export function ResumeDropzone({
         <div className="space-y-1.5 max-w-sm">
           <p className="text-sm font-semibold text-slate-900 transition-colors">
             {isDragReject
-              ? 'Only PDF or DOCX files are supported'
+              ? t('resumeDropzone.fileRequirements')
               : isDragActive
-                ? 'Drop the file here'
+                ? t('common.dragDrop')
                 : hasExistingFile
-                  ? 'Replace CV'
-                  : 'Drag & drop your CV or browse'}
+                  ? t('resumeDropzone.replaceText')
+                  : t('resumeDropzone.idleInstruction')}
           </p>
           <p className="text-xs text-slate-500">
-            PDF or DOCX · up to 5 MB · text-based documents
+            {t('resumeDropzone.fileRequirements')}
           </p>
         </div>
 
@@ -98,14 +100,14 @@ export function ResumeDropzone({
             size="sm"
             className="mt-4 h-9 px-4 rounded-xl border-slate-200 bg-white font-medium text-slate-700 shadow-sm transition-all group-hover:border-[#1a5d4c] group-hover:text-[#1a5d4c]"
           >
-            Browse file
+            {t('resumeDropzone.browseButton')}
           </Button>
         )}
 
         {uploading && (
           <div className="mt-4 w-full max-w-xs space-y-2">
             <div className="flex justify-between text-xs font-medium text-slate-600">
-              <span>Uploading document and extracting text…</span>
+              <span>{t('resumeDropzone.uploadingText')}</span>
               <span>60%</span>
             </div>
             <Progress value={60} className="h-1.5 w-full bg-slate-100" />

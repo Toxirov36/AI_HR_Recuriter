@@ -55,10 +55,24 @@ const mockAuditLogs = {
 const mockOverview = {
   data: {
     company: { id: 1, name: 'Apex', retentionDays: 365, createdAt: '2026-09-20' },
-    stats: { members: 2, activeMembers: 2, vacancies: 3, candidates: 8, applications: 6, invitations: 1 },
+    stats: {
+      members: 2,
+      activeMembers: 2,
+      vacancies: 3,
+      candidates: 8,
+      applications: 6,
+      invitations: 1,
+    },
     stages: [{ status: 'HIRED', _count: 2 }],
-    integrations: { emailConfigured: true, aiConfigured: false, telegramConnected: true, storageConfigured: false },
-  }, error: '', reload: vi.fn(),
+    integrations: {
+      emailConfigured: true,
+      aiConfigured: false,
+      telegramConnected: true,
+      storageConfigured: false,
+    },
+  },
+  error: '',
+  reload: vi.fn(),
 };
 
 vi.mock('../../components/ui', async (importOriginal) => {
@@ -81,7 +95,7 @@ vi.mock('../../features/auth', () => ({
   }),
 }));
 
-describe('Settings Hub (RBAC, MFA, Audit Logs, Retention, Telegram)', () => {
+describe('Settings Hub (RBAC, Audit Logs, Retention, Telegram)', () => {
   it('loads company settings and integration configuration without exposing secrets', () => {
     render(<Team />);
     expect(screen.getByLabelText('Kompaniya nomi')).toHaveValue('Apex');
@@ -91,15 +105,19 @@ describe('Settings Hub (RBAC, MFA, Audit Logs, Retention, Telegram)', () => {
   it('filters members and keeps self-access controls unavailable', () => {
     render(<Team />);
     fireEvent.click(screen.getByRole('tab', { name: /Jamoa va Rollar/i }));
-    expect(screen.queryByRole('button', { name: 'Dilshodbek Toxirov ruxsatlarini boshqarish' })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Xodimlarni qidirish'), { target: { value: 'ali@apex.uz' } });
+    expect(
+      screen.queryByRole('button', { name: 'Dilshodbek Toxirov ruxsatlarini boshqarish' }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Xodimlarni qidirish'), {
+      target: { value: 'ali@apex.uz' },
+    });
     expect(screen.getByText('Ali Valiyev')).toBeInTheDocument();
     expect(screen.queryByText('Dilshodbek Toxirov')).not.toBeInTheDocument();
   });
   it('renders all settings navigation tabs', () => {
     render(<Team />);
     expect(screen.getByText(/Jamoa va Rollar \(RBAC\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/Xavfsizlik & MFA \(2FA\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Xavfsizlik & MFA \(2FA\)/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Audit loglar & Export/i)).toBeInTheDocument();
     expect(screen.getByText(/Ma'lumotlar saqlanishi \(GDPR\)/i)).toBeInTheDocument();
     expect(screen.getByText(/Telegram Business/i)).toBeInTheDocument();
@@ -124,16 +142,6 @@ describe('Settings Hub (RBAC, MFA, Audit Logs, Retention, Telegram)', () => {
     expect(screen.getByText('Export CSV')).toBeInTheDocument();
     expect(screen.getByText('Export JSON')).toBeInTheDocument();
     expect(screen.getByText('CANDIDATE_ANONYMIZED')).toBeInTheDocument();
-  });
-
-  it('switches to Xavfsizlik & MFA tab and renders 2FA setup trigger', () => {
-    render(<Team />);
-    const securityTab = screen.getByRole('tab', { name: /Xavfsizlik & MFA \(2FA\)/i });
-    fireEvent.pointerDown(securityTab, { button: 0 });
-    fireEvent.click(securityTab);
-
-    expect(screen.getByText(/Ikki bosqichli autentifikatsiya \(2FA \/ TOTP\)/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /2FA'ni sozlash va yoqish/i })).toBeInTheDocument();
   });
 
   it('switches to Telegram Business tab and displays connected bot status and permissions', () => {

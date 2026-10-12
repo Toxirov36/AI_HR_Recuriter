@@ -1,8 +1,16 @@
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ResumeDropzone } from './resume-dropzone';
+import { changeLanguage } from '../i18n';
 
-afterEach(cleanup);
+beforeEach(async () => {
+  await changeLanguage('en');
+});
+
+afterEach(async () => {
+  cleanup();
+  await changeLanguage('uz');
+});
 
 describe('ResumeDropzone component', () => {
   it('renders idle state with instructions and file type requirements', () => {

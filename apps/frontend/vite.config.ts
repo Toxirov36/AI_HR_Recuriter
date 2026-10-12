@@ -9,7 +9,15 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  server: { port: 5173, strictPort: true, proxy: { '/api': 'http://127.0.0.1:3000' } },
+  server: {
+    port: 5173,
+    strictPort: true,
+    proxy: { '/api': 'http://127.0.0.1:3000' },
+    headers: {
+      'Referrer-Policy': 'no-referrer-when-downgrade',
+      'Cross-Origin-Opener-Policy': 'same-origin-allow-popups',
+    },
+  },
   build: {
     rollupOptions: {
       output: {

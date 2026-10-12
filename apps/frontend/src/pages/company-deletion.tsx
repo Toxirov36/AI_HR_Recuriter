@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Button,
@@ -25,6 +26,7 @@ export function CompanyDeletionButton({
   };
   onDeleted: () => void;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -39,11 +41,9 @@ export function CompanyDeletionButton({
       );
       setOpen(false);
       if (result.pendingFiles === 0)
-        toast.success('Kompaniya va bog‘langan ma’lumotlar o‘chirildi');
+        toast.success(t('companyDeletion.deletedSuccess'));
       else
-        toast.warning(
-          'Kompaniya o‘chirildi. CV fayllarini tozalash kutilmoqda — quyidagi bo‘limni tekshiring.',
-        );
+        toast.warning(t('companyDeletion.deletedPendingFiles'));
       onDeleted();
     } catch (e) {
       setError((e as Error).message);
@@ -62,7 +62,7 @@ export function CompanyDeletionButton({
           setOpen(true);
         }}
       >
-        <Trash2 size={14} className="mr-1.5" /> O‘chirish
+        <Trash2 size={14} className="mr-1.5" /> {t('companyDeletion.deleteButton')}
       </Button>
       <Dialog
         open={open}
@@ -72,17 +72,19 @@ export function CompanyDeletionButton({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Kompaniyani butunlay o‘chirish</DialogTitle>
+            <DialogTitle>{t('companyDeletion.modalTitle')}</DialogTitle>
             <DialogDescription>{company.name}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <Alert message={error} />
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-900">
-              <p className="font-semibold">Bu amalni qaytarib bo‘lmaydi.</p>
+              <p className="font-semibold">{t('companyDeletion.irreversible')}</p>
               <p className="mt-2">
-                {company._count.users} xodim, {company._count.vacancies} vakansiya,{' '}
-                {company._count.applications} ariza, barcha nomzodlar, CVlar va kompaniya tarixi
-                o‘chiriladi. Platforma amallari tarixi saqlanadi.
+                {t('companyDeletion.impact', {
+                  users: company._count.users,
+                  vacancies: company._count.vacancies,
+                  applications: company._count.applications,
+                })}
               </p>
             </div>
             <DialogFooter>
@@ -92,7 +94,7 @@ export function CompanyDeletionButton({
                 disabled={busy}
                 onClick={() => setOpen(false)}
               >
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
               <Button
                 type="button"
@@ -100,7 +102,7 @@ export function CompanyDeletionButton({
                 disabled={busy}
                 onClick={remove}
               >
-                {busy ? 'O‘chirilmoqda…' : 'Butunlay o‘chirish'}
+                {busy ? t('companyDeletion.deleting') : t('companyDeletion.confirmDelete')}
               </Button>
             </DialogFooter>
           </div>
@@ -111,6 +113,7 @@ export function CompanyDeletionButton({
 }
 
 export function PendingCompanyFiles() {
+  const { t } = useTranslation();
   const { data, error, reload } = useData<
     Array<{ companyId: number; companyName: string; pendingFiles: number }>
   >('/platform-admin/file-cleanups');
@@ -122,10 +125,10 @@ export function PendingCompanyFiles() {
         `/platform-admin/file-cleanups/${id}/retry`,
         {},
       );
-      if (result.pendingFiles === 0) toast.success('CV fayllari tozalandi');
+      if (result.pendingFiles === 0) toast.success(t('companyDeletion.cleanupSuccess'));
       else
         toast.warning(
-          `${result.pendingFiles} ta fayl qoldi. Qayta urinib ko‘ring; davom etsa R2 ulanishini tekshiring.`,
+          t('companyDeletion.filesRemaining', { count: result.pendingFiles }),
         );
       reload();
     } catch (e) {
@@ -134,14 +137,13 @@ export function PendingCompanyFiles() {
       setBusy(null);
     }
   }
-  if (error) return <Alert message={`CV tozalash holatini yuklab bo‘lmadi: ${error}`} />;
+  if (error) return <Alert message={`${t('common.error')}: ${error}`} />;
   if (!data?.length) return null;
   return (
     <section className="panel padded border-amber-200">
-      <h2>Tozalanishi kutilayotgan CV fayllari</h2>
+      <h2>{t('companyDeletion.pendingCleanupsTitle')}</h2>
       <p className="text-sm text-slate-500 mt-2 mb-4">
-        Kompaniyalar bazadan o‘chirilgan. Qolgan fayllarni R2’dan tozalashni davom ettiring; har
-        urinishda 10 tagacha fayl tozalanadi.
+        {t('companyDeletion.pendingCleanupsDesc')}
       </p>
       <div className="space-y-3">
         {data.map((item) => (
@@ -152,7 +154,7 @@ export function PendingCompanyFiles() {
             <div>
               <strong className="text-sm">{item.companyName}</strong>
               <p className="text-xs text-slate-500">
-                #{item.companyId} · {item.pendingFiles} ta fayl
+                #{item.companyId} · {item.pendingFiles} {t('common.records')}
               </p>
             </div>
             <Button
@@ -161,7 +163,7 @@ export function PendingCompanyFiles() {
               disabled={busy !== null}
               onClick={() => retry(item.companyId)}
             >
-              {busy === item.companyId ? 'Tozalanmoqda…' : 'Tozalashni davom ettirish'}
+              {busy === item.companyId ? t('companyDeletion.cleaning') : t('companyDeletion.retryCleanup')}
             </Button>
           </div>
         ))}

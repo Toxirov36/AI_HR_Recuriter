@@ -1,9 +1,17 @@
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
 import { Pipeline } from './pipeline';
+import { changeLanguage } from '../../i18n';
 
-afterEach(cleanup);
+beforeEach(async () => {
+  await changeLanguage('en');
+});
+
+afterEach(async () => {
+  cleanup();
+  await changeLanguage('uz');
+});
 
 const mockVacancies = {
   data: {
@@ -114,7 +122,7 @@ describe('Pipeline hiring workflow', () => {
     );
 
     expect(screen.getByText('Active candidates')).toBeInTheDocument();
-    expect(screen.getByText('Complete scorecard')).toBeInTheDocument();
+    expect(screen.getByText('Review interview outcome')).toBeInTheDocument();
   });
 
   it('renders filters and switches between board and list views', () => {

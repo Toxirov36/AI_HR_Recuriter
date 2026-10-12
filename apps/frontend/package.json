@@ -27,10 +27,12 @@
     "@radix-ui/react-tooltip": "^1.2.16",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "i18next": "^26.4.4",
     "lucide-react": "^0.468.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-dropzone": "^20.1.2",
+    "react-i18next": "^17.0.16",
     "react-router-dom": "^7.9.0",
     "sonner": "^2.0.8",
     "tailwind-merge": "^3.7.0"

@@ -1,19 +1,17 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Inject,
-  Post,
-  Req,
-  Res,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
 import { AuthRequest } from '../../common/utils/security';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService, userSelect } from './auth.service';
+import { GoogleAuthService } from './google-auth.service';
+import {
+  googleCredentialSchema,
+  googleRegisterSchema,
+  type GoogleCredentialDto,
+  type GoogleRegisterDto,
+} from './dto/google.dto';
 import {
   RegisterDto,
   registerSchema,
@@ -23,19 +21,44 @@ import {
   invitationSchema,
   AcceptInviteDto,
   acceptInviteSchema,
-  MfaEnableDto,
-  mfaEnableSchema,
-  MfaVerifyDto,
-  mfaVerifySchema,
-  MfaDisableDto,
-  mfaDisableSchema,
 } from './dto';
 
 export { userSelect };
 
 @Controller('auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private authService: AuthService) {}
+  constructor(
+    @Inject(AuthService) private authService: AuthService,
+    @Inject(GoogleAuthService) private googleAuth: GoogleAuthService,
+  ) {}
+
+  @Get('google/config')
+  googleConfig() {
+    return this.googleAuth.config();
+  }
+
+  @Post('google/challenge')
+  googleChallenge(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    return this.googleAuth.challenge(req.ip, res);
+  }
+
+  @Post('google/verify')
+  googleVerify(
+    @Body(new ZodValidationPipe(googleCredentialSchema)) data: GoogleCredentialDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.googleAuth.verify(data.credential, req, res);
+  }
+
+  @Post('google/register')
+  googleRegister(
+    @Body(new ZodValidationPipe(googleRegisterSchema)) data: GoogleRegisterDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    return this.googleAuth.register(data, req, res);
+  }
 
   @Post('register')
   async register(
@@ -96,37 +119,4 @@ export class AuthController {
   ) {
     return this.authService.accept(dto, req.ip, res);
   }
-
-  @Get('mfa/setup')
-  @UseGuards(AuthGuard)
-  async setupMfa(@Req() req: AuthRequest) {
-    return this.authService.setupMfa(req.user.id);
-  }
-
-  @Post('mfa/enable')
-  @UseGuards(AuthGuard)
-  async enableMfa(
-    @Req() req: AuthRequest,
-    @Body(new ZodValidationPipe(mfaEnableSchema)) dto: MfaEnableDto,
-  ) {
-    return this.authService.enableMfa(req.user.id, dto.code);
-  }
-
-  @Post('mfa/verify')
-  async verifyMfa(
-    @Body(new ZodValidationPipe(mfaVerifySchema)) dto: MfaVerifyDto,
-    @Res({ passthrough: true }) res: Response,
-  ) {
-    return this.authService.verifyMfaLogin(dto.challengeToken, dto.code, res);
-  }
-
-  @Post('mfa/disable')
-  @UseGuards(AuthGuard)
-  async disableMfa(
-    @Req() req: AuthRequest,
-    @Body(new ZodValidationPipe(mfaDisableSchema)) dto: MfaDisableDto,
-  ) {
-    return this.authService.disableMfa(req.user.id, dto.password);
-  }
 }
-

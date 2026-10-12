@@ -24,6 +24,7 @@ export const envSchema = z.object({
   REDIS_URL: z.string().min(1),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must contain at least 32 characters'),
   FRONTEND_ORIGIN: z.url().default('http://localhost:5173'),
+  GOOGLE_CLIENT_ID: z.string().trim().default(''),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
   GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-2'),

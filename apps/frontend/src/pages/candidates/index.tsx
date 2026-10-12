@@ -10,6 +10,7 @@ import {
   Trash2,
   Upload,
   Download,
+  Printer,
   Sparkles,
   FileText,
   Mail,
@@ -19,6 +20,8 @@ import {
 import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
 import { ParseProgress, type ParseStatusResponse } from '../../components/parse-progress';
+import { exportCandidatesToCsv } from '../../lib/export';
+import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import {
   AiConsent,
   Alert,
@@ -214,6 +217,22 @@ export function Candidates() {
         <div className="candidates-count-pill">
           <span>{data?.total ?? '—'} people</span>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            if (!data?.items?.length) {
+              toast.error('Eksport qilish uchun nomzodlar mavjud emas');
+              return;
+            }
+            exportCandidatesToCsv(data.items);
+            toast.success(`${data.items.length} ta nomzod CSV/Excel faylga yuklandi`);
+          }}
+          className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-slate-200 text-slate-800 bg-white hover:bg-slate-50 font-medium text-sm shadow-none shrink-0"
+          title="Nomzodlar ro‘yxatini Excel/CSV ga yuklab olish"
+        >
+          <Download size={15} /> Eksport (CSV)
+        </Button>
       </div>
       <Alert message={error || actionError} />
       {!data && !error ? (
@@ -388,6 +407,7 @@ export function CandidateDetail() {
   const [actionError, setActionError] = useState('');
   const [consent, setConsent] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [dossierOpen, setDossierOpen] = useState(false);
   const [anonymizeOpen, setAnonymizeOpen] = useState(false);
   const [mergeCandidate, setMergeCandidate] = useState<NonNullable<typeof duplicates>[number] | null>(null);
   const [parseProgress, setParseProgress] = useState<ParseStatusResponse | null>(null);
@@ -540,6 +560,13 @@ export function CandidateDetail() {
                 )}
                 {!(c as any).isAnonymized && (
                   <>
+                    <Button
+                      variant="outline"
+                      onClick={() => setDossierOpen(true)}
+                      className="flex items-center gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-50 font-medium"
+                    >
+                      <Printer size={16} /> Dossier (A4 PDF)
+                    </Button>
                     <Button
                       variant="outline"
                       onClick={() => setEditing(true)}
@@ -790,6 +817,11 @@ export function CandidateDetail() {
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
+            <CandidateDossierModal
+              open={dossierOpen}
+              onClose={() => setDossierOpen(false)}
+              candidate={c}
+            />
           </>
         )
       )}

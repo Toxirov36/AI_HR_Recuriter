@@ -17,15 +17,18 @@ export const email = z
   .max(254)
   .transform((v) => v.toLowerCase());
 
-export const phone = z.string().trim().max(30).transform((value) => {
-  const compact = value.replace(/[\s().-]/g, '');
-  if (/^\d{9}$/.test(compact)) return `+998${compact}`;
-  if (/^998\d{9}$/.test(compact)) return `+${compact}`;
-  return compact;
-}).pipe(z.string().regex(/^\+[1-9]\d{7,14}$/, 'Enter a valid international phone number'));
-
-const oneContact = <T extends { email?: string; phone?: string }>(data: T) =>
-  Boolean(data.email) !== Boolean(data.phone);
+// Candidate contact numbers are still supported; authentication requires email.
+export const phone = z
+  .string()
+  .trim()
+  .max(30)
+  .transform((value) => {
+    const compact = value.replace(/[\s().-]/g, '');
+    if (/^\d{9}$/.test(compact)) return `+998${compact}`;
+    if (/^998\d{9}$/.test(compact)) return `+${compact}`;
+    return compact;
+  })
+  .pipe(z.string().regex(/^\+[1-9]\d{7,14}$/, 'Enter a valid international phone number'));
 
 export const password = z
   .string()
@@ -34,20 +37,18 @@ export const password = z
   .refine((v) => Buffer.byteLength(v, 'utf8') <= 72, 'Password must be at most 72 UTF-8 bytes');
 
 export const registration = z
-  .object({ companyName: text(160), fullName: text(160), email: email.optional(), phone: phone.optional(), password })
-  .strict()
-  .refine(oneContact, { message: 'Provide either email or phone', path: ['email'] });
+  .object({ companyName: text(160), fullName: text(160), email, password })
+  .strict();
 
-export const login = z
-  .object({ email: email.optional(), phone: phone.optional(), password: z.string().min(1).max(72) })
-  .strict()
-  .refine(oneContact, { message: 'Provide either email or phone', path: ['email'] });
+export const login = z.object({ email, password: z.string().min(1).max(72) }).strict();
 
 export const acceptInvite = z
   .object({ token: z.string().regex(/^[a-f0-9]{64}$/), fullName: text(160), password })
   .strict();
 
-export const invitation = z.object({ email, role: z.enum(['HR', 'RECRUITER', 'INTERVIEWER']) }).strict();
+export const invitation = z
+  .object({ email, role: z.enum(['HR', 'RECRUITER', 'INTERVIEWER']) })
+  .strict();
 
 export const requirement = z
   .object({
@@ -150,7 +151,6 @@ export const interviewReview = z
     scorecard: scorecard.optional(),
   })
   .strict();
-
 
 export const pagination = z.object({
   page: z.coerce.number().int().min(1).default(1),

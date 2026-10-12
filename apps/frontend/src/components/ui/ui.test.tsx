@@ -1,8 +1,18 @@
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AiConsent, Badge } from '../../components/ui';
 import { AuthPage } from '../../features/auth';
-afterEach(cleanup);
+import { changeLanguage } from '../../i18n';
+
+beforeEach(async () => {
+  await changeLanguage('en');
+});
+
+afterEach(async () => {
+  cleanup();
+  await changeLanguage('uz');
+});
+
 describe('review interface', () => {
   it('labels evidence without a suitability score', () => {
     render(<Badge value="NOT_FOUND" />);
@@ -25,3 +35,4 @@ describe('review interface', () => {
     expect(screen.getByLabelText('Password')).toHaveAttribute('minlength', '8');
   });
 });
+

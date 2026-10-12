@@ -62,6 +62,7 @@ model User {
   email String? @unique
   phone String? @unique
   password String
+  googleSubject String? @unique
   role UserRole @default(HR)
   isActive Boolean @default(true)
   platformRole PlatformRole?

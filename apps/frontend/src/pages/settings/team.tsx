@@ -7,7 +7,6 @@ import {
   ExternalLink,
   FileSpreadsheet,
   FileText,
-  KeyRound,
   Layers3,
   MessageCircle,
   RefreshCw,
@@ -66,7 +65,11 @@ interface AuditLogItem {
 
 export function Team() {
   const { user } = useAuth();
-  const { data: overview, error: overviewError, reload: reloadOverview } = useData<CompanyOverview>('/company-admin');
+  const {
+    data: overview,
+    error: overviewError,
+    reload: reloadOverview,
+  } = useData<CompanyOverview>('/company-admin');
   const { data: teamUsers, error: teamError, reload: reloadTeam } = useData<User[]>('/auth/team');
   const {
     data: telegramStatus,
@@ -128,7 +131,11 @@ export function Team() {
         try {
           const res = await api<{
             connected: boolean;
-            setup: { telegramVerified: boolean; telegramUsername: string | null; expiresAt: string } | null;
+            setup: {
+              telegramVerified: boolean;
+              telegramUsername: string | null;
+              expiresAt: string;
+            } | null;
           }>('/v1/integrations/telegram/status');
           if (res?.connected) {
             toast.success('Telegram hisobingiz muvaffaqiyatli ulandi! 🎉');
@@ -148,16 +155,12 @@ export function Team() {
     };
   }, [activeTab, connectModalOpen, reloadTelegram, telegramStatus?.connected]);
 
-  // MFA Setup State
-  const [mfaModalOpen, setMfaModalOpen] = useState(false);
-  const [mfaSecretData, setMfaSecretData] = useState<{ secret: string; otpAuthUri: string } | null>(null);
-  const [mfaCode, setMfaCode] = useState('');
-  const [recoveryCodes, setRecoveryCodes] = useState<string[] | null>(null);
-
   // Retention State
   const [retentionDays, setRetentionDays] = useState(180);
   const [purging, setPurging] = useState(false);
-  useEffect(() => { if (overview) setRetentionDays(overview.company.retentionDays); }, [overview?.company.retentionDays]);
+  useEffect(() => {
+    if (overview) setRetentionDays(overview.company.retentionDays);
+  }, [overview?.company.retentionDays]);
 
   async function startTelegramConnect() {
     setBusy(true);
@@ -218,40 +221,6 @@ export function Team() {
     }
   }
 
-  async function startMfaSetup() {
-    setBusy(true);
-    setError('');
-    try {
-      const res = await api<{ secret: string; otpAuthUri: string }>('/auth/mfa/setup');
-      setMfaSecretData(res);
-      setMfaCode('');
-      setRecoveryCodes(null);
-      setMfaModalOpen(true);
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function confirmMfaEnable() {
-    if (!mfaCode.trim()) return;
-    setBusy(true);
-    try {
-      const res = await send<{ enabled: boolean; recoveryCodes: string[] }>('/auth/mfa/enable', {
-        code: mfaCode.trim(),
-      });
-      if (res.enabled) {
-        setRecoveryCodes(res.recoveryCodes);
-        toast.success('2FA muvaffaqiyatli yoqildi!');
-      }
-    } catch (e) {
-      toast.error((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   async function downloadAuditExport(format: 'csv' | 'json') {
     try {
       const res = await fetch(`/api/v1/audit-logs/export?format=${format}`, {
@@ -289,7 +258,10 @@ export function Team() {
   async function purgeExpired() {
     setPurging(true);
     try {
-      const res = await send<{ purgedCount: number; retentionDays: number }>('/v1/retention/purge', {});
+      const res = await send<{ purgedCount: number; retentionDays: number }>(
+        '/v1/retention/purge',
+        {},
+      );
       toast.success(`${res.purgedCount} ta eskirgan nomzod ma‘lumotlari tozalandi (anonymized)`);
       reloadAudit();
     } catch (e) {
@@ -311,8 +283,19 @@ export function Team() {
 
       <Alert message={teamError || telegramError || actionError} />
 
-      <div role="tablist" className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 mb-6 border border-slate-200">
-        <button role="tab" type="button" aria-selected={activeTab === 'overview'} onClick={() => setActiveTab('overview')} className={`rounded-lg px-3.5 py-2 text-xs font-medium ${activeTab === 'overview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}>Umumiy ko‘rinish</button>
+      <div
+        role="tablist"
+        className="bg-slate-100 p-1 rounded-xl flex flex-wrap gap-1 mb-6 border border-slate-200"
+      >
+        <button
+          role="tab"
+          type="button"
+          aria-selected={activeTab === 'overview'}
+          onClick={() => setActiveTab('overview')}
+          className={`rounded-lg px-3.5 py-2 text-xs font-medium ${activeTab === 'overview' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600'}`}
+        >
+          Umumiy ko‘rinish
+        </button>
         <button
           role="tab"
           type="button"
@@ -325,19 +308,6 @@ export function Team() {
           }`}
         >
           <Users size={15} /> Jamoa va Rollar (RBAC)
-        </button>
-        <button
-          role="tab"
-          type="button"
-          aria-selected={activeTab === 'security'}
-          onClick={() => setActiveTab('security')}
-          className={`inline-flex items-center justify-center whitespace-nowrap rounded-lg px-3.5 py-2 text-xs font-medium transition-all gap-2 ${
-            activeTab === 'security'
-              ? 'bg-white text-slate-900 shadow-sm'
-              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-          }`}
-        >
-          <ShieldCheck size={15} /> Xavfsizlik & MFA (2FA)
         </button>
         <button
           role="tab"
@@ -381,14 +351,22 @@ export function Team() {
       </div>
 
       {/* 1. TEAM & RBAC TAB */}
-      {activeTab === 'overview' && <CompanyOverviewPanel data={overview} error={overviewError} reload={reloadOverview} />}
+      {activeTab === 'overview' && (
+        <CompanyOverviewPanel data={overview} error={overviewError} reload={reloadOverview} />
+      )}
       {activeTab === 'audit' && <Alert message={auditError} />}
       {activeTab === 'team' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <section className="panel padded">
               <h2>Jamoa a'zolari</h2>
-              <Input aria-label="Xodimlarni qidirish" placeholder="Ism, email yoki telefon bo‘yicha qidirish…" value={memberSearch} onChange={(e) => setMemberSearch(e.target.value)} className="my-3" />
+              <Input
+                aria-label="Xodimlarni qidirish"
+                placeholder="Ism, email yoki telefon bo‘yicha qidirish…"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="my-3"
+              />
               <p className="muted small mb-4">
                 Kompaniyadagi xodimlar va ularning tizimdagi ruxsat darajalari (RBAC).
               </p>
@@ -396,36 +374,67 @@ export function Team() {
                 <Loading />
               ) : (
                 <div className="team-list space-y-3">
-                  {teamUsers && !teamUsers.some((u) => `${u.fullName} ${u.email ?? ''} ${u.phone ?? ''}`.toLowerCase().includes(memberSearch.toLowerCase())) && <p className="text-sm text-slate-500">Xodim topilmadi.</p>}
-                  {teamUsers?.filter((u) => `${u.fullName} ${u.email ?? ''} ${u.phone ?? ''}`.toLowerCase().includes(memberSearch.toLowerCase())).map((u) => {
-                    const initials = u.fullName
-                      .split(' ')
-                      .map((n) => n[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase();
-                    return (
-                      <div className="team-row flex flex-wrap gap-3 items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50" key={u.id}>
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback>{initials}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <strong className="text-sm font-semibold text-slate-800">{u.fullName}</strong>
-                            <span className="block text-xs text-slate-500">{u.email || u.phone}</span>
-                          </div>
-                        </div>
-                        <Badge
-                          variant={u.role === 'ADMIN' ? 'default' : 'outline'}
-                          className={u.role === 'ADMIN' ? 'bg-[#245e4f] text-white' : 'text-slate-700'}
+                  {teamUsers &&
+                    !teamUsers.some((u) =>
+                      `${u.fullName} ${u.email ?? ''} ${u.phone ?? ''}`
+                        .toLowerCase()
+                        .includes(memberSearch.toLowerCase()),
+                    ) && <p className="text-sm text-slate-500">Xodim topilmadi.</p>}
+                  {teamUsers
+                    ?.filter((u) =>
+                      `${u.fullName} ${u.email ?? ''} ${u.phone ?? ''}`
+                        .toLowerCase()
+                        .includes(memberSearch.toLowerCase()),
+                    )
+                    .map((u) => {
+                      const initials = u.fullName
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+                      return (
+                        <div
+                          className="team-row flex flex-wrap gap-3 items-center justify-between p-3 rounded-lg border border-slate-100 bg-slate-50/50"
+                          key={u.id}
                         >
-                          {u.role}
-                        </Badge>
-                        {u.isActive === false && <Badge variant="outline" className="text-red-700">Bloklangan</Badge>}
-                        <MemberAccessEditor member={u} onSaved={() => { reloadTeam(); reloadOverview(); reloadAudit(); }} />
-                      </div>
-                    );
-                  })}
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarFallback>{initials}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <strong className="text-sm font-semibold text-slate-800">
+                                {u.fullName}
+                              </strong>
+                              <span className="block text-xs text-slate-500">
+                                {u.email || u.phone}
+                              </span>
+                            </div>
+                          </div>
+                          <Badge
+                            variant={u.role === 'ADMIN' ? 'default' : 'outline'}
+                            className={
+                              u.role === 'ADMIN' ? 'bg-[#245e4f] text-white' : 'text-slate-700'
+                            }
+                          >
+                            {u.role}
+                          </Badge>
+                          {u.isActive === false && (
+                            <Badge variant="outline" className="text-red-700">
+                              Bloklangan
+                            </Badge>
+                          )}
+                          <MemberAccessEditor
+                            member={u}
+                            onSaved={() => {
+                              reloadTeam();
+                              reloadOverview();
+                              reloadAudit();
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
                 </div>
               )}
             </section>
@@ -438,7 +447,14 @@ export function Team() {
               <form onSubmit={submitInvite} className="space-y-3">
                 <label className="block text-xs font-semibold text-slate-700">
                   Elektron pochta
-                  <Input name="email" type="email" required maxLength={160} placeholder="colleague@company.com" className="mt-1" />
+                  <Input
+                    name="email"
+                    type="email"
+                    required
+                    maxLength={160}
+                    placeholder="colleague@company.com"
+                    className="mt-1"
+                  />
                 </label>
                 <label className="block text-xs font-semibold text-slate-700">
                   Ruxsat roli (RBAC)
@@ -448,14 +464,24 @@ export function Team() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="HR">HR — Vakansiyalar va nomzodlarni to'liq boshqarish</SelectItem>
-                        <SelectItem value="RECRUITER">Recruiter — Nomzodlar bilan ishlash va suhbatlar</SelectItem>
-                        <SelectItem value="INTERVIEWER">Interviewer — Faqat suhbat scorecard to'ldirish</SelectItem>
+                        <SelectItem value="HR">
+                          HR — Vakansiyalar va nomzodlarni to'liq boshqarish
+                        </SelectItem>
+                        <SelectItem value="RECRUITER">
+                          Recruiter — Nomzodlar bilan ishlash va suhbatlar
+                        </SelectItem>
+                        <SelectItem value="INTERVIEWER">
+                          Interviewer — Faqat suhbat scorecard to'ldirish
+                        </SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
                 </label>
-                <Button type="submit" disabled={busy} className="bg-[#245e4f] text-white gap-2 w-full mt-2">
+                <Button
+                  type="submit"
+                  disabled={busy}
+                  className="bg-[#245e4f] text-white gap-2 w-full mt-2"
+                >
                   <UserPlus size={16} /> Taklif havolasini yaratish
                 </Button>
               </form>
@@ -486,51 +512,6 @@ export function Team() {
         </div>
       )}
 
-      {/* 2. SECURITY & MFA TAB */}
-      {activeTab === 'security' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-6 border border-slate-200 bg-white shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center">
-                  <KeyRound size={22} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Ikki bosqichli autentifikatsiya (2FA / TOTP)</h3>
-                  <p className="text-xs text-slate-500">Google Authenticator, Microsoft Authenticator yoki Apple Passwords</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Tizimga kirishda paroldan tashqari telefoningizdagi ilova orqali 6 xonali tasdiqlash kodini kiritish talab qilinadi. Bu hisobingizni ruxsatsiz kirishlardan to'liq himoyalaydi.
-              </p>
-              <div className="pt-2">
-                <Button onClick={startMfaSetup} disabled={busy} className="bg-[#245e4f] hover:bg-[#1b4338] text-white gap-2">
-                  <KeyRound size={16} /> 2FA'ni sozlash va yoqish
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="p-6 border border-slate-200 bg-white shadow-sm space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center">
-                  <ShieldCheck size={22} />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900">Fayl xavfsizligi va Antivirus</h3>
-                  <p className="text-xs text-slate-500">Real-vaqtli file signature va malware tekshiruvi</p>
-                </div>
-              </div>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                Yuklangan barcha CV fayllar (PDF, DOCX) magic byte signaturasi va zararli makroslar (VBA scripts, PDF exploits) bo'yicha avtomatik tekshiruvdan o'tadi. Bajariluvchi (.exe, ELF, shell) fayllar darhol bloklanadi.
-              </p>
-              <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-200 w-fit">
-                <ShieldCheck size={15} /> Antivirus himoyasi: Faol va himoyalangan
-              </div>
-            </Card>
-          </div>
-        </div>
-      )}
-
       {/* 3. AUDIT LOGS TAB */}
       {activeTab === 'audit' && (
         <div className="space-y-4">
@@ -538,7 +519,9 @@ export function Team() {
             <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4 mb-4">
               <div>
                 <h2>Audit loglar (Faoliyat tarixi)</h2>
-                <p className="muted small">Tizimdagi barcha muhim amallar, o'zgarishlar va kirishlar yozib boriladi.</p>
+                <p className="muted small">
+                  Tizimdagi barcha muhim amallar, o'zgarishlar va kirishlar yozib boriladi.
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <Button
@@ -557,7 +540,12 @@ export function Team() {
                 >
                   <FileText size={15} className="text-blue-700" /> Export JSON
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => reloadAudit()} className="text-xs gap-1">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => reloadAudit()}
+                  className="text-xs gap-1"
+                >
                   <RefreshCw size={13} /> Yangilash
                 </Button>
               </div>
@@ -620,12 +608,18 @@ export function Team() {
                 <ShieldAlert size={22} />
               </div>
               <div>
-                <h3 className="text-base font-bold text-slate-900">Ma'lumotlar saqlanish muddati (Retention Policy)</h3>
-                <p className="text-xs text-slate-500">GDPR Art. 17 va Shaxsiy ma'lumotlarni himoya qilish standartlari</p>
+                <h3 className="text-base font-bold text-slate-900">
+                  Ma'lumotlar saqlanish muddati (Retention Policy)
+                </h3>
+                <p className="text-xs text-slate-500">
+                  GDPR Art. 17 va Shaxsiy ma'lumotlarni himoya qilish standartlari
+                </p>
               </div>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Rad etilgan yoki arxivlangan nomzodlarning shaxsiy ma'lumotlari belgilangan muddatdan so'ng avtomatik tarzda anonimlashtiriladi (ism, telefon, email va CV fayli butunlay o'chiriladi, ammo statistik ko'rsatkichlar saqlab qolinadi).
+              Rad etilgan yoki arxivlangan nomzodlarning shaxsiy ma'lumotlari belgilangan muddatdan
+              so'ng avtomatik tarzda anonimlashtiriladi (ism, telefon, email va CV fayli butunlay
+              o'chiriladi, ammo statistik ko'rsatkichlar saqlab qolinadi).
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-2">
@@ -646,15 +640,24 @@ export function Team() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button size="sm" onClick={saveRetentionPolicy} disabled={busy} className="bg-[#245e4f] text-white text-xs h-9">
+              <Button
+                size="sm"
+                onClick={saveRetentionPolicy}
+                disabled={busy}
+                className="bg-[#245e4f] text-white text-xs h-9"
+              >
                 Siyosatni saqlash
               </Button>
             </div>
 
             <div className="pt-4 border-t flex items-center justify-between">
               <div>
-                <strong className="text-xs text-slate-800 block">Eskirgan ma'lumotlarni majburiy tozalash</strong>
-                <span className="text-xs text-slate-500">Muddati o'tgan rad etilgan arizalarni hoziroq anonimlashtirish.</span>
+                <strong className="text-xs text-slate-800 block">
+                  Eskirgan ma'lumotlarni majburiy tozalash
+                </strong>
+                <span className="text-xs text-slate-500">
+                  Muddati o'tgan rad etilgan arizalarni hoziroq anonimlashtirish.
+                </span>
               </div>
               <Button
                 size="sm"
@@ -676,24 +679,39 @@ export function Team() {
           <Card className="p-6 border border-slate-200 bg-white shadow-sm space-y-5">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b pb-4">
               <div className="flex items-center gap-3">
-                <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${
-                  telegramStatus?.connected ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-700'
-                }`}>
+                <div
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center ${
+                    telegramStatus?.connected
+                      ? 'bg-emerald-100 text-emerald-800'
+                      : 'bg-blue-100 text-blue-700'
+                  }`}
+                >
                   <MessageCircle size={24} />
                 </div>
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     Telegram Business Integratsiyasi
                     {telegramStatus?.connected ? (
-                      <Badge className={telegramStatus.connection?.canReply ? 'bg-emerald-600 text-white text-xs' : 'bg-amber-100 text-amber-900 text-xs'}>
-                        {telegramStatus.connection?.canReply ? 'Faol va Ulangan ✅' : 'Ulangan · javob ruxsati yo‘q'}
+                      <Badge
+                        className={
+                          telegramStatus.connection?.canReply
+                            ? 'bg-emerald-600 text-white text-xs'
+                            : 'bg-amber-100 text-amber-900 text-xs'
+                        }
+                      >
+                        {telegramStatus.connection?.canReply
+                          ? 'Faol va Ulangan ✅'
+                          : 'Ulangan · javob ruxsati yo‘q'}
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="text-slate-600 text-xs">Ulanmagan</Badge>
+                      <Badge variant="outline" className="text-slate-600 text-xs">
+                        Ulanmagan
+                      </Badge>
                     )}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Bitta umumiy HR Secretary Bot orqali Telegram'dagi rezyumelarni avtomatik qabul qilish va javob berish.
+                    Bitta umumiy HR Secretary Bot orqali Telegram'dagi rezyumelarni avtomatik qabul
+                    qilish va javob berish.
                   </p>
                 </div>
               </div>
@@ -719,7 +737,12 @@ export function Team() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Button size="sm" variant="outline" onClick={() => reloadTelegram()} className="text-xs gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => reloadTelegram()}
+                    className="text-xs gap-1"
+                  >
                     <RefreshCw size={13} /> Holatni tekshirish
                   </Button>
                   <Button
@@ -741,7 +764,9 @@ export function Team() {
                       Telegram Akkaunt
                     </span>
                     <strong className="text-sm text-slate-900 font-mono">
-                      {telegramStatus.connection?.telegramUsername ? `@${telegramStatus.connection.telegramUsername}` : `ID: ${telegramStatus.connection?.telegramUserId}`}
+                      {telegramStatus.connection?.telegramUsername
+                        ? `@${telegramStatus.connection.telegramUsername}`
+                        : `ID: ${telegramStatus.connection?.telegramUserId}`}
                     </strong>
                   </div>
 
@@ -750,7 +775,10 @@ export function Team() {
                       Ulanish holati
                     </span>
                     <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-                      <CheckCircle2 size={15} /> {telegramStatus.connection?.canReply ? 'Business Bot ulangan' : 'Javob berish ruxsatini yoqing'}
+                      <CheckCircle2 size={15} />{' '}
+                      {telegramStatus.connection?.canReply
+                        ? 'Business Bot ulangan'
+                        : 'Javob berish ruxsatini yoqing'}
                     </span>
                   </div>
 
@@ -759,30 +787,45 @@ export function Team() {
                       Ulangan sana
                     </span>
                     <span className="text-xs text-slate-700 font-mono">
-                      {telegramStatus.connection?.createdAt ? new Date(telegramStatus.connection.createdAt).toLocaleDateString() : '—'}
+                      {telegramStatus.connection?.createdAt
+                        ? new Date(telegramStatus.connection.createdAt).toLocaleDateString()
+                        : '—'}
                     </span>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200 text-xs space-y-2">
-                  <strong className="text-emerald-900 block font-semibold">Berilgan ruxsatlar (Permissions):</strong>
+                  <strong className="text-emerald-900 block font-semibold">
+                    Berilgan ruxsatlar (Permissions):
+                  </strong>
                   <ul className="space-y-1 text-emerald-800">
                     <li className="flex items-center gap-1.5">
                       <CheckCircle2 size={14} className="text-emerald-600" />
-                      <strong>O'qilgan deb belgilash (Read messages):</strong> {telegramStatus.connection?.canReadMessages ? 'Faol' : 'O‘chiq — CV qabul qilishga to‘sqinlik qilmaydi'}
+                      <strong>O'qilgan deb belgilash (Read messages):</strong>{' '}
+                      {telegramStatus.connection?.canReadMessages
+                        ? 'Faol'
+                        : 'O‘chiq — CV qabul qilishga to‘sqinlik qilmaydi'}
                     </li>
                     <li className="flex items-center gap-1.5">
                       <CheckCircle2 size={14} className="text-emerald-600" />
-                      <strong>Javob berish (Reply to messages):</strong> {telegramStatus.connection?.canReply ? 'Faol — ruxsat berilgan chatlarga javob yuboradi' : 'O‘chiq — avtomatik xabar yuborilmaydi'}
+                      <strong>Javob berish (Reply to messages):</strong>{' '}
+                      {telegramStatus.connection?.canReply
+                        ? 'Faol — ruxsat berilgan chatlarga javob yuboradi'
+                        : 'O‘chiq — avtomatik xabar yuborilmaydi'}
                     </li>
                   </ul>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-500">
-                  ℹ️ <strong>Telegram qoidasi:</strong> Rasmiy Telegram API chekloviga binoan, bitta shaxsiy Telegram profiliga bir vaqtning o'zida faqat bitta faol Business bot ulanishi mumkin.
+                  ℹ️ <strong>Telegram qoidasi:</strong> Rasmiy Telegram API chekloviga binoan, bitta
+                  shaxsiy Telegram profiliga bir vaqtning o'zida faqat bitta faol Business bot
+                  ulanishi mumkin.
                 </div>
                 <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                  CV yoki javob kelmasa, Telegram Business → Chatbots bo‘limida <strong>Chats the bot can access</strong> sozlamasini tekshiring: sinov chatini Excluded chats'dan chiqaring yoki Only Selected Chats ro‘yxatiga qo‘shing. Business hisobidan javob faqat oxirgi 24 soatda xabar kelgan chatga yuboriladi.
+                  CV yoki javob kelmasa, Telegram Business → Chatbots bo‘limida{' '}
+                  <strong>Chats the bot can access</strong> sozlamasini tekshiring: sinov chatini
+                  Excluded chats'dan chiqaring yoki Only Selected Chats ro‘yxatiga qo‘shing.
+                  Business hisobidan javob faqat oxirgi 24 soatda xabar kelgan chatga yuboriladi.
                 </div>
               </div>
             ) : (
@@ -790,7 +833,9 @@ export function Team() {
                 <div className="p-6 rounded-xl border border-dashed border-slate-300 bg-slate-50/50 text-center space-y-4">
                   <div className="max-w-md mx-auto space-y-2">
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Kompaniyangiz nomidan nomzodlar bilan avtomatik muloqot qilish va Telegram orqali yuborilgan CV fayllarni darhol platformaga yuklash uchun Telegram hisobingizni ulang.
+                      Kompaniyangiz nomidan nomzodlar bilan avtomatik muloqot qilish va Telegram
+                      orqali yuborilgan CV fayllarni darhol platformaga yuklash uchun Telegram
+                      hisobingizni ulang.
                     </p>
                     <div className="pt-2">
                       <Button
@@ -808,7 +853,8 @@ export function Team() {
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
                     <strong className="text-slate-900 block">1. Botni ochish</strong>
                     <p className="text-[11px] text-slate-500">
-                      Tugma bir martalik ulanish havolasini yaratib, botni ochadi. Botda Start bosing.
+                      Tugma bir martalik ulanish havolasini yaratib, botni ochadi. Botda Start
+                      bosing.
                     </p>
                   </div>
                   <div className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-1">
@@ -830,86 +876,17 @@ export function Team() {
         </div>
       )}
 
-      {/* MFA SETUP DIALOG */}
-      <Dialog open={mfaModalOpen} onOpenChange={setMfaModalOpen}>
-        <DialogContent className="sm:max-w-[440px]">
-          <DialogHeader>
-            <DialogTitle>Ikki bosqichli autentifikatsiya (2FA)</DialogTitle>
-            <DialogDescription>
-              Google Authenticator yoki Microsoft Authenticator ilovasiga quyidagi kalitni qo'shing.
-            </DialogDescription>
-          </DialogHeader>
-
-          {!recoveryCodes ? (
-            <div className="space-y-4 py-2">
-              <div className="p-3 bg-slate-50 border rounded-lg text-center space-y-1.5">
-                <span className="text-[11px] text-slate-500 uppercase tracking-wider block font-semibold">
-                  Maxfiy sozlash kaliti (Secret Key)
-                </span>
-                <code className="text-sm font-bold text-slate-800 tracking-widest font-mono select-all">
-                  {mfaSecretData?.secret}
-                </code>
-              </div>
-
-              <label className="block text-xs font-semibold text-slate-700">
-                Ilovadagi 6 xonali kodni kiriting:
-                <Input
-                  value={mfaCode}
-                  onChange={(e) => setMfaCode(e.target.value)}
-                  maxLength={6}
-                  placeholder="123456"
-                  className="mt-1 text-center font-mono text-base tracking-widest h-11"
-                />
-              </label>
-
-              <DialogFooter className="pt-2">
-                <Button variant="outline" onClick={() => setMfaModalOpen(false)}>
-                  Bekor qilish
-                </Button>
-                <Button onClick={confirmMfaEnable} disabled={busy || mfaCode.length !== 6} className="bg-[#245e4f] text-white">
-                  {busy ? 'Tekshirilmoqda…' : 'Tasdiqlash va yoqish'}
-                </Button>
-              </DialogFooter>
-            </div>
-          ) : (
-            <div className="space-y-4 py-2">
-              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 space-y-2">
-                <strong>✓ 2FA muvaffaqiyatli yoqildi!</strong>
-                <p className="text-slate-600">
-                  Telefoningiz yo'qolganda hisobingizga kirish uchun quyidagi 8 ta favqulodda tiklash kodini saqlab qo'ying:
-                </p>
-                <div className="grid grid-cols-2 gap-2 font-mono text-xs p-2 bg-white rounded border border-emerald-200">
-                  {recoveryCodes.map((c, i) => (
-                    <span key={i} className="text-slate-800">{c}</span>
-                  ))}
-                </div>
-              </div>
-              <DialogFooter>
-                <Button
-                  onClick={() => {
-                    navigator.clipboard.writeText(recoveryCodes.join('\n'));
-                    toast.success('Kodlar nusxalandi');
-                    setMfaModalOpen(false);
-                  }}
-                  className="bg-[#245e4f] text-white w-full"
-                >
-                  Kodlarni nusxalash va yopish
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* TELEGRAM CONNECT ONBOARDING DIALOG */}
       <Dialog open={connectModalOpen} onOpenChange={setConnectModalOpen}>
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageCircle size={20} className="text-[#245e4f]" /> Telegram Business hisobini ulash
+              <MessageCircle size={20} className="text-[#245e4f]" /> Telegram Business hisobini
+              ulash
             </DialogTitle>
             <DialogDescription>
-              Nomzodlar yuborgan rezyumelarni avtomatik qabul qilish uchun botni Telegram profilingizga ulang.
+              Nomzodlar yuborgan rezyumelarni avtomatik qabul qilish uchun botni Telegram
+              profilingizga ulang.
             </DialogDescription>
           </DialogHeader>
 
@@ -920,7 +897,11 @@ export function Team() {
                   1
                 </span>
                 <div className="space-y-1.5 flex-1">
-                  <strong className="text-slate-900 block text-xs">{setupStage?.telegramVerified ? 'Telegram hisobingiz aniqlandi' : 'Telegram botida Start bosing'}</strong>
+                  <strong className="text-slate-900 block text-xs">
+                    {setupStage?.telegramVerified
+                      ? 'Telegram hisobingiz aniqlandi'
+                      : 'Telegram botida Start bosing'}
+                  </strong>
                   <p className="text-slate-600 text-[11px]">
                     {setupStage?.telegramVerified
                       ? `${setupStage.telegramUsername ? `@${setupStage.telegramUsername}` : 'Hisobingiz'} tasdiqlandi. Endi botga Business ruxsatini bering.`
@@ -944,11 +925,19 @@ export function Team() {
                   2
                 </span>
                 <div className="space-y-1 text-slate-700 text-xs">
-                  <strong className="text-slate-900 block">Telegram ilovangizda botga ruxsat bering</strong>
+                  <strong className="text-slate-900 block">
+                    Telegram ilovangizda botga ruxsat bering
+                  </strong>
                   <p className="text-[11px] text-slate-600 leading-relaxed">
-                    Telegram Sozlamalari (Settings) → <strong>Telegram Business</strong> → <strong>Chatbots</strong> (Chat-botlar) bo'limida <strong>@{connectLinkData?.botUsername || 'bot'}</strong>ni tanlang va <em>«Read Messages»</em> hamda <em>«Reply to Messages»</em> huquqlarini yoqing.
+                    Telegram Sozlamalari (Settings) → <strong>Telegram Business</strong> →{' '}
+                    <strong>Chatbots</strong> (Chat-botlar) bo'limida{' '}
+                    <strong>@{connectLinkData?.botUsername || 'bot'}</strong>ni tanlang va{' '}
+                    <em>«Read Messages»</em> hamda <em>«Reply to Messages»</em> huquqlarini yoqing.
                   </p>
-                  <a href="tg://settings/business" className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 font-medium text-emerald-800 hover:bg-emerald-50">
+                  <a
+                    href="tg://settings/business"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-1.5 font-medium text-emerald-800 hover:bg-emerald-50"
+                  >
                     Telegram Business sozlamalarini ochish <ExternalLink size={13} />
                   </a>
                 </div>
@@ -990,7 +979,9 @@ export function Team() {
           </DialogHeader>
 
           <p className="text-xs text-slate-600 leading-relaxed py-2">
-            Ulanish uzilgandan so'ng, nomzodlar Telegram orqali yuborgan yangi rezyumelar avtomatik tarzda platformaga kelib tushmaydi va ularga avtomatik xabarlar yuborilishi to'xtatiladi.
+            Ulanish uzilgandan so'ng, nomzodlar Telegram orqali yuborgan yangi rezyumelar avtomatik
+            tarzda platformaga kelib tushmaydi va ularga avtomatik xabarlar yuborilishi
+            to'xtatiladi.
           </p>
 
           <DialogFooter className="pt-2">

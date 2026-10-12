@@ -36,7 +36,10 @@ export * from './accordion';
 export * from './progress';
 export * from './combobox';
 export * from './popover';
+export * from './sign-in';
+export * from './demo';
 export * from '../resume-dropzone';
+export * from '../language-switcher';
 export { Badge as ShadcnBadge, badgeVariants } from './badge';
 export { Alert as ShadcnAlert, AlertTitle, AlertDescription } from './alert';
 

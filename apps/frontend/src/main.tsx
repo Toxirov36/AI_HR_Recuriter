@@ -24,6 +24,9 @@ import { AppProviders } from './app/providers';
 import { AppRouter, preloadRoute } from './app/router';
 import { useAuth } from './features/auth';
 import { NotificationCenter } from './components/notification-center';
+import { LanguageSwitcher } from './components/language-switcher';
+import { useTranslation } from 'react-i18next';
+import './i18n';
 import {
   Alert,
   Avatar,
@@ -59,6 +62,7 @@ function SidebarNav({
   user: any;
   logout: () => void;
 }) {
+  const { t } = useTranslation();
   const companyName = user?.company?.name || 'Northstar Studio';
   const companyInitials =
     companyName
@@ -74,11 +78,11 @@ function SidebarNav({
         <span className="company-icon">{companyInitials}</span>
         <div className="company-switch-info">
           <strong>{companyName}</strong>
-          <small>Recruiting workspace</small>
+          <small>{t('navigation.recruitingWorkspace')}</small>
         </div>
         <ChevronRight size={15} className="company-chevron" />
       </div>
-      <div className="nav-label">WORKSPACE</div>
+      <div className="nav-label">{t('navigation.workspace').toUpperCase()}</div>
       <nav>
         {links.map((l) => (
           <NavLink
@@ -97,8 +101,8 @@ function SidebarNav({
       <div className="sidebar-bottom mt-auto">
         <div className="sidebar-note">
           <ShieldCheck size={20} className="shield-icon" />
-          <strong>Human by design.</strong>
-          <p>AI structures the evidence. Your team makes every hiring decision.</p>
+          <strong>{t('navigation.humanByDesign')}</strong>
+          <p>{t('navigation.humanByDesignText')}</p>
         </div>
       </div>
     </div>
@@ -106,6 +110,7 @@ function SidebarNav({
 }
 
 function AppShell() {
+  const { t } = useTranslation();
   const { user, refresh } = useAuth();
   const [error, setError] = useState('');
   const [menu, setMenu] = useState(false);
@@ -148,17 +153,17 @@ function AppShell() {
   }
 
   const links = [
-    { to: '/', title: 'Overview', icon: LayoutDashboard },
-    { to: '/vacancies', title: 'Vacancies', icon: BriefcaseBusiness },
-    { to: '/candidates', title: 'Candidates', icon: Users },
-    { to: '/pipeline', title: 'Hiring pipeline', icon: GitBranch },
-    ...(user.role === 'ADMIN' ? [{ to: '/admin', title: 'Admin panel', icon: Settings2 }] : []),
-    ...(user.platformRole === 'SUPER_ADMIN' ? [{ to: '/platform-admin', title: 'Platforma admini', icon: Layers3 }] : []),
+    { to: '/', title: t('navigation.overview'), icon: LayoutDashboard },
+    { to: '/vacancies', title: t('navigation.vacancies'), icon: BriefcaseBusiness },
+    { to: '/candidates', title: t('navigation.candidates'), icon: Users },
+    { to: '/pipeline', title: t('navigation.hiringPipeline'), icon: GitBranch },
+    ...(user.role === 'ADMIN' ? [{ to: '/admin', title: t('navigation.adminPanel'), icon: Settings2 }] : []),
+    ...(user.platformRole === 'SUPER_ADMIN' ? [{ to: '/platform-admin', title: t('navigation.platformAdmin'), icon: Layers3 }] : []),
   ];
 
   const current =
     links.find((l) => l.to !== '/' && location.pathname.startsWith(l.to))?.title ||
-    (location.pathname.startsWith('/applications') ? 'Application review' : 'Overview');
+    (location.pathname.startsWith('/applications') ? t('navigation.applicationReview') : t('navigation.overview'));
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -182,7 +187,7 @@ function AppShell() {
 
   const searchLinks = [
     ...links,
-    { to: '/vacancies?new=1', title: 'Create vacancy', icon: Plus },
+    { to: '/vacancies?new=1', title: t('navigation.createVacancy'), icon: Plus },
   ].filter((item) => item.title.toLowerCase().includes(search.trim().toLowerCase()));
 
   return (
@@ -201,7 +206,7 @@ function AppShell() {
           <div className="topbar-breadcrumb-wrap">
             <Sheet open={menu} onOpenChange={setMenu}>
               <SheetTrigger asChild>
-                <button className="mobile-only icon-button" aria-label="Open navigation">
+                <button className="mobile-only icon-button" aria-label={t('navigation.openNavigation')}>
                   <Menu size={20} />
                 </button>
               </SheetTrigger>
@@ -217,6 +222,9 @@ function AppShell() {
                     shortlist<span className="brand-dot">.</span>
                   </SheetTitle>
                 </SheetHeader>
+                <div className="mb-4">
+                  <LanguageSwitcher variant="full" />
+                </div>
                 <SidebarNav
                   links={links}
                   user={user}
@@ -226,17 +234,18 @@ function AppShell() {
               </SheetContent>
             </Sheet>
             <div className="topbar-breadcrumbs">
-              <span className="breadcrumb-root">Workspace</span>
+              <span className="breadcrumb-root">{t('navigation.workspace')}</span>
               <span className="breadcrumb-divider">/</span>
               <strong className="breadcrumb-page">{current}</strong>
             </div>
           </div>
           <button type="button" className="topbar-search-pill" onClick={() => setSearchOpen(true)}>
             <Search size={15} className="search-pill-icon" />
-            <span className="search-pill-placeholder">Search candidates, vacancies...</span>
+            <span className="search-pill-placeholder">{t('navigation.searchPlaceholder')}</span>
             <kbd className="search-pill-kbd">⌘K</kbd>
           </button>
           <div className="topbar-actions">
+            <LanguageSwitcher />
             <NotificationCenter />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -244,7 +253,7 @@ function AppShell() {
                   type="button"
                   className="topbar-avatar cursor-pointer outline-none hover:ring-2 hover:ring-[#1a5d4c]/20 transition-all"
                   title={user.fullName}
-                  aria-label="User profile menu"
+                  aria-label={t('navigation.userProfileMenu')}
                 >
                   <span>{userInitials || 'DT'}</span>
                 </button>
@@ -266,7 +275,7 @@ function AppShell() {
                     <DropdownMenuItem asChild>
                       <NavLink to="/admin" className="cursor-pointer flex items-center">
                         <Users className="mr-2.5 h-4 w-4 text-slate-500" />
-                        <span>Admin panel</span>
+                        <span>{t('navigation.adminPanel')}</span>
                       </NavLink>
                     </DropdownMenuItem>
                   )}
@@ -278,7 +287,7 @@ function AppShell() {
                       className="cursor-pointer flex items-center"
                     >
                       <CircleHelp className="mr-2.5 h-4 w-4 text-slate-500" />
-                      <span>Gemini API key</span>
+                      <span>{t('navigation.geminiApiKey')}</span>
                     </a>
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
@@ -288,7 +297,7 @@ function AppShell() {
                   onClick={() => logout()}
                 >
                   <LogOut className="mr-2.5 h-4 w-4 text-red-500" />
-                  <span>Sign out</span>
+                  <span>{t('navigation.signOut')}</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -298,15 +307,15 @@ function AppShell() {
           <Alert message={error} />
           <AppRouter />
           <footer className="page-footer">
-            <span>Shortlist · A little more human.</span>
-            <span>Evidence-led recruiting</span>
+            <span>{t('navigation.brandTagline')}</span>
+            <span>{t('navigation.evidenceLedRecruiting')}</span>
           </footer>
         </main>
       </div>
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent className="workspace-search-dialog sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Search workspace</DialogTitle>
+            <DialogTitle>{t('navigation.searchWorkspace')}</DialogTitle>
           </DialogHeader>
           <div className="workspace-search-input">
             <Search size={17} />
@@ -314,7 +323,7 @@ function AppShell() {
               autoFocus
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search pages and actions…"
+              placeholder={t('navigation.searchPagesAndActions')}
             />
           </div>
           <div className="workspace-search-results">

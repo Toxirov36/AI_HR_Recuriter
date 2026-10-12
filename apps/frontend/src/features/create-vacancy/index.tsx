@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { send } from '../../lib/api';
 import {
   Alert,
@@ -23,6 +24,7 @@ export function VacancyGenerator({
   disabled: boolean;
   apply: (draft: VacancyDraft) => void;
 }) {
+  const { t } = useTranslation();
   const [brief, setBrief] = useState('');
   const [language, setLanguage] = useState('uz');
   const [busy, setBusy] = useState(false);
@@ -56,7 +58,7 @@ export function VacancyGenerator({
         your review.
       </p>
       <label>
-        Who are you hiring?
+        {t('vacancyGenerator.label')}
         <textarea
           value={brief}
           maxLength={3000}
@@ -97,7 +99,7 @@ export function VacancyGenerator({
         onClick={() => void generate()}
       >
         <Sparkles size={16} />{' '}
-        {busy ? 'Writing vacancy…' : draft ? 'Regenerate draft' : 'Generate job description'}
+        {busy ? t('vacancies.saving') : draft ? t('vacancyGenerator.generateButton') : t('vacancyGenerator.generateButton')}
       </button>
       {busy && (
         <p role="status" className="muted small">
@@ -129,7 +131,7 @@ export function VacancyGenerator({
               setApplied(true);
             }}
           >
-            Use draft
+            {t('vacancyGenerator.useDraft')}
           </button>
         </div>
       )}
