@@ -39,7 +39,9 @@ jobs:
       - run: npm run db:migrate
       - run: npm run build
       - run: npm test
-      - run: npm audit --audit-level=high
+      - run: npm audit --omit=dev --audit-level=high
+      - run: node --test scripts/security-audit.test.mjs
+      - run: node scripts/security-audit.mjs
       - run: npm ci --prefix deploy/ops
       - run: npm test --prefix deploy/ops
       - run: python3 deploy/ops/monitor_test.py

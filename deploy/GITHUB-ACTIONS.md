@@ -70,6 +70,13 @@ Nginx aaPanel orqali ishlaydi: `/www/server/nginx/sbin/nginx`, konfiguratsiya
 
 ## Log chegaralari
 
+Audit production dependencies uchun high/critical muammolarni bloklaydi.
+To'liq audit ham ishlaydi. Faqat GHSA-vfj7-8cjw-p6xm (`braces`) va uning
+dev-only build dependency zanjiri 2026-11-11gacha vaqtinchalik istisno:
+patch chiqarilmagan, Tailwind faqat repodagi ishonchli build patternlarini o'qiydi.
+Runtime dependency, boshqa advisory yoki critical muammo bu istisnoga kirmaydi.
+Istisno muddati tugagach deploy bloklanadi; patchni yoki Tailwind migratsiyasini tekshiring.
+
 Docker: har servis uchun 10 MB x 3 fayl (`compose.production.yaml`).
 `journald.conf`ni `/etc/systemd/journald.conf.d/hr-recruiter.conf`ga o'rnating
 va systemd-journaldni qayta ishga tushiring. Ops Agent uchun
