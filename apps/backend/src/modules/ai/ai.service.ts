@@ -22,9 +22,12 @@ import { evidenceSchema, validateEvidence } from './schemas/evidence.schema';
 import { questionsSchema } from './schemas/questions.schema';
 import { vacancyInstructions } from './prompts/vacancy.prompt';
 import { instructions } from './prompts/evidence.prompt';
+import { comparisonInstructions } from './prompts/comparison.prompt';
 import { GeminiProvider } from './providers/gemini.provider';
 import { ResumeQueueService } from '../resumes/resume-queue.service';
 import { NotificationService } from '../notifications/notification.service';
+import { calculateCandidateMatchScore } from './utils/matching-calculator';
+import { topComparisonSchema, type TopComparisonResult } from './schemas/top-comparison.schema';
 
 export {
   vacancyDraftSchema,
@@ -32,6 +35,8 @@ export {
   evidenceSchema,
   questionsSchema,
   validateEvidence,
+  topComparisonSchema,
+  calculateCandidateMatchScore,
 };
 
 @Injectable()
@@ -340,5 +345,270 @@ export class AiService implements OnModuleInit {
 
       return result;
     });
+  }
+
+  async analyzeVacancyApplications(companyId: number, vacancyId: number, userId: number) {
+    const vacancy = await this.recruiting.vacancy(companyId, vacancyId);
+    if (!vacancy.requirements.length) {
+      throw new BadRequestException('Vakansiyada tahlil qilish uchun talablar mavjud emas');
+    }
+
+    const applications = await this.recruiting.db.application.findMany({
+      where: { vacancyId, companyId },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            fullName: true,
+            resumeText: true,
+            resumeRevision: true,
+            publicSubmittedAt: true,
+            aiConsentAt: true,
+          },
+        },
+      },
+    });
+
+    let analyzedCount = 0;
+    let skippedCount = 0;
+    const skippedDetails: Array<{ applicationId: number; candidateName: string; reason: string }> = [];
+
+    for (const app of applications) {
+      if (app.candidate.publicSubmittedAt && !app.candidate.aiConsentAt) {
+        skippedCount++;
+        skippedDetails.push({
+          applicationId: app.id,
+          candidateName: app.candidate.fullName,
+          reason: 'Nomzod AI tahlili uchun rozilik bermagan',
+        });
+        continue;
+      }
+
+      if (!app.candidate.resumeText) {
+        skippedCount++;
+        skippedDetails.push({
+          applicationId: app.id,
+          candidateName: app.candidate.fullName,
+          reason: 'Rezyume matni mavjud emas',
+        });
+        continue;
+      }
+
+      const needsAnalysis =
+        !app.analysis ||
+        app.analyzedResumeRevision !== app.candidate.resumeRevision ||
+        app.analyzedVacancyRevision !== vacancy.revision;
+
+      if (needsAnalysis) {
+        try {
+          await this.analyze(companyId, app.id, userId);
+          analyzedCount++;
+        } catch (err: any) {
+          this.logger.warn(`Failed to analyze application ${app.id}: ${err?.message}`);
+          skippedCount++;
+          skippedDetails.push({
+            applicationId: app.id,
+            candidateName: app.candidate.fullName,
+            reason: err?.message || 'Tahlil jarayonida xatolik',
+          });
+        }
+      } else {
+        analyzedCount++;
+      }
+    }
+
+    return {
+      vacancyId,
+      totalApplications: applications.length,
+      analyzedCount,
+      skippedCount,
+      skippedDetails,
+      message: `${applications.length} ta nomzoddan ${analyzedCount} tasi tahlil qilindi`,
+    };
+  }
+
+  async getVacancyTopCandidates(companyId: number, vacancyId: number, limit = 3) {
+    const vacancy = await this.recruiting.vacancy(companyId, vacancyId);
+
+    const applications = await this.recruiting.db.application.findMany({
+      where: { vacancyId, companyId },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            source: true,
+            resumeName: true,
+            resumeText: true,
+            aiConsentAt: true,
+            publicSubmittedAt: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const scoredCandidates = applications.map((app) => {
+      const score = calculateCandidateMatchScore(
+        vacancy.requirements,
+        app.analysis as any,
+      );
+
+      const isAnalyzed = Boolean(app.analysis);
+      const hasConsent = !app.candidate.publicSubmittedAt || Boolean(app.candidate.aiConsentAt);
+      const hasResume = Boolean(app.candidate.resumeText);
+
+      return {
+        applicationId: app.id,
+        candidateId: app.candidate.id,
+        candidateName: app.candidate.fullName,
+        candidateEmail: app.candidate.email,
+        candidatePhone: app.candidate.phone,
+        candidateSource: app.candidate.source,
+        currentStage: app.status,
+        hasResume,
+        hasConsent,
+        isAnalyzed,
+        matchScore: isAnalyzed ? score.matchScore : 0,
+        mandatoryScore: isAnalyzed ? score.mandatoryScore : 0,
+        optionalScore: isAnalyzed ? score.optionalScore : 0,
+        supportedCount: score.supportedCount,
+        partialCount: score.partialCount,
+        notFoundCount: score.notFoundCount,
+        unknownCount: score.unknownCount,
+        strengths: score.strengths,
+        gaps: score.gaps,
+        partialMatches: score.partialMatches,
+        requirementDetails: score.requirementDetails,
+      };
+    });
+
+    // Rank: highest matchScore first, then highest mandatoryScore, then highest supportedCount
+    const analyzedOnly = scoredCandidates.filter((c) => c.isAnalyzed);
+    analyzedOnly.sort((a, b) => {
+      if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
+      if (b.mandatoryScore !== a.mandatoryScore) return b.mandatoryScore - a.mandatoryScore;
+      if (b.supportedCount !== a.supportedCount) return b.supportedCount - a.supportedCount;
+      return a.applicationId - b.applicationId;
+    });
+
+    const topCandidates = analyzedOnly.slice(0, Math.max(1, limit)).map((c, idx) => ({
+      ...c,
+      rank: idx + 1,
+    }));
+
+    // AI comparison generation
+    let comparison = this.buildFallbackComparison(vacancy.title, topCandidates);
+
+    if (topCandidates.length > 0 && this.security.config.GEMINI_API_KEY) {
+      try {
+        const inputData = {
+          vacancy: {
+            title: vacancy.title,
+            description: vacancy.description,
+            requirements: vacancy.requirements.map((r) => ({
+              id: r.id,
+              name: r.name,
+              required: r.required,
+            })),
+          },
+          candidates: topCandidates.map((c) => ({
+            candidateId: c.candidateId,
+            rank: c.rank,
+            name: c.candidateName,
+            matchScore: c.matchScore,
+            strengths: c.strengths,
+            gaps: c.gaps,
+            partialMatches: c.partialMatches,
+          })),
+        };
+
+        const aiComparison = await this.generate(
+          topComparisonSchema,
+          `Ushbu top nomzodlarni o'zaro taqqoslab, HR mutaxassis uchun qisqa va professional xulosa tayyorlang.`,
+          inputData,
+          comparisonInstructions,
+        );
+
+        if (aiComparison && aiComparison.executiveSummary) {
+          comparison = aiComparison;
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `AI Top Candidates comparison generation failed, using fallback: ${err?.message}`,
+        );
+      }
+    }
+
+    return {
+      vacancy: {
+        id: vacancy.id,
+        title: vacancy.title,
+        status: vacancy.status,
+        requirementsCount: vacancy.requirements.length,
+      },
+      stats: {
+        totalApplications: applications.length,
+        analyzedCount: analyzedOnly.length,
+        unanalyzedCount: applications.length - analyzedOnly.length,
+        averageScore:
+          analyzedOnly.length > 0
+            ? Math.round(
+                analyzedOnly.reduce((acc, c) => acc + c.matchScore, 0) / analyzedOnly.length,
+              )
+            : 0,
+      },
+      topCandidates,
+      allCandidates: scoredCandidates.map((c) => {
+        const rankIndex = analyzedOnly.findIndex((a) => a.applicationId === c.applicationId);
+        return {
+          ...c,
+          rank: rankIndex >= 0 ? rankIndex + 1 : null,
+        };
+      }),
+      comparison,
+    };
+  }
+
+  private buildFallbackComparison(
+    vacancyTitle: string,
+    topCandidates: Array<{
+      rank: number;
+      candidateName: string;
+      candidateId: number;
+      matchScore: number;
+      strengths: string[];
+      gaps: string[];
+    }>,
+  ): TopComparisonResult {
+    if (topCandidates.length === 0) {
+      return {
+        executiveSummary: `"${vacancyTitle}" vakansiyasi bo'yicha tahlil qilingan nomzodlar topilmadi. Avval nomzodlar rezyumesini AI orqali tahlil qiling.`,
+        candidateHighlights: [],
+        overallRecommendation: "Nomzodlarni tahlil qilish uchun 'AI Tahlil' tugmasini bosing.",
+      };
+    }
+
+    const first = topCandidates[0];
+    return {
+      executiveSummary: `"${vacancyTitle}" vakansiyasi bo'yicha eng yaxshi natijani ${first.candidateName} (${first.matchScore}% moslik) ko'rsatdi. Nomzodlar vakansiya talablari asosida saralandi.`,
+      candidateHighlights: topCandidates.map((c) => ({
+        candidateId: c.candidateId,
+        rank: c.rank,
+        keyStrengthsSummary:
+          c.strengths.length > 0
+            ? `Asosiy kuchli tomonlari: ${c.strengths.slice(0, 3).join(', ')}.`
+            : 'Umumiy talablarga moslik mavjud.',
+        areasToVerify:
+          c.gaps.length > 0
+            ? `Suhbatda aniqlashtirilishi kerak: ${c.gaps.slice(0, 2).join(', ')}.`
+            : "Bo'shliqlar aniqlanmadi.",
+        recommendedInterviewFocus:
+          "Texnik bilimlar va amaliy loyihalardagi tajribasi bo'yicha savollar berish.",
+      })),
+      overallRecommendation: `${topCandidates.map((c) => c.candidateName).join(', ')} bilan suhbat o'tkazish tavsiya etiladi.`,
+    };
   }
 }

@@ -48,6 +48,7 @@ import { toast } from 'sonner';
 import type { Page, Vacancy, Requirement } from '../../types';
 import { useAuth } from '../../features/auth';
 import { VacancyGenerator } from '../../features/create-vacancy';
+import { TopCandidatesModal } from '../../features/ai-matching';
 
 export function parseDescriptionMeta(rawDescription: string, rawTitle: string = '') {
   let description = rawDescription || '';
@@ -588,6 +589,7 @@ export function Vacancies() {
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<Vacancy | null>(null);
   const [deletingVacancy, setDeletingVacancy] = useState<Vacancy | null>(null);
+  const [topModalVacancyId, setTopModalVacancyId] = useState<number | null>(null);
   const [open, setOpen] = useState(params.has('new'));
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -790,6 +792,15 @@ export function Vacancies() {
                         )}
                         <button
                           type="button"
+                          className="quick-action-btn text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
+                          aria-label={`View Top 3 candidates for ${v.title}`}
+                          title="Top 3 mos nomzodlarni ko‘rish (AI)"
+                          onClick={() => setTopModalVacancyId(v.id)}
+                        >
+                          <Sparkles size={14} className="text-emerald-600" />
+                        </button>
+                        <button
+                          type="button"
                           className="quick-action-btn"
                           aria-label={`Edit ${v.title}`}
                           title={`Edit ${v.title}`}
@@ -879,6 +890,13 @@ export function Vacancies() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TopCandidatesModal
+        vacancyId={topModalVacancyId}
+        open={Boolean(topModalVacancyId)}
+        onClose={() => setTopModalVacancyId(null)}
+        onApplicationStageChanged={() => reload()}
+      />
     </div>
   );
 }

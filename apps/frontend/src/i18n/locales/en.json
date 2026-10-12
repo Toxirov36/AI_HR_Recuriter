@@ -461,5 +461,25 @@
     "currencyUZS": "UZS",
     "currencyUSD": "$",
     "percent": "%"
+  },
+  "topCandidates": {
+    "title": "Top 3 Matching Candidates",
+    "subtitle": "Highest-matching candidates based on vacancy requirements",
+    "rank": "Rank",
+    "matchScore": "Match",
+    "mandatory": "Mandatory requirements",
+    "optional": "Optional requirements",
+    "strengths": "Strengths",
+    "gaps": "Areas to verify",
+    "executiveSummary": "Executive Summary",
+    "comparisonMatrix": "Comparison Matrix",
+    "allCandidates": "All Candidates",
+    "moveToInterview": "Move to Interview",
+    "inInterview": "In Interview",
+    "runAnalysis": "Update AI Analysis",
+    "analyzing": "Analyzing…",
+    "noCandidates": "No analyzed candidates found",
+    "averageScore": "Average match",
+    "requirementsCount": "Requirements count"
   }
 }

@@ -461,5 +461,25 @@
     "currencyUZS": "so‘m",
     "currencyUSD": "$",
     "percent": "%"
+  },
+  "topCandidates": {
+    "title": "Top 3 Mos Nomzodlar",
+    "subtitle": "Vakansiya talablari asosida eng yuqori moslikka ega nomzodlar",
+    "rank": "O'rin",
+    "matchScore": "Moslik",
+    "mandatory": "Majburiy talablar",
+    "optional": "Ixtiyoriy talablar",
+    "strengths": "Kuchli tomonlari",
+    "gaps": "Aniqlashtirish kerak",
+    "executiveSummary": "Boshqaruv Xulosasi",
+    "comparisonMatrix": "Taqqoslama Matritsa",
+    "allCandidates": "Barcha Nomzodlar",
+    "moveToInterview": "Suhbatga chaqirish",
+    "inInterview": "Suhbatda",
+    "runAnalysis": "AI Tahlilni yangilash",
+    "analyzing": "Tahlil qilinmoqda…",
+    "noCandidates": "Tahlil qilingan nomzodlar topilmadi",
+    "averageScore": "O'rtacha moslik",
+    "requirementsCount": "Talablar soni"
   }
 }

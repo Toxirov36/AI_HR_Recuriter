@@ -461,5 +461,25 @@
     "currencyUZS": "сум",
     "currencyUSD": "$",
     "percent": "%"
+  },
+  "topCandidates": {
+    "title": "Топ-3 подходящих кандидата",
+    "subtitle": "Кандидаты с наивысшим соответствием требованиям вакансии",
+    "rank": "Место",
+    "matchScore": "Соответствие",
+    "mandatory": "Обязательные требования",
+    "optional": "Дополнительные требования",
+    "strengths": "Сильные стороны",
+    "gaps": "Требует уточнения",
+    "executiveSummary": "Резюме для руководства",
+    "comparisonMatrix": "Сравнительная матрица",
+    "allCandidates": "Все кандидаты",
+    "moveToInterview": "Пригласить на интервью",
+    "inInterview": "На интервью",
+    "runAnalysis": "Обновить ИИ-анализ",
+    "analyzing": "Идет анализ…",
+    "noCandidates": "Проанализированные кандидаты не найдены",
+    "averageScore": "Среднее соответствие",
+    "requirementsCount": "Количество требований"
   }
 }

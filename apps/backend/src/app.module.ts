@@ -85,7 +85,11 @@ export async function createApp() {
 export function configureApp(app: INestApplication) {
   const config = getConfig();
   app.setGlobalPrefix('api');
-  app.use(helmet());
+  app.use(
+    helmet({
+      crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    }),
+  );
   app.use(cookieParser());
   app.use(json({ limit: '128kb' }));
   app.enableCors({

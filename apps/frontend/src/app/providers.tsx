@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { AuthContext, AuthPage } from '../features/auth';
 import { Alert, Loading, Toaster } from '../components/ui';
@@ -7,6 +8,7 @@ import type { User } from '../types';
 import { PublicApplyPage } from '../pages/public-apply';
 
 export function AppProviders({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const isPublicApply = window.location.pathname.startsWith('/apply/');
   const [user, setUser] = useState<User>();
   const [ready, setReady] = useState(false);
@@ -25,6 +27,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const handleAuthSuccess = useCallback(async () => {
+    await refresh();
+    navigate('/', { replace: true });
+  }, [navigate, refresh]);
+
   useEffect(() => {
     if (isPublicApply) return;
     void refresh();
@@ -40,7 +47,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     return (
       <>
         <Alert message={error} />
-        <AuthPage onSuccess={refresh} />
+        <AuthPage onSuccess={handleAuthSuccess} />
       </>
     );
 

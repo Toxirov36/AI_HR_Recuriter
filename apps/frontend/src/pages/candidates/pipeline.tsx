@@ -37,6 +37,7 @@ import {
 } from '../../lib/match-score';
 import { exportApplicationsToCsv } from '../../lib/export';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
+import { TopCandidatesModal } from '../../features/ai-matching';
 import {
   AiConsent,
   Alert,
@@ -321,6 +322,7 @@ export function Pipeline() {
   const [dossierApp, setDossierApp] = useState<Application | null>(null);
   const sortBy: PipelineSortOption = 'created_desc';
   const [selectedVacancy, setSelectedVacancy] = useState('all');
+  const [topCandidatesVacancyId, setTopCandidatesVacancyId] = useState<number | null>(null);
   const [selectedStage, setSelectedStage] = useState<'all' | Stage>('all');
   const [mobileStage, setMobileStage] = useState<Stage>('NEW');
   const [viewMode, setViewMode] = useState<PipelineViewMode>('board');
@@ -714,6 +716,29 @@ export function Pipeline() {
         >
           <Download size={15} /> Eksport (CSV)
         </Button>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            if (selectedVacancy === 'all') {
+              if (vacanciesList.length === 1) {
+                setTopCandidatesVacancyId(vacanciesList[0].id);
+              } else if (vacanciesList.length > 1) {
+                setTopCandidatesVacancyId(vacanciesList[0].id);
+                setSelectedVacancy(String(vacanciesList[0].id));
+              } else {
+                toast.info("Tahlil qilish uchun avval biror vakansiyani tanlang");
+              }
+            } else {
+              setTopCandidatesVacancyId(Number(selectedVacancy));
+            }
+          }}
+          className="h-10 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-sm font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 shadow-none shrink-0"
+          title="Vakansiya bo'yicha eng yaxshi 3 ta nomzodni AI tahlili orqali ko'rish"
+        >
+          <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400" /> Top 3 Nomzodlar (AI)
+        </Button>
       </section>
 
       <Alert message={error} />
@@ -880,6 +905,14 @@ export function Pipeline() {
         open={Boolean(dossierApp)}
         onClose={() => setDossierApp(null)}
         application={dossierApp}
+      />
+
+      <TopCandidatesModal
+        vacancyId={topCandidatesVacancyId}
+        open={Boolean(topCandidatesVacancyId)}
+        onClose={() => setTopCandidatesVacancyId(null)}
+        onApplicationStageChanged={() => reload()}
+        onOpenDossier={(app) => setDossierApp(app)}
       />
 
       <AlertDialog

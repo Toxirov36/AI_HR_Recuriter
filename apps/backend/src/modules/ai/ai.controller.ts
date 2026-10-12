@@ -6,6 +6,7 @@ import {
   Param,
   ParseIntPipe,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -76,4 +77,23 @@ export class AiController {
   ) {
     return this.ai.analyze(req.user.companyId, id, req.user.id, true);
   }
+
+  @Post('vacancies/:id/analyze-candidates')
+  analyzeVacancyCandidates(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.ai.analyzeVacancyApplications(req.user.companyId, id, req.user.id);
+  }
+
+  @Get('vacancies/:id/top-candidates')
+  getVacancyTopCandidates(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Query('limit') limit?: string,
+  ) {
+    const numLimit = limit ? Math.max(1, parseInt(limit, 10) || 3) : 3;
+    return this.ai.getVacancyTopCandidates(req.user.companyId, id, numLimit);
+  }
 }
+

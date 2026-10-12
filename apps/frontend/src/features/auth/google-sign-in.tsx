@@ -10,6 +10,7 @@ type GoogleSdk = {
         client_id: string;
         nonce: string;
         auto_select: boolean;
+        itp_support?: boolean;
         callback: (response: { credential: string }) => void;
       }) => void;
       renderButton: (
@@ -86,6 +87,7 @@ export function GoogleSignInButton({
           client_id: config.clientId,
           nonce,
           auto_select: false,
+          itp_support: true,
           callback: ({ credential }) => {
             if (!cancelled && !latest.current.disabled) latest.current.onCredential(credential);
           },
