@@ -3,7 +3,8 @@
 The `oftobai` account can run the application, PostgreSQL, Redis, and Nginx
 without sudo. Keep all files under `~/hr-recruiter`. The preparation scripts
 expect Ubuntu 22.04, a private `~/hr-recruiter/.env`, the Ubuntu 14 PostgreSQL
-and Redis package binaries extracted into `~/hr-recruiter/runtime/apt-root`,
+package binaries extracted into `~/hr-recruiter/runtime/apt-root`, Redis 7.4
+under `~/hr-recruiter/runtime/redis7`,
 and Node 22 at `~/hr-recruiter/runtime/node`.
 
 1. Clone the repository into `~/hr-recruiter/releases/<release>`, link

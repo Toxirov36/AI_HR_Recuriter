@@ -16,7 +16,7 @@ def main() -> None:
     if not (CURRENT / "apps/backend/dist/main.js").exists():
         raise RuntimeError("Build the release and create ~/hr-recruiter/current first")
     nginx_dir = DATA / "nginx"
-    for name in ("client", "proxy"):
+    for name in ("client", "proxy", "fastcgi", "uwsgi", "scgi"):
         (nginx_dir / name).mkdir(parents=True, exist_ok=True)
     config = DATA / "nginx.conf"
     config.write_text(f"""worker_processes 1;
@@ -29,6 +29,9 @@ http {{
   access_log {nginx_dir / 'access.log'};
   client_body_temp_path {nginx_dir / 'client'};
   proxy_temp_path {nginx_dir / 'proxy'};
+  fastcgi_temp_path {nginx_dir / 'fastcgi'};
+  uwsgi_temp_path {nginx_dir / 'uwsgi'};
+  scgi_temp_path {nginx_dir / 'scgi'};
   client_max_body_size 6m;
   server {{
     listen 127.0.0.1:8081;

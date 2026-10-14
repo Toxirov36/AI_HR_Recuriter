@@ -20,7 +20,7 @@ APT = BASE / "runtime" / "apt-root"
 DATA = BASE / "data"
 UNITS = Path.home() / ".config" / "systemd" / "user"
 PGBIN = APT / "usr" / "lib" / "postgresql" / "14" / "bin"
-REDISBIN = APT / "usr" / "bin"
+REDISBIN = BASE / "runtime" / "redis7" / "usr" / "bin"
 LIB = ":".join((str(APT / "usr/lib/x86_64-linux-gnu"), str(APT / "usr/lib/postgresql/14/lib")))
 
 
@@ -44,6 +44,8 @@ def write_private(path: Path, content: str) -> None:
 
 
 def main() -> None:
+    if not (REDISBIN / "redis-server").exists():
+        raise RuntimeError("Redis 7 package is missing from ~/hr-recruiter/runtime/redis7")
     values = read_env()
     db = urlparse(values["DATABASE_URL"])
     redis = urlparse(values["REDIS_URL"])
@@ -91,6 +93,7 @@ def main() -> None:
     run("systemctl", "--user", "daemon-reload")
     run("systemctl", "--user", "enable", "--now", "hr-recruiter-postgres.service", "hr-recruiter-redis.service")
     run("systemctl", "--user", "restart", "hr-recruiter-postgres.service")
+    run("systemctl", "--user", "restart", "hr-recruiter-redis.service")
     for _ in range(30):
         try:
             run(str(PGBIN / "pg_isready"), "-h", "127.0.0.1", "-p", "5432", env=pg_env)
