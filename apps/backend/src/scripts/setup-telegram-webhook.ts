@@ -17,6 +17,8 @@ async function main() {
         secret_token: config.TELEGRAM_WEBHOOK_SECRET,
         allowed_updates: [
           'message',
+          'callback_query',
+          'channel_post',
           'business_connection',
           'business_message',
           'edited_business_message',

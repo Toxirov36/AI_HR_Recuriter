@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { FormEvent } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   ArrowRight,
@@ -39,7 +40,6 @@ import { exportApplicationsToCsv } from '../../lib/export';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import {
-  AiConsent,
   Alert,
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +91,7 @@ function RecordSelect({
   kind: 'candidates' | 'vacancies';
   onSelect: (id: number) => void;
 }) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState<Candidate | Vacancy | null>(null);
   const endpoint =
     kind === 'vacancies'
@@ -113,11 +114,11 @@ function RecordSelect({
       const draft = vacancies.filter((v) => v.status === 'DRAFT');
       const other = vacancies.filter((v) => v.status !== 'ACTIVE' && v.status !== 'DRAFT');
       const groups: { value: string; items: (Vacancy | Candidate)[] }[] = [];
-      if (active.length > 0) groups.push({ value: 'Active Positions', items: active });
-      if (draft.length > 0) groups.push({ value: 'Draft Positions', items: draft });
-      if (other.length > 0) groups.push({ value: 'Other Positions', items: other });
+      if (active.length > 0) groups.push({ value: t('pipeline.activePositions', 'Active Positions'), items: active });
+      if (draft.length > 0) groups.push({ value: t('pipeline.draftPositions', 'Draft Positions'), items: draft });
+      if (other.length > 0) groups.push({ value: t('pipeline.otherPositions', 'Other Positions'), items: other });
       if (groups.length === 0 && vacancies.length > 0) {
-        groups.push({ value: 'Available Positions', items: vacancies });
+        groups.push({ value: t('pipeline.availablePositions', 'Available Positions'), items: vacancies });
       }
       return groups;
     } else {
@@ -125,14 +126,14 @@ function RecordSelect({
       const withCv = candidates.filter((c) => c.resumeName || c.resumeText);
       const withoutCv = candidates.filter((c) => !c.resumeName && !c.resumeText);
       const groups: { value: string; items: (Candidate | Vacancy)[] }[] = [];
-      if (withCv.length > 0) groups.push({ value: 'Candidates with CV', items: withCv });
-      if (withoutCv.length > 0) groups.push({ value: 'Other Candidates', items: withoutCv });
+      if (withCv.length > 0) groups.push({ value: t('pipeline.candidatesWithCv', 'Candidates with CV'), items: withCv });
+      if (withoutCv.length > 0) groups.push({ value: t('pipeline.otherCandidates', 'Other Candidates'), items: withoutCv });
       if (groups.length === 0 && candidates.length > 0) {
-        groups.push({ value: 'Available Candidates', items: candidates });
+        groups.push({ value: t('pipeline.availableCandidates', 'Available Candidates'), items: candidates });
       }
       return groups;
     }
-  }, [kind, rawItems]);
+  }, [kind, rawItems, t]);
 
   const handleSelect = (item: Candidate | Vacancy | null) => {
     setSelected(item);
@@ -145,12 +146,12 @@ function RecordSelect({
     <div className="form-group mb-5">
       <div className="flex items-center justify-between mb-2">
         <label className="form-label text-sm font-semibold text-slate-800">
-          <span>{kind === 'candidates' ? 'Select candidate' : 'Select vacancy'}</span>
+          <span>{kind === 'candidates' ? t('pipeline.selectCandidate', 'Select candidate') : t('pipeline.selectVacancy', 'Select vacancy')}</span>
           <span className="text-red-500 font-bold ml-1">*</span>
         </label>
         {totalCount > 0 && (
           <span className="text-xs text-slate-500 font-medium px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200/60">
-            {totalCount} available
+            {totalCount} {t('pipeline.available', 'available')}
           </span>
         )}
       </div>
@@ -159,14 +160,14 @@ function RecordSelect({
 
       <Combobox items={groupedData} value={selected} onValueChange={handleSelect}>
         <ComboboxInput
-          aria-label={kind === 'candidates' ? 'Search candidate' : 'Search vacancy'}
+          aria-label={kind === 'candidates' ? t('pipeline.searchCandidate', 'Search candidate') : t('pipeline.searchVacancy', 'Search vacancy')}
           placeholder={
-            kind === 'candidates' ? 'Select or search a candidate…' : 'Select or search a vacancy…'
+            kind === 'candidates' ? t('pipeline.selectOrSearchCandidate', 'Select or search a candidate…') : t('pipeline.selectOrSearchVacancy', 'Select or search a vacancy…')
           }
         />
         <ComboboxContent>
           <ComboboxEmpty>
-            {kind === 'candidates' ? 'No candidates found.' : 'No vacancies found.'}
+            {kind === 'candidates' ? t('pipeline.noCandidatesFound', 'No candidates found.') : t('pipeline.noVacanciesFound', 'No vacancies found.')}
           </ComboboxEmpty>
           <ComboboxList>
             {(group: { value: string; items: (Candidate | Vacancy)[] }, index: number) => (
@@ -177,7 +178,7 @@ function RecordSelect({
                     const title = 'fullName' in item ? item.fullName : item.title;
                     const subtitle =
                       'email' in item
-                        ? item.email || (item.resumeName ? 'CV attached' : 'No CV')
+                        ? item.email || (item.resumeName ? t('pipeline.cvAttached', 'CV attached') : t('pipeline.noCv', 'No CV'))
                         : 'status' in item
                           ? item.status
                           : null;
@@ -207,6 +208,7 @@ function RecordSelect({
 }
 
 function ApplicationForm({ close, saved }: { close: () => void; saved: () => void }) {
+  const { t } = useTranslation();
   const [candidateId, setCandidate] = useState(0);
   const [vacancyId, setVacancy] = useState(0);
   const [error, setError] = useState('');
@@ -216,7 +218,7 @@ function ApplicationForm({ close, saved }: { close: () => void; saved: () => voi
     setBusy(true);
     try {
       await send('/applications', { candidateId, vacancyId });
-      toast.success('Application created successfully');
+      toast.success(t('pipeline.appCreatedSuccess', 'Application created successfully'));
       saved();
     } catch (e) {
       setError((e as Error).message);
@@ -226,8 +228,8 @@ function ApplicationForm({ close, saved }: { close: () => void; saved: () => voi
   }
   return (
     <Modal
-      title="Create an application"
-      subtitle="Connect a candidate to a vacancy to begin reviewing their evidence."
+      title={t('pipeline.modalCreateTitle', 'Create an application')}
+      subtitle={t('pipeline.createAppDesc', 'Connect a candidate to a vacancy to begin reviewing their evidence.')}
       close={close}
       className="application-modal-custom"
     >
@@ -237,14 +239,14 @@ function ApplicationForm({ close, saved }: { close: () => void; saved: () => voi
         <RecordSelect kind="vacancies" onSelect={setVacancy} />
         <div className="modal-footer-actions">
           <button type="button" className="btn-modal-cancel" onClick={close}>
-            Cancel
+            {t('common.cancel', 'Cancel')}
           </button>
           <button
             type="submit"
             className="btn-modal-submit"
             disabled={busy || !candidateId || !vacancyId}
           >
-            {busy ? 'Creating…' : 'Create application'}
+            {busy ? t('pipeline.creating', 'Creating…') : t('pipeline.createAppButton', 'Create application')}
           </button>
         </div>
       </form>
@@ -252,14 +254,17 @@ function ApplicationForm({ close, saved }: { close: () => void; saved: () => voi
   );
 }
 
-const stageDescriptions: Record<Stage, string> = {
-  NEW: 'Just arrived, not reviewed yet',
-  REVIEWING: 'Evidence and CV under review',
-  INTERVIEW: 'Interview in progress',
-  OFFER: 'Offer sent or being prepared',
-  HIRED: 'Successfully joined the team',
-  REJECTED: 'Closed applications',
-};
+function getStageDescription(stage: Stage, t?: (key: string, def: string) => string) {
+  const map: Record<Stage, { key: string; fallback: string }> = {
+    NEW: { key: 'pipeline.stageDescNew', fallback: 'Just arrived, not reviewed yet' },
+    REVIEWING: { key: 'pipeline.stageDescReviewing', fallback: 'Evidence and CV under review' },
+    INTERVIEW: { key: 'pipeline.stageDescInterview', fallback: 'Interview in progress' },
+    OFFER: { key: 'pipeline.stageDescOffer', fallback: 'Offer sent or being prepared' },
+    HIRED: { key: 'pipeline.stageDescHired', fallback: 'Successfully joined the team' },
+    REJECTED: { key: 'pipeline.stageDescRejected', fallback: 'Closed applications' },
+  };
+  return t ? t(map[stage].key, map[stage].fallback) : map[stage].fallback;
+}
 
 function daysBetween(date?: string | null) {
   if (!date) return 0;
@@ -268,12 +273,12 @@ function daysBetween(date?: string | null) {
   return Math.max(0, Math.floor((Date.now() - timestamp) / 86_400_000));
 }
 
-function applicationOwner(application: Application) {
+function applicationOwner(application: Application, unassignedLabel = 'Unassigned') {
   const history = application.stageHistory ?? [];
   const latest = [...history].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )[0];
-  return latest?.actorName || 'Unassigned';
+  return latest?.actorName || unassignedLabel;
 }
 
 function daysInCurrentStage(application: Application) {
@@ -284,21 +289,23 @@ function daysInCurrentStage(application: Application) {
   return daysBetween(latestCurrentStage?.createdAt || application.createdAt);
 }
 
-function nextActionFor(application: Application) {
+function nextActionFor(application: Application, t?: (key: string, def: string) => string) {
   const hasEvidence = Boolean(getEvidenceSummary(application.analysis));
   switch (application.status) {
     case 'NEW':
-      return hasEvidence ? 'Review evidence' : 'Review the CV';
+      return hasEvidence
+        ? t ? t('pipeline.actionReviewEvidence', 'Review evidence') : 'Review evidence'
+        : t ? t('pipeline.actionReviewCv', 'Review the CV') : 'Review the CV';
     case 'REVIEWING':
-      return 'Complete HR review';
+      return t ? t('pipeline.actionCompleteHrReview', 'Complete HR review') : 'Complete HR review';
     case 'INTERVIEW':
-      return 'Review interview outcome';
+      return t ? t('pipeline.actionReviewOutcome', 'Review interview outcome') : 'Review interview outcome';
     case 'OFFER':
-      return 'Follow up on offer';
+      return t ? t('pipeline.actionFollowUpOffer', 'Follow up on offer') : 'Follow up on offer';
     case 'HIRED':
-      return 'Process completed';
+      return t ? t('pipeline.actionProcessCompleted', 'Process completed') : 'Process completed';
     case 'REJECTED':
-      return 'Application archived';
+      return t ? t('pipeline.actionArchived', 'Application archived') : 'Application archived';
   }
 }
 
@@ -315,6 +322,7 @@ function initials(name: string) {
 type PipelineViewMode = 'board' | 'list';
 
 export function Pipeline() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -405,27 +413,27 @@ export function Pipeline() {
 
   const summaryCards = [
     {
-      label: 'Active candidates',
+      label: t('pipeline.activeCandidates', 'Active candidates'),
       value: activeApplications.length,
-      detail: 'In an open stage',
+      detail: t('pipeline.inOpenStage', 'In an open stage'),
       icon: Users,
     },
     {
-      label: 'Interviews this week',
+      label: t('pipeline.interviewsThisWeek', 'Interviews this week'),
       value: interviewsThisWeek,
-      detail: 'Moved to Interview in 7 days',
+      detail: t('pipeline.movedToInterview7d', 'Moved to Interview in 7 days'),
       icon: CalendarDays,
     },
     {
-      label: 'Offers pending',
+      label: t('pipeline.offersPending', 'Offers pending'),
       value: offersPending,
-      detail: 'Awaiting a reply',
+      detail: t('pipeline.awaitingReply', 'Awaiting a reply'),
       icon: FileCheck2,
     },
     {
-      label: 'Avg. time in process',
+      label: t('pipeline.avgTime', 'Avg. time in process'),
       value: `${averageDays}d`,
-      detail: 'From application to today',
+      detail: t('pipeline.fromAppToToday', 'From application to today'),
       icon: Clock3,
     },
   ];
@@ -484,7 +492,7 @@ export function Pipeline() {
 
   function renderCard(application: Application) {
     const evidence = getEvidenceSummary(application.analysis);
-    const owner = applicationOwner(application);
+    const owner = applicationOwner(application, t('pipeline.unassigned', 'Unassigned'));
     const days = daysInCurrentStage(application);
     const isDragging = draggingId === application.id;
     return (
@@ -515,7 +523,7 @@ export function Pipeline() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Move to stage</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('pipeline.moveToStage', 'Move to stage')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {stages.map((stage) => (
                 <DropdownMenuItem
@@ -528,7 +536,7 @@ export function Pipeline() {
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to={`/applications/${application.id}`}>Open application</Link>
+                <Link to={`/applications/${application.id}`}>{t('pipeline.openApplication', 'Open application')}</Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -540,9 +548,21 @@ export function Pipeline() {
             <UserRound size={12} /> {owner}
           </span>
           <span>
-            <Clock3 size={12} /> {days}d in stage
+            <Clock3 size={12} /> {t('pipeline.inStageDays', { days, defaultValue: `${days}d in stage` })}
           </span>
         </div>
+
+        {application.assessmentScore != null && (
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200/80 text-[11px] font-semibold my-1.5">
+            <Sparkles size={12} className="text-emerald-600 shrink-0" />
+            <span>AI Test: {application.assessmentScore}%</span>
+            {application.assessmentResult?.hardSkillScore != null && (
+              <span className="text-[10px] text-emerald-600 font-normal ml-auto">
+                Hard: {application.assessmentResult.hardSkillScore}% · Soft: {application.assessmentResult.softSkillScore}%
+              </span>
+            )}
+          </div>
+        )}
 
         {(application.candidate.email || application.candidate.phone) && (
           <div className="pipeline-card-contacts">
@@ -563,19 +583,19 @@ export function Pipeline() {
 
         <div className="pipeline-card-review">
           <span className={evidence ? 'is-reviewed' : 'needs-review'}>
-            {evidence ? 'Evidence reviewed' : 'Needs review'}
+            {evidence ? t('pipeline.evidenceReviewed', 'Evidence reviewed') : t('pipeline.needsReview', 'Needs review')}
           </span>
-          <span>{nextActionFor(application)}</span>
+          <span>{nextActionFor(application, t)}</span>
         </div>
 
         <div className="flex items-center gap-1.5 mt-2">
           <Link className="pipeline-card-open flex-1" to={`/applications/${application.id}`}>
-            Open details <ArrowRight size={15} />
+            {t('pipeline.openDetails', 'Open details')} <ArrowRight size={15} />
           </Link>
           <button
             type="button"
             className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] hover:bg-[#1a5d4c]/10 transition-colors border border-transparent hover:border-[#1a5d4c]/20"
-            title="Nomzod A4 dosyesini ko‘rish va chop etish"
+            title={t('pipeline.dossierTooltip', 'Nomzod A4 dosyesini ko‘rish va chop etish')}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -592,12 +612,12 @@ export function Pipeline() {
   return (
     <div className="pipeline-page pipeline-redesign">
       <PageTitle
-        eyebrow="HIRING"
-        title="Hiring pipeline"
-        text="Every application in one board. Stage changes are made by a person and recorded."
+        eyebrow={t('pipeline.eyebrow', 'HIRING')}
+        title={t('pipeline.title', 'Hiring pipeline')}
+        text={t('pipeline.subtitle', 'Every application in one board. Stage changes are made by a person and recorded.')}
       >
         <button className="primary" onClick={() => setOpen(true)}>
-          <Plus size={17} /> Add candidate
+          <Plus size={17} /> {t('pipeline.addCandidate', 'Add candidate')}
         </button>
       </PageTitle>
 
@@ -621,12 +641,12 @@ export function Pipeline() {
           <SelectTrigger
             value={selectedVacancy}
             className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
-            aria-label="Filter by vacancy"
+            aria-label={t('pipeline.filterVacancy', 'Filter by vacancy')}
           >
-            <SelectValue placeholder="All vacancies" />
+            <SelectValue placeholder={t('pipeline.allVacancies', 'All vacancies')} />
           </SelectTrigger>
           <SelectContent className="max-h-72">
-            <SelectItem value="all">All vacancies</SelectItem>
+            <SelectItem value="all">{t('pipeline.allVacancies', 'All vacancies')}</SelectItem>
             {vacanciesList.map((vacancy) => (
               <SelectItem key={vacancy.id} value={String(vacancy.id)}>
                 {vacancy.title}
@@ -639,8 +659,8 @@ export function Pipeline() {
           <Search size={16} className="absolute left-3 text-[#94a3b8] pointer-events-none" aria-hidden="true" />
           <Input
             id="pipeline-search-input"
-            aria-label="Search the pipeline"
-            placeholder="Search candidates…"
+            aria-label={t('pipeline.searchCandidates', 'Search the pipeline')}
+            placeholder={t('pipeline.searchPlaceholder', 'Search candidates…')}
             value={search}
             onChange={(event) => {
               setSearch(event.target.value);
@@ -667,12 +687,12 @@ export function Pipeline() {
           <SelectTrigger
             value={selectedStage}
             className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
-            aria-label="Filter by stage"
+            aria-label={t('pipeline.filterStage', 'Filter by stage')}
           >
-            <SelectValue placeholder="All stages" />
+            <SelectValue placeholder={t('pipeline.allStages', 'All stages')} />
           </SelectTrigger>
           <SelectContent className="max-h-72">
-            <SelectItem value="all">All stages</SelectItem>
+            <SelectItem value="all">{t('pipeline.allStages', 'All stages')}</SelectItem>
             {stages.map((stage) => (
               <SelectItem key={stage} value={stage}>
                 {label(stage)}
@@ -688,7 +708,7 @@ export function Pipeline() {
             aria-pressed={viewMode === 'board'}
             onClick={() => setViewMode('board')}
           >
-            <LayoutGrid size={15} /> Board
+            <LayoutGrid size={15} /> {t('pipeline.viewBoard', 'Board')}
           </button>
           <button
             type="button"
@@ -696,7 +716,7 @@ export function Pipeline() {
             aria-pressed={viewMode === 'list'}
             onClick={() => setViewMode('list')}
           >
-            <ListIcon size={15} /> List
+            <ListIcon size={15} /> {t('pipeline.viewList', 'List')}
           </button>
         </div>
 
@@ -705,16 +725,16 @@ export function Pipeline() {
           variant="outline"
           onClick={() => {
             if (!filteredItems.length) {
-              toast.error('Eksport qilish uchun arizalar mavjud emas');
+              toast.error(t('pipeline.noAppsToExport', 'Eksport qilish uchun arizalar mavjud emas'));
               return;
             }
             exportApplicationsToCsv(filteredItems);
-            toast.success(`${filteredItems.length} ta ariza CSV/Excel faylga yuklandi`);
+            toast.success(t('pipeline.exportedApps', { count: filteredItems.length, defaultValue: `${filteredItems.length} ta ariza CSV/Excel faylga yuklandi` }));
           }}
           className="h-10 px-3.5 rounded-xl border border-[#e2e8f0] bg-white text-sm font-semibold text-[#0f172a] hover:bg-slate-50 hover:border-[#cbd5e1] flex items-center gap-1.5 shadow-none shrink-0"
           title="Arizalarni Excel/CSV fayl sifatida yuklab olish"
         >
-          <Download size={15} /> Eksport (CSV)
+          <Download size={15} /> {t('pipeline.exportCsv', 'Eksport (CSV)')}
         </Button>
 
         <Button
@@ -728,7 +748,7 @@ export function Pipeline() {
                 setTopCandidatesVacancyId(vacanciesList[0].id);
                 setSelectedVacancy(String(vacanciesList[0].id));
               } else {
-                toast.info("Tahlil qilish uchun avval biror vakansiyani tanlang");
+                toast.info(t('pipeline.selectVacancyFirst', "Tahlil qilish uchun avval biror vakansiyani tanlang"));
               }
             } else {
               setTopCandidatesVacancyId(Number(selectedVacancy));
@@ -737,7 +757,7 @@ export function Pipeline() {
           className="h-10 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-sm font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 shadow-none shrink-0"
           title="Vakansiya bo'yicha eng yaxshi 3 ta nomzodni AI tahlili orqali ko'rish"
         >
-          <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400" /> Top 3 Nomzodlar (AI)
+          <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400" /> {t('pipeline.topCandidatesBtn', 'Top 3 Nomzodlar (AI)')}
         </Button>
       </section>
 
@@ -750,16 +770,16 @@ export function Pipeline() {
             <section className="pipeline-board-shell">
               <div className="pipeline-board-heading">
                 <div>
-                  <strong>Candidate journey</strong>
-                  <span>Drag a card or use its menu. Every move asks for confirmation.</span>
+                  <strong>{t('pipeline.candidateJourney', 'Candidate journey')}</strong>
+                  <span>{t('pipeline.dragHint', 'Drag a card or use its menu. Every move asks for confirmation.')}</span>
                 </div>
                 <span className="pipeline-board-hint">
-                  Scroll horizontally to see every stage →
+                  {t('pipeline.scrollHint', 'Scroll horizontally to see every stage →')}
                 </span>
               </div>
 
               <div className="pipeline-mobile-stage">
-                <span>Stage</span>
+                <span>{t('pipeline.tableStage', 'Stage')}</span>
                 <Select
                   value={mobileStage}
                   onValueChange={(val) => setMobileStage(val as Stage)}
@@ -806,7 +826,7 @@ export function Pipeline() {
                           <span className="pipeline-stage-dot" />
                           <div>
                             <strong>{label(stage)}</strong>
-                            <small>{stageDescriptions[stage]}</small>
+                            <small>{getStageDescription(stage, t)}</small>
                           </div>
                         </div>
                         <span className="stage-count">{applications.length}</span>
@@ -818,8 +838,8 @@ export function Pipeline() {
                             <span aria-hidden="true">
                               <Users size={16} />
                             </span>
-                            <strong>No candidates here</strong>
-                            <p>Move a candidate here when they reach this stage.</p>
+                            <strong>{t('pipeline.noCandidatesHere', 'No candidates here')}</strong>
+                            <p>{t('pipeline.noCandidatesDesc', 'Move a candidate here when they reach this stage.')}</p>
                           </div>
                         )}
                       </div>
@@ -831,12 +851,12 @@ export function Pipeline() {
           ) : (
             <section className="pipeline-list-shell" aria-label="Applications list">
               <div className="pipeline-list-head">
-                <span>Candidate</span>
-                <span>Vacancy</span>
-                <span>Stage</span>
-                <span>Owner</span>
-                <span>Time</span>
-                <span>Next action</span>
+                <span>{t('pipeline.tableCandidate', 'Candidate')}</span>
+                <span>{t('pipeline.tableVacancy', 'Vacancy')}</span>
+                <span>{t('pipeline.tableStage', 'Stage')}</span>
+                <span>{t('pipeline.tableOwner', 'Owner')}</span>
+                <span>{t('pipeline.tableTime', 'Time')}</span>
+                <span>{t('pipeline.nextAction', 'Next action')}</span>
                 <span />
               </div>
               {filteredItems.map((application) => (
@@ -844,9 +864,16 @@ export function Pipeline() {
                   <div className="pipeline-list-candidate">
                     <span className="avatar">{initials(application.candidate.fullName)}</span>
                     <div>
-                      <Link to={`/applications/${application.id}`}>
-                        {application.candidate.fullName}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link to={`/applications/${application.id}`}>
+                          {application.candidate.fullName}
+                        </Link>
+                        {application.assessmentScore != null && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                            <Sparkles size={10} /> {application.assessmentScore}%
+                          </span>
+                        )}
+                      </div>
                       <small>
                         {application.candidate.email || sourceLabel(application.candidate)}
                       </small>
@@ -856,14 +883,14 @@ export function Pipeline() {
                   <span data-label="Stage">
                     <Badge value={application.status} />
                   </span>
-                  <span data-label="Owner">{applicationOwner(application)}</span>
-                  <span data-label="Time">{daysInCurrentStage(application)}d</span>
-                  <span data-label="Next action">{nextActionFor(application)}</span>
+                  <span data-label="Owner">{applicationOwner(application, t('pipeline.unassigned', 'Unassigned'))}</span>
+                  <span data-label="Time">{t('pipeline.inStageDays', { days: daysInCurrentStage(application), defaultValue: `${daysInCurrentStage(application)}d` })}</span>
+                  <span data-label="Next action">{nextActionFor(application, t)}</span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
                       className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] hover:bg-[#1a5d4c]/10 transition-colors"
-                      title="Nomzod A4 dosyesini ko‘rish va chop etish"
+                      title={t('pipeline.dossierTooltip', 'Nomzod A4 dosyesini ko‘rish va chop etish')}
                       onClick={() => setDossierApp(application)}
                     >
                       <Printer size={15} />
@@ -885,8 +912,8 @@ export function Pipeline() {
       ) : (
         <section className="panel">
           <Empty
-            title="No matching applications"
-            text="Change the filters or add a candidate to a vacancy."
+            title={t('pipeline.noMatchingApps', 'No matching applications')}
+            text={t('pipeline.noMatchingAppsDesc', 'Change the filters or add a candidate to a vacancy.')}
           />
         </section>
       )}
@@ -922,17 +949,18 @@ export function Pipeline() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Move candidate to {pendingMove ? label(pendingMove.stage) : ''}?
+              {t('pipeline.confirmMoveTitle', { stage: pendingMove ? label(pendingMove.stage) : '' })}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingMove?.app.candidate.fullName} will move from{' '}
-              {pendingMove ? label(pendingMove.app.status) : ''} to{' '}
-              {pendingMove ? label(pendingMove.stage) : ''}. This change will be recorded in the
-              stage history.
+              {t('pipeline.confirmMoveDesc', {
+                name: pendingMove?.app.candidate.fullName,
+                from: pendingMove ? label(pendingMove.app.status) : '',
+                to: pendingMove ? label(pendingMove.stage) : '',
+              })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={moving}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={moving}>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
             <AlertDialogAction
               disabled={moving}
               onClick={(event) => {
@@ -940,7 +968,7 @@ export function Pipeline() {
                 if (pendingMove) void moveApplication(pendingMove.app, pendingMove.stage);
               }}
             >
-              {moving ? 'Moving…' : 'Confirm move'}
+              {moving ? t('pipeline.moving', 'Moving…') : t('pipeline.confirmMoveButton', 'Confirm move')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -950,10 +978,10 @@ export function Pipeline() {
 }
 
 export function ApplicationDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const { data: a, error, reload } = useData<Application>(`/applications/${id}`);
-  const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState('');
   const [actionError, setError] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -964,7 +992,7 @@ export function ApplicationDetail() {
     setBusy('analyze');
     setError('');
     try {
-      await send(`/applications/${id}/analyze`, { consent });
+      await send(`/applications/${id}/analyze`, { consent: true });
       toast.success('CV evidence matched');
       reload();
     } catch (e) {
@@ -979,11 +1007,11 @@ export function ApplicationDetail() {
     try {
       await send(`/applications/${id}/status`, { status, expectedStatus: a?.status }, 'PUT');
       if (status === 'INTERVIEW') {
-        toast.success(`Moved application to Interview · Auto-invitation sent`);
+        toast.success(t('applications.autoInvitationSent', 'Moved application to Interview · Auto-invitation sent'));
       } else if (status === 'REJECTED') {
-        toast.success(`Moved application to Rejected · Rejection message sent`);
+        toast.success(t('applications.rejectionMessageSent', 'Moved application to Rejected · Rejection message sent'));
       } else {
-        toast.success(`Moved application to ${label(status)}`);
+        toast.success(t('applications.movedSuccess', { stage: label(status), defaultValue: `Moved application to ${label(status)}` }));
       }
       reload();
     } catch (e) {
@@ -996,7 +1024,7 @@ export function ApplicationDetail() {
     setBusy('delete');
     try {
       await api(`/applications/${id}`, { method: 'DELETE' });
-      toast.success('Application deleted');
+      toast.success(t('applications.appDeletedSuccess', 'Application deleted'));
       window.location.assign('/pipeline');
     } catch (e) {
       setError((e as Error).message);
@@ -1006,7 +1034,7 @@ export function ApplicationDetail() {
   return (
     <>
       <Link to="/pipeline" className="back-link">
-        <ArrowLeft size={16} /> Back to pipeline
+        <ArrowLeft size={16} /> {t('applications.backToPipeline', 'Back to pipeline')}
       </Link>
       <Alert message={error || actionError} />
       {!a && !error ? (
@@ -1015,7 +1043,7 @@ export function ApplicationDetail() {
         a && (
           <>
             <PageTitle
-              eyebrow="APPLICATION REVIEW"
+              eyebrow={t('pipeline.eyebrow', 'APPLICATION REVIEW')}
               title={a.candidate.fullName}
               text={a.vacancy.title}
             >
@@ -1026,7 +1054,7 @@ export function ApplicationDetail() {
                   onClick={() => setDossierOpen(true)}
                   className="flex items-center gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-50 font-medium"
                 >
-                  <Printer size={16} /> Dossier (A4 PDF)
+                  <Printer size={16} /> {t('candidateDossier.title', 'Dossier (A4 PDF)')}
                 </Button>
                 {nextStage[a.status] && (
                   <button
@@ -1034,7 +1062,7 @@ export function ApplicationDetail() {
                     disabled={Boolean(busy)}
                     onClick={() => void changeStatus(nextStage[a.status]!)}
                   >
-                    {busy === 'status' ? 'Moving…' : 'Move to ' + label(nextStage[a.status]!)}{' '}
+                    {busy === 'status' ? t('pipeline.moving', 'Moving…') : `${t('pipeline.moveToStage', 'Move to')} ` + label(nextStage[a.status]!)}{' '}
                     <ArrowRight size={16} />
                   </button>
                 )}
@@ -1077,46 +1105,127 @@ export function ApplicationDetail() {
               </div>
             </PageTitle>
             <div className="stage-progress" aria-label="Application progress">
-              <span>Current stage</span>
+              <span>{t('applications.currentStage', 'Current stage')}</span>
               <Badge value={a.status} />
               {nextStage[a.status] ? (
                 <>
                   <ArrowRight size={16} />
-                  <span>Next: {label(nextStage[a.status]!)}</span>
+                  <span>{t('applications.nextStage', { stage: label(nextStage[a.status]!), defaultValue: `Next: ${label(nextStage[a.status]!)}` })}</span>
                 </>
               ) : (
-                <span>Final stage</span>
+                <span>{t('applications.finalStage', 'Final stage')}</span>
               )}
             </div>
             <div className="review-notice">
               <ShieldCheck size={22} />
               <div>
-                <strong>Faktik dalillar — Insoniy qaror</strong>
+                <strong>{t('applications.factEvidenceTitle', 'Faktik dalillar — Insoniy qaror')}</strong>
                 <span>
-                  Ushbu tahlil nomzod rezyumesidan olingan faktik dalillarni ko‘rsatadi. Bu ishga
-                  qabul qilish bo‘yicha AI tavsiyasi emas — yakuniy qarorni faqat interviewer qabul
-                  qiladi.
+                  {t('applications.factEvidenceDesc', 'Ushbu tahlil nomzod rezyumesidan olingan faktik dalillarni ko‘rsatadi. Bu ishga qabul qilish bo‘yicha AI tavsiyasi emas — yakuniy qarorni faqat interviewer qabul qiladi.')}
                 </span>
               </div>
               <Link to={`/candidates/${a.candidateId}`}>
-                CV ko‘rish <ArrowRight size={16} />
+                {t('applications.viewCv', 'CV ko‘rish')} <ArrowRight size={16} />
               </Link>
             </div>
+
+            {a.candidate.source === 'TELEGRAM' && a.assessmentScore == null && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 mb-4">Test ishlamagan. Arizani qo‘lda ko‘rib chiqing.</p>
+            )}
+            {a.assessmentScore != null && (
+              <section className="panel padded mb-4 bg-emerald-50/20 border-emerald-200">
+                <div className="flex items-center justify-between mb-3 border-b border-emerald-200 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={18} className="text-emerald-600" />
+                    <div>
+                      <h2 className="text-base font-bold text-slate-900 leading-tight">
+                        {t('applications.assessmentTitle', 'AI Saralash Testi Natijalari (Telegram Assessment)')}
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        {t('applications.assessmentSubtitle', 'Nomzod bot orqali topshirgan saralash testi.')}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Ball: {a.assessmentScore}% · {a.assessmentResult?.passed !== false ? 'O‘tgan (>=70%)' : 'O‘tmagan'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-xs">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Umumiy natija</span>
+                    <strong className="text-emerald-800 text-base font-bold">
+                      {a.assessmentScore}% ({a.assessmentResult?.correctCount ?? Math.round((a.assessmentScore / 10))}/10 to‘g‘ri)
+                    </strong>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">💡 Hard Skills</span>
+                    <strong className="text-slate-800 text-base font-bold">
+                      {a.assessmentResult?.hardSkillScore ?? '-'}%
+                    </strong>
+                  </div>
+                  <div className="p-3 bg-white rounded-xl border border-slate-200">
+                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">🤝 Soft Skills</span>
+                    <strong className="text-slate-800 text-base font-bold">
+                      {a.assessmentResult?.softSkillScore ?? '-'}%
+                    </strong>
+                  </div>
+                </div>
+                {a.assessmentResult?.answers?.length ? (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden text-xs bg-white">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50 text-slate-700 text-left border-b border-slate-200">
+                          <th className="p-2.5 font-semibold w-12 text-center">#</th>
+                          <th className="p-2.5 font-semibold w-32">Yo‘nalish</th>
+                          <th className="p-2.5 font-semibold w-28">Natija</th>
+                          <th className="p-2.5 font-semibold">Tanlangan javob</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {a.assessmentResult.answers.map((ans, idx) => (
+                          <tr key={idx} className={ans.isCorrect ? 'hover:bg-emerald-50/20' : 'hover:bg-rose-50/20'}>
+                            <td className="p-2.5 text-center font-mono font-medium text-slate-500">{idx + 1}</td>
+                            <td className="p-2.5 font-medium">
+                              {ans.type === 'HARD_SKILL' ? '💡 Hard Skill' : '🤝 Soft Skill'}
+                            </td>
+                            <td className="p-2.5">
+                              {ans.isCorrect ? (
+                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  ✓ To‘g‘ri
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                  ✗ Noto‘g‘ri
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2.5 text-slate-700">
+                              Variant {String.fromCharCode(65 + ans.selectedIndex)}
+                              {!ans.isCorrect && (
+                                <span className="text-slate-400 ml-1.5">(To‘g‘ri variant: {String.fromCharCode(65 + ans.correctIndex)})</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </section>
+            )}
 
             <section className="panel evidence-panel">
               <div className="panel-heading">
                 <div>
-                  <h2>AI topgan dalillar (CV Evidence Breakdown)</h2>
+                  <h2>{t('applications.evidenceBreakdownTitle', 'AI topgan dalillar (CV Evidence Breakdown)')}</h2>
                   <p>
-                    CV matnidan olingan faktik dalillar. AI nomzodlarni baholamaydi — qarorni faqat
-                    inson qabul qiladi.
+                    {t('applications.evidenceBreakdownSubtitle', 'CV matnidan olingan faktik dalillar. AI nomzodlarni baholamaydi — qarorni faqat inson qabul qiladi.')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
                     className="primary"
                     disabled={
-                      !consent ||
                       aiBlocked ||
                       !user?.aiConfigured ||
                       !a.candidate.resumeText ||
@@ -1126,25 +1235,22 @@ export function ApplicationDetail() {
                   >
                     <Sparkles size={15} />
                     {busy === 'analyze'
-                      ? 'Tahlil qilinmoqda…'
+                      ? t('common.loading', 'Tahlil qilinmoqda…')
                       : a.analysis
-                        ? 'Qayta tahlil qilish'
-                        : 'CV dalillarini tahlil qilish'}
+                        ? t('applications.reanalyze', 'Qayta tahlil qilish')
+                        : t('applications.analyzeCv', 'CV dalillarini tahlil qilish')}
                   </button>
-                  <span className="count-chip">{a.vacancy.requirements.length} talab</span>
+                  <span className="count-chip">{a.vacancy.requirements.length} {t('vacancies.cardRequirements', 'talab')}</span>
                 </div>
               </div>
-              <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between">
-                <AiConsent
-                  checked={consent}
-                  onChange={setConsent}
-                  configured={Boolean(user?.aiConfigured)}
-                />
-                {aiBlocked && <span className="text-xs text-amber-700">Nomzod AI tahliliga rozilik bermagan.</span>}
-                {!a.candidate.resumeText && (
-                  <span className="text-xs text-amber-600">Avval nomzod profiliga CV yuklang.</span>
-                )}
-              </div>
+              {(aiBlocked || !a.candidate.resumeText) && (
+                <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between">
+                  {aiBlocked && <span className="text-xs text-amber-700">{t('applications.noConsentWarning', 'Nomzod AI tahliliga rozilik bermagan.')}</span>}
+                  {!a.candidate.resumeText && (
+                    <span className="text-xs text-amber-600">{t('applications.noCvWarning', 'Avval nomzod profiliga CV yuklang.')}</span>
+                  )}
+                </div>
+              )}
               {a.vacancy.requirements.length ? (
                 a.vacancy.requirements.map((r) => {
                   const evidence = a.analysis?.requirements.find((e) => e.requirementId === r.id);
@@ -1155,7 +1261,7 @@ export function ApplicationDetail() {
                           <h3>
                             {r.name}
                             <span className="required-label">
-                              {r.required ? 'Majburiy' : 'Afzallik'}
+                              {r.required ? t('vacancyGenerator.required', 'Majburiy') : t('vacancyGenerator.niceToHave', 'Afzallik')}
                             </span>
                           </h3>
                           {r.description && <p className="muted">{r.description}</p>}
@@ -1163,7 +1269,7 @@ export function ApplicationDetail() {
                         {evidence ? (
                           <Badge value={evidence.status} />
                         ) : (
-                          <span className="muted small">Tahlil qilinmagan</span>
+                          <span className="muted small">{t('applications.notAnalyzed', 'Tahlil qilinmagan')}</span>
                         )}
                       </div>
                       {evidence && (
@@ -1172,7 +1278,7 @@ export function ApplicationDetail() {
                           {evidence.quotes.map((q, i) => (
                             <blockquote key={i}>
                               {q}
-                              <small>CV matnidan aniq parcha</small>
+                              <small>{t('applications.cvExactQuote', 'CV matnidan aniq parcha')}</small>
                             </blockquote>
                           ))}
                         </>
@@ -1182,29 +1288,28 @@ export function ApplicationDetail() {
                 })
               ) : (
                 <Empty
-                  title="Vakansiyada talablar kiritilmagan"
-                  text="Ushbu vakansiyani tahrirlab, talablarni qo‘shing."
+                  title={t('applications.noRequirements', 'Vakansiyada talablar kiritilmagan')}
+                  text={t('applications.noRequirementsDesc', 'Ushbu vakansiyani tahrirlab, talablarni qo‘shing.')}
                 />
               )}
               <div className="evidence-legend">
                 <span>
-                  <b>Supported</b> Aniq tasdiqlangan dalil
+                  <b>Supported</b> {t('applications.legendSupported', 'Aniq tasdiqlangan dalil')}
                 </span>
                 <span>
-                  <b>Partial</b> Qisman dalil mavjud
+                  <b>Partial</b> {t('applications.legendPartial', 'Qisman dalil mavjud')}
                 </span>
                 <span>
-                  <b>Not found</b> CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda
-                  aniqlashtirish zarur)
+                  <b>Not found</b> {t('applications.legendNotFound', 'CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda aniqlashtirish zarur)')}
                 </span>
                 <span>
-                  <b>Unknown</b> Aniq xulosa yo‘q, suhbatda aniqlash zarur
+                  <b>Unknown</b> {t('applications.legendUnknown', 'Aniq xulosa yo‘q, suhbatda aniqlash zarur')}
                 </span>
               </div>
             </section>
             <section className="panel padded stage-history">
-              <h2>Stage history</h2>
-              <p className="muted">Who moved this application, and when.</p>
+              <h2>{t('applications.stageHistoryTitle', 'Stage history')}</h2>
+              <p className="muted">{t('applications.stageHistoryDesc', 'Who moved this application, and when.')}</p>
               {a.stageHistory?.length ? (
                 <ol>
                   {a.stageHistory.map((entry) => (
@@ -1227,26 +1332,25 @@ export function ApplicationDetail() {
                 </ol>
               ) : (
                 <p className="muted">
-                  No recorded changes yet. Earlier stage changes were not tracked.
+                  {t('applications.noRecordedChanges', 'No recorded changes yet. Earlier stage changes were not tracked.')}
                 </p>
               )}
             </section>
             <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Delete application?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('applications.deleteTitle', 'Delete application?')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This will delete this application and its analysis. The candidate and vacancy
-                    will be kept.
+                    {t('applications.deleteDesc', 'This will delete this application and its analysis. The candidate and vacancy will be kept.')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common.cancel', 'Cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     onClick={() => void confirmDelete()}
                   >
-                    {busy === 'delete' ? 'Deleting…' : 'Delete application'}
+                    {busy === 'delete' ? t('applications.deleting', 'Deleting…') : t('applications.deleteButton', 'Delete application')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

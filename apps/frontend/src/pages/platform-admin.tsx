@@ -1,6 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
-import { Building2, Search, ShieldCheck, RefreshCw, LockKeyhole, Activity, ChevronDown, Check } from 'lucide-react';
+import {
+  Building2,
+  Search,
+  ShieldCheck,
+  RefreshCw,
+  LockKeyhole,
+  Activity,
+  ChevronDown,
+  Check,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Badge,
@@ -45,14 +55,6 @@ type AuditItem = {
   reason: string;
   createdAt: string;
 };
-const auditLabels: Record<string, string> = {
-  COMPANY_BLOCKED: 'Kompaniya bloklandi',
-  COMPANY_REACTIVATED: 'Kompaniya faollashtirildi',
-  PLATFORM_ADMIN_GRANTED: 'Platforma huquqi berildi',
-  COMPANY_DELETED: 'Kompaniya o‘chirildi',
-};
-const formatDate = (date: string) =>
-  new Date(date).toLocaleString('uz-UZ', { dateStyle: 'medium', timeStyle: 'short' });
 
 function Pagination({
   page,
@@ -65,15 +67,21 @@ function Pagination({
   size: number;
   onChange: (page: number) => void;
 }) {
+  const { t } = useTranslation();
   const pages = Math.max(1, Math.ceil(total / size));
   return (
     <div className="flex flex-wrap gap-3 justify-between items-center border-t border-slate-100 pt-4 mt-5">
       <p className="text-xs text-slate-500">
-        {total} ta natija · {page} / {pages} sahifa
+        {t('platformAdmin.paginationText', { total, page, pages })}
       </p>
       <div className="flex gap-2">
-        <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => onChange(page - 1)}>
-          Oldingi
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={page <= 1}
+          onClick={() => onChange(page - 1)}
+        >
+          {t('platformAdmin.prev')}
         </Button>
         <Button
           size="sm"
@@ -81,13 +89,12 @@ function Pagination({
           disabled={page >= pages}
           onClick={() => onChange(page + 1)}
         >
-          Keyingi
+          {t('platformAdmin.next')}
         </Button>
       </div>
     </div>
   );
 }
-
 
 type StatusOption = { value: string; label: string; color: string; dot: string; count?: number };
 
@@ -100,38 +107,44 @@ function StatusFilter({
   onChange: (v: string) => void;
   summary?: Overview | null;
 }) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Tashqarida klik yoki Escape — yopish
   useEffect(() => {
     function handle(e: MouseEvent | KeyboardEvent) {
-      if (e instanceof KeyboardEvent && e.key === 'Escape') { setOpen(false); return; }
+      if (e instanceof KeyboardEvent && e.key === 'Escape') {
+        setOpen(false);
+        return;
+      }
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener('mousedown', handle);
     document.addEventListener('keydown', handle);
-    return () => { document.removeEventListener('mousedown', handle); document.removeEventListener('keydown', handle); };
+    return () => {
+      document.removeEventListener('mousedown', handle);
+      document.removeEventListener('keydown', handle);
+    };
   }, []);
 
   const options: StatusOption[] = [
     {
       value: 'all',
-      label: 'Barcha holatlar',
+      label: t('platformAdmin.allStatuses'),
       color: 'text-slate-700 bg-slate-50 hover:bg-slate-100',
       dot: 'bg-slate-400',
       count: summary?.companies,
     },
     {
       value: 'active',
-      label: 'Faol',
+      label: t('platformAdmin.active'),
       color: 'text-emerald-700 bg-emerald-50 hover:bg-emerald-100',
       dot: 'bg-emerald-500',
       count: summary?.activeCompanies,
     },
     {
       value: 'blocked',
-      label: 'Bloklangan',
+      label: t('platformAdmin.blocked'),
       color: 'text-amber-700 bg-amber-50 hover:bg-amber-100',
       dot: 'bg-amber-500',
       count: summary?.blockedCompanies,
@@ -141,8 +154,7 @@ function StatusFilter({
   const active = options.find((o) => o.value === value) ?? options[0];
 
   return (
-    <div ref={ref} className="relative" aria-label="Holat filtri">
-      {/* Trigger tugmasi */}
+    <div ref={ref} className="relative" aria-label={t('platformAdmin.statusFilter')}>
       <button
         type="button"
         aria-haspopup="listbox"
@@ -151,9 +163,11 @@ function StatusFilter({
         className={`
           flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium
           transition-all duration-150 select-none cursor-pointer
-          ${open
-            ? 'border-emerald-400 ring-2 ring-emerald-100 bg-white shadow-sm'
-            : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'}
+          ${
+            open
+              ? 'border-emerald-400 ring-2 ring-emerald-100 bg-white shadow-sm'
+              : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
+          }
         `}
       >
         <span className={`w-2 h-2 rounded-full shrink-0 ${active.dot}`} />
@@ -169,10 +183,9 @@ function StatusFilter({
         />
       </button>
 
-      {/* Accordion panel */}
       <div
         role="listbox"
-        aria-label="Holat tanlash"
+        aria-label={t('platformAdmin.statusSelect')}
         className={`
           absolute left-0 z-30 mt-2 w-52 rounded-xl border border-slate-200
           bg-white shadow-lg overflow-hidden
@@ -188,7 +201,10 @@ function StatusFilter({
               role="option"
               type="button"
               aria-selected={value === opt.value}
-              onClick={() => { onChange(opt.value); setOpen(false); }}
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
               className={`
                 w-full flex items-center gap-3 px-3 py-2.5 text-sm text-left
                 transition-colors duration-100
@@ -202,9 +218,7 @@ function StatusFilter({
                   {opt.count}
                 </span>
               )}
-              {value === opt.value && (
-                <Check size={13} className="shrink-0 text-emerald-600" />
-              )}
+              {value === opt.value && <Check size={13} className="shrink-0 text-emerald-600" />}
             </button>
           ))}
         </div>
@@ -214,37 +228,56 @@ function StatusFilter({
 }
 
 function PlatformAudit() {
-
+  const { t } = useTranslation();
   const [page, setPage] = useState(1);
-  const { data, error, reload } = useData<Page<AuditItem>>(`/platform-admin/audit?page=${page}`);
+  const { data, error, reload } = useData<Page<AuditItem>>(
+    `/platform-admin/audit?page=${page}`,
+  );
+
+  const auditLabels: Record<string, string> = {
+    COMPANY_BLOCKED: t('platformAdmin.actionCompanyBlocked'),
+    COMPANY_REACTIVATED: t('platformAdmin.actionCompanyReactivated'),
+    PLATFORM_ADMIN_GRANTED: t('platformAdmin.actionPlatformAdminGranted'),
+    COMPANY_DELETED: t('platformAdmin.actionCompanyDeleted'),
+  };
+
   return (
     <section className="panel padded">
       <div className="flex justify-between items-center gap-3">
-        <h2>Platforma amallari tarixi</h2>
-        <Button variant="outline" size="sm" onClick={reload} aria-label="Auditni yangilash">
+        <h2>{t('platformAdmin.auditTitle')}</h2>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={reload}
+          aria-label={t('platformAdmin.refreshAudit')}
+        >
           <RefreshCw size={15} />
         </Button>
       </div>
-      <p className="muted small mt-2 mb-5">
-        Kim, qachon va nima sababdan kompaniya holatini o‘zgartirgani.
-      </p>
+      <p className="muted small mt-2 mb-5">{t('platformAdmin.auditDesc')}</p>
       <Alert message={error} />
       {!data && !error && <Loading />}
       {data?.items.length === 0 && (
-        <p className="py-10 text-center text-slate-500">Hozircha amallar yo‘q.</p>
+        <p className="py-10 text-center text-slate-500">
+          {t('platformAdmin.noAuditActions')}
+        </p>
       )}
       <div className="space-y-3">
         {data?.items.map((item) => (
           <article key={item.id} className="rounded-xl border border-slate-200 p-4">
             <div className="flex flex-wrap justify-between gap-2">
               <strong className="text-sm">{auditLabels[item.action] ?? item.action}</strong>
-              <time className="text-xs text-slate-500">{formatDate(item.createdAt)}</time>
+              <time className="text-xs text-slate-500">
+                {new Date(item.createdAt).toLocaleString()}
+              </time>
             </div>
             <p className="text-sm mt-2 break-words">
               {item.companyName} <span className="text-slate-400">#{item.companyId}</span>
             </p>
             <p className="mt-2 text-sm text-slate-600 break-words">{item.reason}</p>
-            <p className="mt-3 text-xs text-slate-500">Mas’ul: {item.actorName}</p>
+            <p className="mt-3 text-xs text-slate-500">
+              {t('platformAdmin.responsible', { name: item.actorName })}
+            </p>
           </article>
         ))}
       </div>
@@ -256,6 +289,7 @@ function PlatformAudit() {
 }
 
 export function PlatformAdmin() {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<'companies' | 'audit'>('companies');
   const [search, setSearch] = useState('');
   const [draftSearch, setDraftSearch] = useState('');
@@ -269,6 +303,7 @@ export function PlatformAdmin() {
   const companies = useData<Page<Company>>(
     `/platform-admin/companies?page=${page}&status=${status}&search=${encodeURIComponent(search)}`,
   );
+
   async function changeStatus() {
     if (!selected) return;
     setBusy(true);
@@ -282,7 +317,11 @@ export function PlatformAdmin() {
         },
         'PUT',
       );
-      toast.success(selected.isActive ? 'Kompaniya bloklandi' : 'Kompaniya qayta faollashtirildi');
+      toast.success(
+        selected.isActive
+          ? t('platformAdmin.toastBlocked')
+          : t('platformAdmin.toastReactivated'),
+      );
       setSelected(null);
       companies.reload();
       summary.reload();
@@ -292,36 +331,56 @@ export function PlatformAdmin() {
       setBusy(false);
     }
   }
+
   return (
     <div className="space-y-6">
       <header className="rounded-2xl bg-[#183f35] p-6 sm:p-8 text-white flex flex-wrap justify-between gap-5">
         <div>
           <div className="flex items-center gap-2 text-emerald-200 text-xs font-semibold uppercase tracking-widest">
-            <ShieldCheck size={16} /> Platforma boshqaruvi
+            <ShieldCheck size={16} /> {t('platformAdmin.eyebrow')}
           </div>
-          <h1 className="text-2xl sm:text-3xl font-semibold mt-3">Platforma admin paneli</h1>
+          <h1 className="text-2xl sm:text-3xl font-semibold mt-3">
+            {t('platformAdmin.title')}
+          </h1>
           <p className="text-sm text-emerald-100/80 mt-3 max-w-xl">
-            Barcha kompaniyalar holati, foydalanish ko‘rsatkichlari va boshqaruv amallari.
+            {t('platformAdmin.subtitle')}
           </p>
         </div>
         <div className="self-start rounded-full border border-white/20 px-3 py-1.5 text-xs">
-          Super admin
+          {t('platformAdmin.superAdmin')}
         </div>
       </header>
+
       <Alert message={summary.error} />
       <PendingCompanyFiles key={cleanupRevision} />
+
       {!summary.data && !summary.error && <Loading />}
       {summary.data && (
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {[
             [
-              'Kompaniyalar',
+              t('platformAdmin.companies'),
               summary.data.companies,
-              `${summary.data.activeCompanies} faol · ${summary.data.blockedCompanies} bloklangan`,
+              t('platformAdmin.activeBlockedNote', {
+                active: summary.data.activeCompanies,
+                blocked: summary.data.blockedCompanies,
+              }),
             ],
-            ['Foydalanuvchilar', summary.data.users, 'Barcha kompaniyalar bo‘yicha'],
-            ['Faol vakansiyalar', summary.data.vacancies, 'Faol kompaniyalarda'],
-            ['Arizalar', summary.data.applications, `${summary.data.candidates} ta nomzod profili`],
+            [
+              t('platformAdmin.users'),
+              summary.data.users,
+              t('platformAdmin.allCompaniesNote'),
+            ],
+            [
+              t('platformAdmin.activeVacancies'),
+              summary.data.vacancies,
+              t('platformAdmin.activeCompaniesNote'),
+            ],
+            [
+              t('platformAdmin.applications'),
+              summary.data.applications,
+              t('platformAdmin.candidatesProfileNote', { count: summary.data.candidates }),
+            ],
           ].map(([label, value, note]) => (
             <section key={label} className="panel padded">
               <p className="text-xs text-slate-500">{label}</p>
@@ -331,14 +390,15 @@ export function PlatformAdmin() {
           ))}
         </div>
       )}
-      <div className="flex gap-2" role="tablist" aria-label="Platforma bo‘limlari">
+
+      <div className="flex gap-2" role="tablist" aria-label={t('platformAdmin.title')}>
         <Button
           role="tab"
           aria-selected={tab === 'companies'}
           variant={tab === 'companies' ? 'default' : 'outline'}
           onClick={() => setTab('companies')}
         >
-          <Building2 size={16} className="mr-2" /> Kompaniyalar
+          <Building2 size={16} className="mr-2" /> {t('platformAdmin.companies')}
         </Button>
         <Button
           role="tab"
@@ -346,15 +406,16 @@ export function PlatformAdmin() {
           variant={tab === 'audit' ? 'default' : 'outline'}
           onClick={() => setTab('audit')}
         >
-          <Activity size={16} className="mr-2" /> Amallar tarixi
+          <Activity size={16} className="mr-2" /> {t('platformAdmin.auditHistory')}
         </Button>
       </div>
+
       {tab === 'audit' ? (
         <PlatformAudit />
       ) : (
         <section className="panel padded">
           <div className="flex flex-wrap gap-3 items-center justify-between">
-            <h2>Kompaniyalar ro‘yxati</h2>
+            <h2>{t('platformAdmin.companiesList')}</h2>
             <Button
               size="sm"
               variant="outline"
@@ -363,7 +424,7 @@ export function PlatformAdmin() {
                 summary.reload();
               }}
             >
-              <RefreshCw size={14} className="mr-2" /> Yangilash
+              <RefreshCw size={14} className="mr-2" /> {t('common.refresh')}
             </Button>
           </div>
           <form
@@ -375,36 +436,40 @@ export function PlatformAdmin() {
             }}
           >
             <Input
-              aria-label="Kompaniya qidirish"
-              placeholder="Kompaniya nomi bo‘yicha qidirish…"
+              aria-label={t('platformAdmin.searchAria')}
+              placeholder={t('platformAdmin.searchPlaceholder')}
               maxLength={160}
               value={draftSearch}
               onChange={(e) => setDraftSearch(e.target.value)}
               className="flex-1 min-w-0 w-full sm:min-w-60"
             />
-            {/* Accordion holat filtri */}
             <StatusFilter
               value={status}
-              onChange={(val) => { setStatus(val); setPage(1); }}
+              onChange={(val) => {
+                setStatus(val);
+                setPage(1);
+              }}
               summary={summary.data}
             />
             <Button type="submit" variant="outline">
-              <Search size={15} className="mr-2" /> Qidirish
+              <Search size={15} className="mr-2" /> {t('common.search')}
             </Button>
           </form>
+
           <Alert message={companies.error} />
           {!companies.data && !companies.error && <Loading />}
           {companies.data?.items.length === 0 && (
             <p className="py-12 text-center text-slate-500">
-              Kompaniya topilmadi. Qidiruv yoki filtrni o‘zgartiring.
+              {t('platformAdmin.emptyCompanies')}
             </p>
           )}
+
           <div className="space-y-3">
             {companies.data?.items.map((company) => (
               <article
                 key={company.id}
                 className="rounded-xl border border-slate-200 p-4 flex flex-wrap items-center gap-4"
-                aria-label={`${company.name} kompaniyasi`}
+                aria-label={t('platformAdmin.companyAria', { name: company.name })}
               >
                 <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
@@ -413,14 +478,18 @@ export function PlatformAdmin() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm break-words">{company.name}</h3>
                     <p className="text-xs text-slate-500 mt-1">
-                      #{company.id} · {new Date(company.createdAt).toLocaleDateString('uz-UZ')}
+                      #{company.id} · {new Date(company.createdAt).toLocaleDateString()}
                     </p>
                     <p className="text-xs text-slate-500 mt-2">
-                      {company._count.users} xodim · {company._count.vacancies} vakansiya ·{' '}
-                      {company._count.applications} ariza
+                      {t('platformAdmin.companyStats', {
+                        users: company._count.users,
+                        vacancies: company._count.vacancies,
+                        applications: company._count.applications,
+                      })}
                     </p>
                   </div>
                 </div>
+
                 <Badge
                   variant="outline"
                   className={
@@ -429,11 +498,14 @@ export function PlatformAdmin() {
                       : 'bg-amber-50 text-amber-800'
                   }
                 >
-                  {company.isActive ? 'Faol' : 'Bloklangan'}
+                  {company.isActive
+                    ? t('platformAdmin.active')
+                    : t('platformAdmin.blocked')}
                 </Badge>
+
                 {company.protected ? (
                   <span className="text-xs text-slate-500 flex gap-1 items-center">
-                    <LockKeyhole size={13} /> Himoyalangan
+                    <LockKeyhole size={13} /> {t('platformAdmin.protected')}
                   </span>
                 ) : (
                   <Button
@@ -444,9 +516,12 @@ export function PlatformAdmin() {
                       setActionError('');
                     }}
                   >
-                    {company.isActive ? 'Bloklash' : 'Faollashtirish'}
+                    {company.isActive
+                      ? t('platformAdmin.blockAction')
+                      : t('platformAdmin.reactivateAction')}
                   </Button>
                 )}
+
                 {!company.protected && (
                   <CompanyDeletionButton
                     company={company}
@@ -461,6 +536,7 @@ export function PlatformAdmin() {
               </article>
             ))}
           </div>
+
           {companies.data && (
             <Pagination
               page={page}
@@ -471,6 +547,7 @@ export function PlatformAdmin() {
           )}
         </section>
       )}
+
       <Dialog
         open={Boolean(selected)}
         onOpenChange={(open) => {
@@ -480,7 +557,9 @@ export function PlatformAdmin() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {selected?.isActive ? 'Kompaniyani bloklash' : 'Kompaniyani faollashtirish'}
+              {selected?.isActive
+                ? t('platformAdmin.modalBlockTitle')
+                : t('platformAdmin.modalReactivateTitle')}
             </DialogTitle>
             <DialogDescription>{selected?.name}</DialogDescription>
           </DialogHeader>
@@ -488,8 +567,8 @@ export function PlatformAdmin() {
             <Alert message={actionError} />
             <p className="text-sm text-slate-600">
               {selected?.isActive
-                ? 'Xodimlarning kirishi va ochiq sessiyalari cheklanadi. Yangi ommaviy arizalar va Telegram CV qabul qilish to‘xtatiladi. Ma’lumotlar saqlanadi.'
-                : 'Kompaniya xodimlari tizimdan yana foydalana oladi.'}
+                ? t('platformAdmin.modalBlockDesc')
+                : t('platformAdmin.modalReactivateDesc')}
             </p>
             <DialogFooter>
               <Button
@@ -498,10 +577,19 @@ export function PlatformAdmin() {
                 disabled={busy}
                 onClick={() => setSelected(null)}
               >
-                Bekor qilish
+                {t('common.cancel')}
               </Button>
-              <Button type="button" disabled={busy} variant={selected?.isActive ? 'destructive' : 'default'} onClick={changeStatus}>
-                {busy ? 'Saqlanmoqda…' : selected?.isActive ? 'Bloklash' : 'Faollashtirish'}
+              <Button
+                type="button"
+                disabled={busy}
+                variant={selected?.isActive ? 'destructive' : 'default'}
+                onClick={changeStatus}
+              >
+                {busy
+                  ? t('common.saving')
+                  : selected?.isActive
+                    ? t('platformAdmin.blockAction')
+                    : t('platformAdmin.reactivateAction')}
               </Button>
             </DialogFooter>
           </div>

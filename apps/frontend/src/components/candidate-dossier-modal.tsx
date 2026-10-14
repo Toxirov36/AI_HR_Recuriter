@@ -1,4 +1,5 @@
 import { Printer, X, Download, ShieldCheck, Mail, Phone, Calendar, Sparkles, Building2, User, Award, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Application, Candidate } from '../types';
 import { label, Button, useData } from './ui';
 import { getEvidenceSummary } from '../lib/match-score';
@@ -16,6 +17,7 @@ export function CandidateDossierModal({
   application: initialApp,
   candidate: candidateProp,
 }: CandidateDossierModalProps) {
+  const { t } = useTranslation();
   if (!open) return null;
 
   // Agar application ID mavjud bo'lsa, to'liq talablar va ma'lumotlarni yuklaymiz
@@ -30,7 +32,7 @@ export function CandidateDossierModal({
 
   const evidence = application?.analysis ? getEvidenceSummary(application.analysis) : null;
   const parsed = candidate.parsedResume;
-  const nowStr = new Date().toLocaleDateString('uz-UZ', {
+  const nowStr = new Date().toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -51,10 +53,10 @@ export function CandidateDossierModal({
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 leading-tight">
-                Nomzod Dosyesi (A4 PDF)
+                {t('candidateDossier.title')}
               </h2>
               <p className="text-xs text-slate-500">
-                Rahbariyat va suhbat oluvchilar uchun tayyor xulosa
+                {t('candidateDossier.subtitle')}
               </p>
             </div>
           </div>
@@ -64,13 +66,13 @@ export function CandidateDossierModal({
               onClick={handlePrint}
               className="bg-[#1a5d4c] hover:bg-[#144d3e] text-white flex items-center gap-2 shadow-sm text-sm"
             >
-              <Printer size={16} /> PDF yuklab olish / Chop etish
+              <Printer size={16} /> {t('candidateDossier.printButton')}
             </Button>
             <button
               type="button"
               onClick={onClose}
               className="w-9 h-9 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center transition-colors"
-              aria-label="Yopish"
+              aria-label={t('candidateDossier.close')}
             >
               <X size={18} />
             </button>
@@ -87,32 +89,32 @@ export function CandidateDossierModal({
             <div className="border-b-2 border-[#1a5d4c] pb-4 mb-6 flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-2 text-[#1a5d4c] font-black tracking-wider text-xs uppercase mb-1">
-                  <Building2 size={15} /> AI HR Recruiter · Kadrlar Xizmati
+                  <Building2 size={15} /> {t('candidateDossier.brand')}
                 </div>
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                   {candidate.fullName}
                 </h1>
                 {application?.vacancy?.title ? (
                   <p className="text-sm font-semibold text-slate-600 mt-0.5">
-                    Vakansiya:{' '}
+                    {t('candidateDossier.vacancyLabel')}:{' '}
                     <span className="text-[#1a5d4c] font-bold">
                       {application.vacancy.title}
                     </span>
                   </p>
                 ) : (
                   <p className="text-sm text-slate-600 mt-0.5">
-                    Nomzod profili va rezyume tahlili
+                    {t('candidateDossier.subtitle')}
                   </p>
                 )}
               </div>
 
               <div className="text-right">
                 <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-slate-100 text-slate-800 border border-slate-300">
-                  {application ? label(application.status) : 'NOMZOD'}
+                  {application ? label(application.status) : t('common.anonymous')}
                 </span>
                 <p className="text-[11px] text-slate-400 mt-1 font-mono">{nowStr}</p>
                 <span className="text-[10px] text-red-600 font-semibold uppercase tracking-wider block mt-0.5">
-                  Maxfiy / Ichki foydalanish
+                  {t('candidateDossier.confidential')}
                 </span>
               </div>
             </div>
@@ -121,18 +123,18 @@ export function CandidateDossierModal({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-xl mb-6 text-xs">
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">
-                  Telefon
+                  {t('candidates.phoneNumber')}
                 </span>
                 <strong className="text-slate-800 font-medium break-words">
-                  {candidate.phone || 'Kiritilmagan'}
+                  {candidate.phone || t('candidates.notAdded')}
                 </strong>
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">
-                  Email
+                  {t('candidates.emailAddress')}
                 </span>
                 <strong className="text-slate-800 font-medium break-words">
-                  {candidate.email || 'Kiritilmagan'}
+                  {candidate.email || t('candidates.notAdded')}
                 </strong>
               </div>
               <div>
@@ -140,31 +142,112 @@ export function CandidateDossierModal({
                   Telegram
                 </span>
                 <strong className="text-slate-800 font-medium">
-                  {candidate.telegramUsername ? `@${candidate.telegramUsername}` : 'Mavjud emas'}
+                  {candidate.telegramUsername ? `@${candidate.telegramUsername}` : t('candidates.notAdded')}
                 </strong>
               </div>
               <div>
                 <span className="text-slate-400 block text-[10px] uppercase font-semibold">
-                  Manba / Qo‘shilgan
+                  {t('candidates.tableSource')} / {t('candidates.tableCreated')}
                 </span>
                 <strong className="text-slate-800 font-medium">
-                  {candidate.source || 'Website'} ·{' '}
-                  {new Date(candidate.createdAt).toLocaleDateString('uz-UZ')}
+                  {(candidate.source === 'TELEGRAM' ? t('candidates.sourceTelegram') : t('candidates.sourceWebsite'))} ·{' '}
+                  {new Date(candidate.createdAt).toLocaleDateString()}
                 </strong>
               </div>
             </div>
+
+            {/* Telegram AI Pre-screening Assessment Section */}
+            {(application?.assessmentScore != null || application?.assessmentResult != null) && (
+              <div className="mb-6 dossier-section">
+                <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-1.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] flex items-center gap-1.5">
+                    <Sparkles size={14} /> {t('candidateDossier.prescreeningTitle')}
+                  </h3>
+                  <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    {t('candidateDossier.assessmentResult')}: {application.assessmentScore ?? application.assessmentResult?.score}% · {application.assessmentResult?.passed !== false ? t('candidateDossier.passed') : t('candidateDossier.failed')}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 p-3 bg-emerald-50/50 border border-emerald-200 rounded-xl mb-3 text-xs">
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">{t('candidateDossier.totalScore')}</span>
+                    <strong className="text-emerald-800 text-sm font-bold">
+                      {application.assessmentScore ?? application.assessmentResult?.score}% ({application.assessmentResult?.correctCount ?? Math.round(((application.assessmentScore ?? 0) / 10))}/10)
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">💡 Hard Skills</span>
+                    <strong className="text-slate-800 text-sm font-bold">
+                      {application.assessmentResult?.hardSkillScore ?? '-'}%
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 block text-[10px] uppercase font-semibold">🤝 Soft Skills</span>
+                    <strong className="text-slate-800 text-sm font-bold">
+                      {application.assessmentResult?.softSkillScore ?? '-'}%
+                    </strong>
+                  </div>
+                </div>
+
+                {application.assessmentResult?.answers?.length ? (
+                  <div className="border border-slate-200 rounded-xl overflow-hidden text-xs">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-100 text-slate-700 text-left border-b border-slate-200">
+                          <th className="p-2 font-semibold w-12 text-center">#</th>
+                          <th className="p-2 font-semibold w-28">{t('candidateDossier.directionCol')}</th>
+                          <th className="p-2 font-semibold w-24">{t('candidateDossier.assessmentResult')}</th>
+                          <th className="p-2 font-semibold">{t('candidateDossier.selectedOption')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200">
+                        {application.assessmentResult.answers.map((ans, idx) => (
+                          <tr key={idx} className={ans.isCorrect ? 'bg-emerald-50/20' : 'bg-rose-50/20'}>
+                            <td className="p-2 text-center font-mono font-medium text-slate-500">{idx + 1}</td>
+                            <td className="p-2 font-medium">
+                              {ans.type === 'HARD_SKILL' ? (
+                                <span className="inline-flex items-center gap-1 text-slate-800">💡 Hard</span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 text-slate-800">🤝 Soft</span>
+                              )}
+                            </td>
+                            <td className="p-2">
+                              {ans.isCorrect ? (
+                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                  ✓ {t('candidateDossier.correct')}
+                                </span>
+                              ) : (
+                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                  ✗ {t('candidateDossier.incorrect')}
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-2 text-slate-700">
+                              {t('candidateDossier.variant')} {String.fromCharCode(65 + ans.selectedIndex)}
+                              {!ans.isCorrect && (
+                                <span className="text-slate-400 ml-1.5">({t('candidateDossier.correctAnswerNotice')}: {String.fromCharCode(65 + ans.correctIndex)})</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
             {/* AI Fit & Evidence Section (If Application Analysis exists) */}
             {application?.analysis && (
               <div className="mb-6 dossier-section">
                 <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-1.5">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] flex items-center gap-1.5">
-                    <Sparkles size={14} /> AI Tahlili va Talablarga Moslik
+                    <Sparkles size={14} /> {t('candidateDossier.aiEvaluation')}
                   </h3>
                   {evidence && (
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-                      {evidence.supported} tasdiqlangan · {evidence.partial} qisman ·{' '}
-                      {evidence.notFound} topilmadi
+                      {evidence.supported} {t('candidateDossier.verified')} · {evidence.partial} {t('candidateDossier.partial')} ·{' '}
+                      {evidence.notFound} {t('candidateDossier.notFound')}
                     </span>
                   )}
                 </div>
@@ -175,9 +258,9 @@ export function CandidateDossierModal({
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-slate-100 text-slate-700 text-left border-b border-slate-200">
-                          <th className="p-2.5 font-semibold w-1/3">Vakansiya talabi</th>
-                          <th className="p-2.5 font-semibold w-24">Holat</th>
-                          <th className="p-2.5 font-semibold">Rezyumedan olingan faktik dalil</th>
+                          <th className="p-2.5 font-semibold w-1/3">{t('candidateDossier.reqCol')}</th>
+                          <th className="p-2.5 font-semibold w-24">{t('candidateDossier.statusCol')}</th>
+                          <th className="p-2.5 font-semibold">{t('candidateDossier.evidenceCol')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
@@ -186,17 +269,17 @@ export function CandidateDossierModal({
                             (r) => r.requirementId === req.id,
                           );
                           let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-                          let badgeText = 'Noma’lum';
+                          let badgeText = t('candidates.notStated');
 
                           if (item?.status === 'SUPPORTED') {
                             badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                            badgeText = 'Tasdiqlangan';
+                            badgeText = t('candidateDossier.verified');
                           } else if (item?.status === 'PARTIAL') {
                             badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
-                            badgeText = 'Qisman';
+                            badgeText = t('candidateDossier.partial');
                           } else if (item?.status === 'NOT_FOUND') {
                             badgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
-                            badgeText = 'Topilmadi';
+                            badgeText = t('candidateDossier.notFound');
                           }
 
                           return (
@@ -207,7 +290,7 @@ export function CandidateDossierModal({
                                 </strong>
                                 {req.required && (
                                   <span className="text-[10px] text-amber-700 font-semibold uppercase">
-                                    Majburiy talab
+                                    {t('candidateDossier.mandatoryReq')}
                                   </span>
                                 )}
                               </td>
@@ -235,7 +318,7 @@ export function CandidateDossierModal({
                                   </div>
                                 ) : (
                                   <span className="text-slate-400 italic">
-                                    CV ichida bu bo‘yicha to‘g‘ridan-to‘g‘ri matn uchramadi
+                                    {t('candidateDossier.noDirectQuote')}
                                   </span>
                                 )}
                               </td>
@@ -250,24 +333,24 @@ export function CandidateDossierModal({
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-slate-100 text-slate-700 text-left border-b border-slate-200">
-                          <th className="p-2.5 font-semibold w-24">Holat</th>
-                          <th className="p-2.5 font-semibold">Rezyumedan olingan faktik dalil</th>
+                          <th className="p-2.5 font-semibold w-24">{t('candidateDossier.statusCol')}</th>
+                          <th className="p-2.5 font-semibold">{t('candidateDossier.evidenceCol')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
                         {application.analysis!.requirements.map((item, idx) => {
                           let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
-                          let badgeText = 'Noma’lum';
+                          let badgeText = t('candidates.notStated');
 
                           if (item?.status === 'SUPPORTED') {
                             badgeClass = 'bg-emerald-50 text-emerald-800 border-emerald-200';
-                            badgeText = 'Tasdiqlangan';
+                            badgeText = t('candidateDossier.verified');
                           } else if (item?.status === 'PARTIAL') {
                             badgeClass = 'bg-amber-50 text-amber-800 border-amber-200';
-                            badgeText = 'Qisman';
+                            badgeText = t('candidateDossier.partial');
                           } else if (item?.status === 'NOT_FOUND') {
                             badgeClass = 'bg-rose-50 text-rose-800 border-rose-200';
-                            badgeText = 'Topilmadi';
+                            badgeText = t('candidateDossier.notFound');
                           }
 
                           return (
@@ -304,7 +387,7 @@ export function CandidateDossierModal({
                   </div>
                 ) : (
                   <p className="text-xs text-slate-500 italic p-3 bg-slate-50 rounded-lg border border-slate-200">
-                    Vakansiya talablari kiritilmagan yoki tahlil mavjud emas.
+                    {t('candidateDossier.noRequirementsDesc')}
                   </p>
                 )}
               </div>
@@ -317,7 +400,7 @@ export function CandidateDossierModal({
                 {parsed.summary && (
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
-                      Nomzod Haqida Qisqacha (AI Summary)
+                      {t('candidateDossier.aiSummaryTitle')}
                     </h3>
                     <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200">
                       {parsed.summary}
@@ -329,7 +412,7 @@ export function CandidateDossierModal({
                 {parsed.skills?.length ? (
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
-                      Asosiy Ko‘nikma va Texnologiyalar
+                      {t('candidateDossier.keySkillsTitle')}
                     </h3>
                     <div className="flex flex-wrap gap-1.5">
                       {parsed.skills.map((skill, idx) => (
@@ -348,7 +431,7 @@ export function CandidateDossierModal({
                 {parsed.experience?.length ? (
                   <div>
                     <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-2 border-b border-slate-200 pb-1">
-                      Ish Tajribasi
+                      {t('candidateDossier.experienceTitle')}
                     </h3>
                     <div className="space-y-2.5">
                       {parsed.experience.map((exp, idx) => (
@@ -358,7 +441,7 @@ export function CandidateDossierModal({
                         >
                           <div className="flex items-baseline justify-between">
                             <strong className="text-slate-900 font-semibold">
-                              {exp.title || 'Lavozim'}
+                              {exp.title || t('candidates.roleNotStated')}
                             </strong>
                             <span className="text-[11px] text-slate-500 font-medium">
                               {exp.period}
@@ -383,13 +466,13 @@ export function CandidateDossierModal({
                   {parsed.education?.length ? (
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
-                        Ta’lim
+                        {t('candidateDossier.educationTitle')}
                       </h4>
                       <div className="space-y-1.5 text-xs text-slate-700">
                         {parsed.education.map((edu, idx) => (
                           <div key={idx}>
                             <strong className="block text-slate-900">
-                              {edu.qualification || 'Mutaxassislik'}
+                              {edu.qualification || t('candidateDossier.education')}
                             </strong>
                             <span className="text-slate-600 text-[11px]">
                               {[edu.institution, edu.period].filter(Boolean).join(' · ')}
@@ -403,7 +486,7 @@ export function CandidateDossierModal({
                   {parsed.languages?.length ? (
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
-                        Tillar
+                        {t('candidateDossier.languagesTitle')}
                       </h4>
                       <p className="text-xs text-slate-700 font-medium">
                         {parsed.languages.join(', ')}
@@ -418,7 +501,7 @@ export function CandidateDossierModal({
             {application?.interviewQuestions?.questions?.length ? (
               <div className="mb-6 dossier-section">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-2 border-b border-slate-200 pb-1">
-                  Tavsiya Etilgan Suhbat Savollari (AI Generated)
+                  {t('candidateDossier.interviewQuestionsTitle')}
                 </h3>
                 <div className="space-y-2 text-xs">
                   {application.interviewQuestions.questions.slice(0, 4).map((q, idx) => (
@@ -436,7 +519,7 @@ export function CandidateDossierModal({
                           </strong>
                           {q.rationale && (
                             <span className="text-[10px] text-slate-500 font-medium mt-0.5 block">
-                              Asos: {q.rationale}
+                              {t('candidateDossier.rationaleLabel')}: {q.rationale}
                             </span>
                           )}
                         </div>
@@ -450,33 +533,33 @@ export function CandidateDossierModal({
             {/* Official Sign-off & Leadership Evaluation Box */}
             <div className="mt-8 pt-4 border-t-2 border-slate-200 dossier-section">
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3">
-                Rahbariyat va Interviewer Qarori
+                {t('candidateDossier.decisionTitle')}
               </h4>
               <div className="grid grid-cols-3 gap-3 mb-6 text-xs text-slate-700">
                 <div className="p-3 border border-slate-300 rounded-lg flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full border-2 border-slate-400"></div>
-                  <span>Ishga qabul qilinsin</span>
+                  <span>{t('candidateDossier.decisionHire')}</span>
                 </div>
                 <div className="p-3 border border-slate-300 rounded-lg flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full border-2 border-slate-400"></div>
-                  <span>Keyingi bosqich / Zaxira</span>
+                  <span>{t('candidateDossier.decisionNext')}</span>
                 </div>
                 <div className="p-3 border border-slate-300 rounded-lg flex items-center gap-2">
                   <div className="w-4 h-4 rounded-full border-2 border-slate-400"></div>
-                  <span>Rad etilsin</span>
+                  <span>{t('candidateDossier.decisionReject')}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-8 text-xs text-slate-600 pt-2">
                 <div className="border-b border-slate-300 pb-1">
                   <span className="text-[10px] uppercase text-slate-400 block">
-                    Interviewer / Mas’ul HR F.I.Sh
+                    {t('candidateDossier.interviewerLabel')}
                   </span>
                   <div className="h-6"></div>
                 </div>
                 <div className="border-b border-slate-300 pb-1">
                   <span className="text-[10px] uppercase text-slate-400 block">
-                    Imzo va Sana
+                    {t('candidateDossier.signatureLabel')}
                   </span>
                   <div className="h-6"></div>
                 </div>
@@ -485,9 +568,9 @@ export function CandidateDossierModal({
 
             {/* Document Footer Note */}
             <div className="mt-8 pt-3 border-t border-slate-100 text-[10px] text-slate-400 text-center flex items-center justify-between">
-              <span>Hujjat ID: #{application?.id || candidate.id}</span>
-              <span>AI HR Recruiter platformasi orqali shakllantirilgan</span>
-              <span>1-sahifa</span>
+              <span>{t('candidateDossier.docId')}: #{application?.id || candidate.id}</span>
+              <span>{t('candidateDossier.generatedBy')}</span>
+              <span>{t('candidateDossier.pageOne')}</span>
             </div>
           </div>
         </div>

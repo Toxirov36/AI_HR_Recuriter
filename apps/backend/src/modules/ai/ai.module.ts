@@ -4,11 +4,12 @@ import { AiService } from './ai.service';
 import { GeminiProvider } from './providers/gemini.provider';
 import { ResumesModule } from '../resumes/resumes.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { AutoMatchService } from './auto-match.service';
 
 @Module({
   imports: [ResumesModule, NotificationsModule],
   controllers: [AiController],
-  providers: [AiService, GeminiProvider],
-  exports: [AiService],
+  providers: [AiService, GeminiProvider, AutoMatchService],
+  exports: [AiService, GeminiProvider],
 })
 export class AiModule {}

@@ -19,10 +19,21 @@ export type Requirement = {
 export type Vacancy = {
   id: number;
   publicToken?: string;
+  revision?: number;
   title: string;
   description: string;
   status: string;
   requirements: Requirement[];
+  hhAreaId?: string | null;
+  hhProfessionalRoleId?: string | null;
+  hhExperienceId?: string | null;
+  hhEmploymentId?: string | null;
+  hhScheduleId?: string | null;
+  hhSearchCount?: number | null;
+  hhSearchedAt?: string | null;
+  hhSearchError?: string | null;
+  assessmentQuestions?: any | null;
+  assessmentRevision?: number | null;
   createdAt: string;
   _count?: { applications: number };
 };
@@ -111,6 +122,25 @@ export type Evidence = {
   explanation: string;
   quotes: string[];
 };
+export type CandidateAssessmentAnswer = {
+  questionId: number;
+  selectedIndex: number;
+  correctIndex: number;
+  isCorrect: boolean;
+  type: 'HARD_SKILL' | 'SOFT_SKILL';
+};
+
+export type CandidateAssessmentResult = {
+  score: number;
+  passed: boolean;
+  totalQuestions: number;
+  correctCount: number;
+  hardSkillScore: number;
+  softSkillScore: number;
+  answers: CandidateAssessmentAnswer[];
+  completedAt: string;
+};
+
 export type Application = {
   id: number;
   candidateId: number;
@@ -120,6 +150,8 @@ export type Application = {
   status: Stage;
   reviewRevision: number;
   interviewReview: InterviewReview | null;
+  assessmentScore?: number | null;
+  assessmentResult?: CandidateAssessmentResult | null;
   stageHistory: {
     id: number;
     fromStatus: Stage | null;

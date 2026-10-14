@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { Database } from '../../database/prisma.service';
 import { admin } from '../../common/guards/auth.guard';
@@ -8,6 +8,8 @@ import { BusinessConnectionHandler } from './handlers/business-connection.handle
 import { BusinessMessageHandler } from './handlers/business-message.handler';
 import { TelegramApiService } from './telegram-api.service';
 import { AuditService } from '../audit/audit.service';
+import { TelegramApplyService } from './telegram-apply.service';
+import { TelegramAdminService } from './telegram-admin.service';
 import type {
   TelegramCallbackQuery,
   TelegramDirectMessage,
@@ -24,6 +26,8 @@ export class TelegramService {
     @Inject(BusinessMessageHandler) private messageHandler: BusinessMessageHandler,
     @Inject(TelegramApiService) private telegramApi: TelegramApiService,
     @Inject(AuditService) private audit: AuditService,
+    @Optional() @Inject(TelegramApplyService) private applyService?: TelegramApplyService,
+    @Optional() @Inject(TelegramAdminService) private adminService?: TelegramAdminService,
   ) {}
 
   verifySecret(value?: string) {
@@ -61,8 +65,25 @@ export class TelegramService {
   }
 
   async handleMessage(message: TelegramDirectMessage) {
+    if (message?.document) {
+      await this.applyService?.handleDocument(message);
+      return;
+    }
+    if (message?.contact) {
+      const contactHandled = await this.applyService?.handleContact(message);
+      if (contactHandled) return;
+    }
     if (!message?.text) return;
     const text = message.text.trim();
+    if (await this.adminService?.handleText(message)) return;
+    const applyMatch = text.match(/^\/start\s+apply_([0-9a-f-]{36})$/i);
+    if (applyMatch) {
+      await this.applyService?.start(message, applyMatch[1]);
+      return;
+    }
+
+    const applyHandled = await this.applyService?.handleText(message);
+    if (applyHandled) return;
 
     const startMatch = text.match(/^\/start(?:\s+(connect_[a-zA-Z0-9_-]+))?/);
     if (!startMatch) return;
@@ -263,6 +284,15 @@ export class TelegramService {
     try {
       if (update.message) {
         await this.handleMessage(update.message);
+      } else if (update.channel_post) {
+        const match = update.channel_post.text?.match(/#HRV(\d+)\b/);
+        if (match) {
+          const id = Number(match[1]);
+          const publication = await this.db.vacancyPublication.findFirst({ where: { id, platform: 'TELEGRAM', destinationKey: String(update.channel_post.chat.id) }, include: { channel: true, vacancy: true } });
+          if (publication && publication.status !== 'CLOSED') {
+            await this.db.vacancyPublication.update({ where: { id }, data: { externalId: String(update.channel_post.message_id), externalUrl: publication.channel?.username ? `https://t.me/${publication.channel.username}/${update.channel_post.message_id}` : null, status: publication.vacancy.status === 'CLOSED' ? 'QUEUED' : 'PUBLISHED', error: null, publishedAt: new Date() } });
+          }
+        }
       } else if (update.business_connection) {
         await this.connectionHandler.handle(update.business_connection);
       } else if (update.business_message) {
@@ -286,6 +316,14 @@ export class TelegramService {
   async handleCallbackQuery(query: TelegramCallbackQuery) {
     if (!query?.data) return;
     const data = query.data.trim();
+    if (data.startsWith('adm:')) {
+      await this.adminService?.handleCallback(query);
+      return;
+    }
+    if (data.startsWith('apply:') || data.startsWith('quiz:')) {
+      await this.applyService?.handleCallback(query);
+      return;
+    }
 
     if (data.startsWith('action:interview:')) {
       const applicationId = parseInt(data.replace('action:interview:', ''), 10);

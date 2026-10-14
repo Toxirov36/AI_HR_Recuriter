@@ -58,6 +58,8 @@ export class CompanyDeletionService {
         });
         if (protectedUser)
           throw new ConflictException('Platforma admini mavjud kompaniyani o‘chirib bo‘lmaydi.');
+        const externalPosts = await tx.vacancyPublication.count({ where: { companyId, status: { not: 'CLOSED' }, OR: [{ externalId: { not: null } }, { status: { in: ['QUEUED', 'SENDING', 'UNKNOWN'] } }] } });
+        if (externalPosts) throw new ConflictException('Avval kompaniyaning tashqi platformalardagi e’lonlarini yoping.');
 
         // Stabilize file pointers while uploads and queued processors finish their DB writes.
         await tx.$queryRaw`SELECT id FROM "Candidate" WHERE "companyId" = ${companyId} FOR UPDATE`;

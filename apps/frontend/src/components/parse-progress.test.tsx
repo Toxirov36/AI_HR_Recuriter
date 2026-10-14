@@ -1,7 +1,12 @@
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ParseProgress } from './parse-progress';
 import type { ParseStatusResponse } from './parse-progress';
+import { changeLanguage } from '../i18n';
+
+beforeEach(async () => {
+  await changeLanguage('uz');
+});
 
 afterEach(cleanup);
 

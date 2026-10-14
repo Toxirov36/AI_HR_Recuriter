@@ -107,6 +107,53 @@ export class AuthService {
     };
   }
 
+  async updateProfile(user: Identity, data: { fullName: string; companyName?: string }, sessionId?: string) {
+    const updatedUser = await this.db.user.update({
+      where: { id: user.id },
+      data: { fullName: data.fullName },
+      select: userSelect,
+    });
+
+    if (sessionId) {
+      try {
+        await this.security.redis.del(`session-user:${sessionId}`);
+      } catch {}
+    }
+
+    if (data.companyName && user.role === 'ADMIN' && data.companyName.trim()) {
+      await this.db.company.update({
+        where: { id: user.companyId },
+        data: { name: data.companyName.trim() },
+      });
+      try {
+        await this.security.redis.del(`company:${user.companyId}`);
+      } catch {}
+      await this.db.auditLog.create({
+        data: {
+          companyId: user.companyId,
+          userId: user.id,
+          actorName: updatedUser.fullName,
+          actorRole: updatedUser.role,
+          action: 'COMPANY_SETTINGS_UPDATED',
+          resourceType: 'COMPANY',
+          resourceId: String(user.companyId),
+          details: { name: data.companyName.trim() },
+        },
+      });
+    }
+
+    return this.me(updatedUser);
+  }
+
+  async updatePassword(user: Identity, data: { password: string }) {
+    const hashedPassword = await hash(data.password, 12);
+    await this.db.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
+    return { ok: true };
+  }
+
   async logout(sessionId: string, res: Response) {
     await this.security.logout(sessionId, res);
     return { ok: true };

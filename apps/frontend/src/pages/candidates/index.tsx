@@ -23,7 +23,6 @@ import { ParseProgress, type ParseStatusResponse } from '../../components/parse-
 import { exportCandidatesToCsv } from '../../lib/export';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import {
-  AiConsent,
   Alert,
   AlertDialog,
   AlertDialogAction,
@@ -55,6 +54,7 @@ import {
   useData,
 } from '../../components/ui';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import type { Candidate, Page } from '../../types';
 
 function CandidateForm({
@@ -66,6 +66,7 @@ function CandidateForm({
   close: () => void;
   saved: () => void;
 }) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function submit(e: FormEvent<HTMLFormElement>) {
@@ -78,7 +79,7 @@ function CandidateForm({
         Object.fromEntries(new FormData(e.currentTarget)),
         value ? 'PUT' : 'POST',
       );
-      toast.success(value ? 'Candidate updated successfully!' : 'Candidate added successfully!');
+      toast.success(value ? t('candidates.updatedSuccess') : t('candidates.addedSuccess'));
       saved();
     } catch (e) {
       setError((e as Error).message);
@@ -88,8 +89,8 @@ function CandidateForm({
   }
   return (
     <Modal
-      title={value ? 'Edit candidate' : 'Add a candidate'}
-      subtitle="Enter candidate contact details. You can upload their CV right after."
+      title={value ? t('candidates.modalEditTitle') : t('candidates.modalAddTitle')}
+      subtitle={t('candidates.modalSubtitle')}
       close={close}
       className="candidate-modal-custom"
     >
@@ -98,7 +99,7 @@ function CandidateForm({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="form-group">
             <label className="form-label" htmlFor="candidate-fullName">
-              Full name <span style={{ color: '#ef4444' }}>*</span>
+              {t('candidates.labelFullName')} <span style={{ color: '#ef4444' }}>*</span>
             </label>
             <input
               id="candidate-fullName"
@@ -106,13 +107,13 @@ function CandidateForm({
               name="fullName"
               maxLength={160}
               defaultValue={value?.fullName || ''}
-              placeholder="Candidate's full name"
+              placeholder={t('candidates.labelFullName')}
               className="form-control-input"
             />
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="candidate-email">
-              Email
+              {t('candidates.labelEmail')}
             </label>
             <input
               id="candidate-email"
@@ -126,7 +127,7 @@ function CandidateForm({
           </div>
           <div className="form-group">
             <label className="form-label" htmlFor="candidate-phone">
-              Phone
+              {t('candidates.labelPhone')}
             </label>
             <input
               id="candidate-phone"
@@ -140,19 +141,19 @@ function CandidateForm({
           </div>
         </div>
         <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '16px', lineHeight: '1.5' }}>
-          You can upload their CV and extract information from the candidate profile after saving.
+          {t('candidates.emptySubtitle')}
         </p>
         <div className="modal-footer-actions">
           <button type="button" className="btn-modal-cancel" onClick={close}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             className="btn-modal-submit"
             disabled={busy}
-            aria-label={value ? 'Save candidate' : 'Add candidate'}
+            aria-label={value ? t('candidates.editCandidate') : t('candidates.addCandidate')}
           >
-            {busy ? 'Saving…' : value ? 'Save candidate' : 'Add candidate'}
+            {busy ? t('common.saving') : value ? t('candidates.editCandidate') : t('candidates.addCandidate')}
           </button>
         </div>
       </form>
@@ -161,6 +162,7 @@ function CandidateForm({
 }
 
 export function Candidates() {
+  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Candidate | null>(null);
@@ -177,7 +179,7 @@ export function Candidates() {
   async function confirmDeleteCandidate(c: Candidate) {
     try {
       await api(`/candidates/${c.id}`, { method: 'DELETE' });
-      toast.success(`Candidate "${c.fullName}" deleted`);
+      toast.success(`Candidate "${c.fullName}" ${t('candidates.deletedSuccess')}`);
       reload();
     } catch (e) {
       setActionError((e as Error).message);
@@ -188,15 +190,15 @@ export function Candidates() {
   return (
     <>
       <PageTitle
-        eyebrow="PEOPLE, NOT PAPERWORK"
-        title="Candidates"
-        text="Your talent pool, with room for the whole story."
+        eyebrow={t('pipeline.eyebrow')}
+        title={t('candidates.title')}
+        text={t('candidates.subtitle')}
       >
         <Button
           onClick={() => setOpen(true)}
           className="bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
         >
-          <Plus size={17} /> Add candidate
+          <Plus size={17} /> {t('candidates.addCandidate')}
         </Button>
       </PageTitle>
       <div className="vacancies-toolbar candidates-toolbar">
@@ -204,8 +206,8 @@ export function Candidates() {
           <Search className="vacancies-search-icon" size={17} />
           <input
             type="text"
-            aria-label="Search candidates"
-            placeholder="Search by name or email…"
+            aria-label={t('candidates.searchPlaceholder')}
+            placeholder={t('candidates.searchPlaceholder')}
             value={search}
             className="vacancies-search-input"
             onChange={(e) => {
@@ -215,23 +217,23 @@ export function Candidates() {
           />
         </div>
         <div className="candidates-count-pill">
-          <span>{data?.total ?? '—'} people</span>
+          <span>{data?.total ?? '—'} {t('common.records')}</span>
         </div>
         <Button
           type="button"
           variant="outline"
           onClick={() => {
             if (!data?.items?.length) {
-              toast.error('Eksport qilish uchun nomzodlar mavjud emas');
+              toast.error(t('candidates.emptyTitle'));
               return;
             }
             exportCandidatesToCsv(data.items);
-            toast.success(`${data.items.length} ta nomzod CSV/Excel faylga yuklandi`);
+            toast.success(`${data.items.length} ${t('common.exportCsv')}`);
           }}
           className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-slate-200 text-slate-800 bg-white hover:bg-slate-50 font-medium text-sm shadow-none shrink-0"
-          title="Nomzodlar ro‘yxatini Excel/CSV ga yuklab olish"
+          title={t('common.exportCsv')}
         >
-          <Download size={15} /> Eksport (CSV)
+          <Download size={15} /> {t('common.exportCsv')}
         </Button>
       </div>
       <Alert message={error || actionError} />
@@ -246,12 +248,12 @@ export function Candidates() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Candidate</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>CV</TableHead>
-                        <TableHead>Applications</TableHead>
-                        <TableHead>Added</TableHead>
-                        <TableHead>Actions</TableHead>
+                        <TableHead>{t('candidates.tableFullName')}</TableHead>
+                        <TableHead>{t('candidates.tableSource')}</TableHead>
+                        <TableHead>{t('candidates.tableResume')}</TableHead>
+                        <TableHead>{t('candidates.tableApplications')}</TableHead>
+                        <TableHead>{t('candidates.tableCreated')}</TableHead>
+                        <TableHead>{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -262,7 +264,7 @@ export function Candidates() {
                               <Link
                                 className="candidate-avatar-link"
                                 to={`/candidates/${c.id}`}
-                                aria-label={`View ${c.fullName}`}
+                                aria-label={`${t('candidates.viewDossier')} ${c.fullName}`}
                               >
                                 <Avatar className="h-9 w-9">
                                   <AvatarFallback className="bg-[#1b4338] text-white font-semibold text-xs">
@@ -281,7 +283,7 @@ export function Candidates() {
                                     </a>
                                   ) : (
                                     <span className="missing-contact">
-                                      <Mail size={12} /> No email
+                                      <Mail size={12} /> {t('candidates.noEmail')}
                                     </span>
                                   )}
                                   {c.phone ? (
@@ -290,7 +292,7 @@ export function Candidates() {
                                     </a>
                                   ) : (
                                     <span className="missing-contact">
-                                      <Phone size={12} /> No phone
+                                      <Phone size={12} /> {t('candidates.noPhone')}
                                     </span>
                                   )}
                                 </div>
@@ -299,7 +301,7 @@ export function Candidates() {
                           </TableCell>
                           <TableCell>
                             <span className="badge neutral">
-                              {c.source === 'TELEGRAM' ? 'Telegram' : 'Website'}
+                              {c.source === 'TELEGRAM' ? t('candidates.sourceTelegram') : t('candidates.sourceWebsite')}
                             </span>
                             {c.telegramUsername && (
                               <small className="block muted">@{c.telegramUsername}</small>
@@ -308,7 +310,7 @@ export function Candidates() {
                           <TableCell>
                             <span className={`file-state ${c.resumeName ? 'has-file' : ''}`}>
                               <FileText size={15} />
-                              {c.resumeName ? 'Uploaded' : 'Not uploaded'}
+                              {c.resumeName ? t('candidates.resumeUploaded') : t('candidates.resumeNotUploaded')}
                             </span>
                           </TableCell>
                           <TableCell>{c._count?.applications || 0}</TableCell>
@@ -317,14 +319,14 @@ export function Candidates() {
                             <div className="row">
                               <Link
                                 className="icon-button"
-                                aria-label={`View ${c.fullName}`}
+                                aria-label={`${t('candidates.viewDossier')} ${c.fullName}`}
                                 to={`/candidates/${c.id}`}
                               >
                                 <ArrowUpRight size={16} />
                               </Link>
                               <button
                                 className="icon-button"
-                                aria-label={`Edit ${c.fullName}`}
+                                aria-label={`${t('candidates.editCandidate')} ${c.fullName}`}
                                 onClick={() => {
                                   setEditing(c);
                                   setOpen(true);
@@ -334,7 +336,7 @@ export function Candidates() {
                               </button>
                               <button
                                 className="icon-button danger"
-                                aria-label={`Delete ${c.fullName}`}
+                                aria-label={`${t('candidates.deleteCandidate')} ${c.fullName}`}
                                 onClick={() => setDeletingCandidate(c)}
                               >
                                 <Trash2 size={16} />
@@ -348,11 +350,11 @@ export function Candidates() {
                 </div>
               ) : (
                 <Empty
-                  title={search ? 'No candidates found' : 'Meet your future team'}
+                  title={search ? t('candidates.emptyTitle') : t('candidates.emptyTitle')}
                   text={
                     search
-                      ? 'Try a different name or email.'
-                      : 'Add your first candidate to start reviewing their experience.'
+                      ? t('candidates.emptySubtitle')
+                      : t('candidates.emptySubtitle')
                   }
                 />
               )}
@@ -377,19 +379,18 @@ export function Candidates() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete candidate?</AlertDialogTitle>
+            <AlertDialogTitle>{t('candidates.deleteConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deletingCandidate?.fullName}</strong>, their
-              CV, and all applications? This action cannot be undone.
+              {t('candidates.deleteConfirmDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-[#dc2626] text-white hover:bg-[#b91c1c]"
               onClick={() => deletingCandidate && void confirmDeleteCandidate(deletingCandidate)}
             >
-              Delete candidate
+              {t('candidates.deleteCandidate')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -399,13 +400,13 @@ export function Candidates() {
 }
 
 export function CandidateDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const { user } = useAuth();
   const { data: c, error, reload } = useData<Candidate>(`/candidates/${id}`);
   const { data: duplicates, reload: reloadDuplicates } = useData<Array<Pick<Candidate, 'id' | 'fullName' | 'email' | 'phone' | 'source' | 'resumeName'>>>(`/candidates/${id}/duplicates`);
   const [busy, setBusy] = useState('');
   const [actionError, setActionError] = useState('');
-  const [consent, setConsent] = useState(false);
   const [editing, setEditing] = useState(false);
   const [dossierOpen, setDossierOpen] = useState(false);
   const [anonymizeOpen, setAnonymizeOpen] = useState(false);
@@ -423,7 +424,7 @@ export function CandidateDetail() {
     setBusy('anonymize');
     try {
       await send(`/v1/candidates/${id}/anonymize`, {});
-      toast.success('Nomzod shaxsiy ma‘lumotlari anonimlashtirildi (GDPR)');
+      toast.success(t('candidates.anonymizedSuccess'));
       setAnonymizeOpen(false);
       reload();
     } catch (e) {
@@ -439,7 +440,7 @@ export function CandidateDetail() {
     setActionError('');
     try {
       await send(`/candidates/${id}/merge`, { duplicateId: mergeCandidate.id });
-      toast.success('Nomzod profillari birlashtirildi');
+      toast.success(t('candidates.mergedSuccess'));
       setMergeCandidate(null);
       reload();
       reloadDuplicates();
@@ -454,7 +455,7 @@ export function CandidateDetail() {
     if (!file) return;
     setActionError('');
     if (file.size > 5 * 1024 * 1024) {
-      setActionError('Maximum CV file size is 5 MB.');
+      setActionError(t('candidates.maxFileSizeError'));
       return;
     }
     setBusy('upload');
@@ -462,8 +463,7 @@ export function CandidateDetail() {
       const f = new FormData();
       f.append('file', file);
       await api(`/candidates/${id}/resume`, { method: 'POST', body: f });
-      setConsent(false);
-      toast.success('CV uploaded and text extracted!');
+      toast.success(t('candidates.cvUploadedSuccess'));
       reload();
     } catch (e) {
       setActionError((e as Error).message);
@@ -479,14 +479,14 @@ export function CandidateDetail() {
       status: 'PENDING',
       step: 1,
       totalSteps: 4,
-      message: "Navbatga qo'yildi va tahlilga tayyorlanmoqda…",
+      message: t('candidates.parsingPending'),
       percent: 0,
     });
 
     if (pollTimerRef.current) clearInterval(pollTimerRef.current);
 
     try {
-      await send(`/candidates/${id}/parse-async`, { consent });
+      await send(`/candidates/${id}/parse-async`, { consent: true });
 
       const pollInterval = 800;
       let attempts = 0;
@@ -502,12 +502,12 @@ export function CandidateDetail() {
             if (status.status === 'COMPLETED') {
               if (pollTimerRef.current) clearInterval(pollTimerRef.current);
               setBusy('');
-              toast.success("Rezyume AI orqali to'liq tahlil qilindi!");
+              toast.success(t('candidates.parsingCompleted'));
               reload();
             } else if (status.status === 'FAILED') {
               if (pollTimerRef.current) clearInterval(pollTimerRef.current);
               setBusy('');
-              setActionError(status.error || 'Rezyumeni tahlil qilishda xatolik yuz berdi.');
+              setActionError(status.error || t('candidates.parsingFailed'));
             }
           }
         } catch {
@@ -517,7 +517,7 @@ export function CandidateDetail() {
         if (attempts >= maxAttempts) {
           if (pollTimerRef.current) clearInterval(pollTimerRef.current);
           setBusy('');
-          setActionError("Tahlil vaqti tugadi. Qayta urinib ko'ring.");
+          setActionError(t('candidates.parsingTimeout'));
         }
       }, pollInterval);
     } catch (e) {
@@ -529,7 +529,7 @@ export function CandidateDetail() {
   return (
     <>
       <Link to="/candidates" className="back-link">
-        <ArrowLeft size={16} /> All candidates
+        <ArrowLeft size={16} /> {t('candidates.backToCandidates')}
       </Link>
       <Alert message={error || actionError} />
       {!c && !error ? (
@@ -538,10 +538,10 @@ export function CandidateDetail() {
         c && (
           <>
             <PageTitle
-              eyebrow="CANDIDATE PROFILE"
+              eyebrow={t('candidates.eyebrowProfile')}
               title={c.fullName}
               text={[
-                c.source === 'TELEGRAM' ? 'Telegram candidate' : 'Website candidate',
+                c.source === 'TELEGRAM' ? t('candidates.telegramCandidate') : t('candidates.websiteCandidate'),
                 c.telegramUsername ? `@${c.telegramUsername}` : null,
               ]
                 .filter(Boolean)
@@ -550,12 +550,12 @@ export function CandidateDetail() {
               <div className="flex items-center gap-2">
                 {(c as any).isAnonymized && (
                   <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-                    Anonimlashtirilgan (GDPR)
+                    {t('candidates.anonymizedBadge')}
                   </span>
                 )}
                 {(c as any).isOcrProcessed && (
                   <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                    OCR orqali o'qilgan
+                    {t('candidates.ocrProcessedBadge')}
                   </span>
                 )}
                 {!(c as any).isAnonymized && (
@@ -565,21 +565,21 @@ export function CandidateDetail() {
                       onClick={() => setDossierOpen(true)}
                       className="flex items-center gap-1.5 border-slate-300 text-slate-800 hover:bg-slate-50 font-medium"
                     >
-                      <Printer size={16} /> Dossier (A4 PDF)
+                      <Printer size={16} /> {t('candidates.dossierBtn')}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setEditing(true)}
                       className="flex items-center gap-1.5"
                     >
-                      <Pencil size={16} /> Edit profile
+                      <Pencil size={16} /> {t('candidates.editProfileBtn')}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setAnonymizeOpen(true)}
                       className="flex items-center gap-1.5 text-red-600 border-red-200 hover:bg-red-50"
                     >
-                      <ShieldAlert size={16} /> PII Anonymize
+                      <ShieldAlert size={16} /> {t('candidates.anonymizeBtn')}
                     </Button>
                   </>
                 )}
@@ -587,18 +587,30 @@ export function CandidateDetail() {
             </PageTitle>
             {c.mergedIntoId && (
               <section className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                Bu profil boshqa nomzod profiliga birlashtirilgan. <Link className="font-semibold underline" to={`/candidates/${c.mergedIntoId}`}>Asosiy profilni ochish</Link>
+                {t('candidates.mergedNotice')}{' '}
+                <Link className="font-semibold underline" to={`/candidates/${c.mergedIntoId}`}>
+                  {t('candidates.openMainProfile')}
+                </Link>
               </section>
             )}
             {!c.mergedIntoId && Boolean(duplicates?.length) && (
-              <section className="mb-5 rounded-xl border border-[#cce3d7] bg-[#f4faf6] p-5" aria-label="Potential duplicate candidates">
-                <h2 className="text-base font-semibold text-[#183d30]">O‘xshash nomzod profillari</h2>
-                <p className="mt-1 text-sm text-[#60736b]">Email yoki telefon bir xil. Ma’lumotlarni tekshiring; birlashtirish faqat siz tasdiqlaganingizdan keyin amalga oshadi.</p>
+              <section className="mb-5 rounded-xl border border-[#cce3d7] bg-[#f4faf6] p-5" aria-label={t('candidates.duplicatesTitle')}>
+                <h2 className="text-base font-semibold text-[#183d30]">{t('candidates.duplicatesTitle')}</h2>
+                <p className="mt-1 text-sm text-[#60736b]">{t('candidates.duplicatesDesc')}</p>
                 <div className="mt-3 space-y-2">
                   {duplicates?.map((match) => (
                     <div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#dce7e0] bg-white p-3 text-sm">
-                      <div><Link className="font-semibold text-[#245e4f] underline" to={`/candidates/${match.id}`}>{match.fullName}</Link><p className="text-xs text-[#60736b]">{match.source} · {match.email || match.phone} {match.resumeName ? '· CV mavjud' : ''}</p></div>
-                      <Button variant="outline" disabled={Boolean(busy)} onClick={() => setMergeCandidate(match)}>Shu profilga birlashtirish</Button>
+                      <div>
+                        <Link className="font-semibold text-[#245e4f] underline" to={`/candidates/${match.id}`}>
+                          {match.fullName}
+                        </Link>
+                        <p className="text-xs text-[#60736b]">
+                          {match.source === 'TELEGRAM' ? t('candidates.sourceTelegram') : t('candidates.sourceWebsite')} · {match.email || match.phone} {match.resumeName ? `· ${t('candidates.hasCv')}` : ''}
+                        </p>
+                      </div>
+                      <Button variant="outline" disabled={Boolean(busy)} onClick={() => setMergeCandidate(match)}>
+                        {t('candidates.mergeToThis')}
+                      </Button>
                     </div>
                   ))}
                 </div>
@@ -606,9 +618,15 @@ export function CandidateDetail() {
             )}
             {Boolean(c.mergedCandidates?.length) && (
               <section className="mb-5 rounded-xl border border-[#dce7e0] bg-white p-4 text-sm">
-                <strong>Birlashtirilgan eski profillar</strong>
-                <p className="mt-1 text-[#60736b]">Eski CV va tarixni tekshirish uchun profilni oching.</p>
-                <div className="mt-2 flex flex-wrap gap-3">{c.mergedCandidates?.map((source) => <Link key={source.id} className="text-[#245e4f] underline" to={`/candidates/${source.id}`}>{source.fullName} #{source.id}</Link>)}</div>
+                <strong>{t('candidates.mergedHistoryTitle')}</strong>
+                <p className="mt-1 text-[#60736b]">{t('candidates.mergedHistoryDesc')}</p>
+                <div className="mt-2 flex flex-wrap gap-3">
+                  {c.mergedCandidates?.map((source) => (
+                    <Link key={source.id} className="text-[#245e4f] underline" to={`/candidates/${source.id}`}>
+                      {source.fullName} #{source.id}
+                    </Link>
+                  ))}
+                </div>
               </section>
             )}
             <section className="candidate-contact-panel" aria-label="Candidate contact information">
@@ -617,11 +635,11 @@ export function CandidateDetail() {
                   <Mail size={17} />
                 </span>
                 <div>
-                  <small>Email address</small>
+                  <small>{t('candidates.emailAddress')}</small>
                   {c.email ? (
                     <a href={`mailto:${c.email}`}>{c.email}</a>
                   ) : (
-                    <strong className="missing-contact">Not added</strong>
+                    <strong className="missing-contact">{t('candidates.notAdded')}</strong>
                   )}
                 </div>
               </div>
@@ -630,11 +648,11 @@ export function CandidateDetail() {
                   <Phone size={17} />
                 </span>
                 <div>
-                  <small>Phone number</small>
+                  <small>{t('candidates.phoneNumber')}</small>
                   {c.phone ? (
                     <a href={`tel:${c.phone}`}>{c.phone}</a>
                   ) : (
-                    <strong className="missing-contact">Not added</strong>
+                    <strong className="missing-contact">{t('candidates.notAdded')}</strong>
                   )}
                 </div>
               </div>
@@ -643,8 +661,8 @@ export function CandidateDetail() {
               <section className="panel padded">
                 <div className="panel-heading flush">
                   <div>
-                    <h2>Curriculum vitae</h2>
-                    <p>The source behind every piece of evidence.</p>
+                    <h2>{t('candidates.cvTitle')}</h2>
+                    <p>{t('candidates.cvDesc')}</p>
                   </div>
                   <FileText size={20} />
                 </div>
@@ -664,10 +682,10 @@ export function CandidateDetail() {
                       <span className="text-xs font-semibold truncate text-slate-700">{c.resumeName}</span>
                     </div>
                     <a
-                      aria-label="Download CV"
+                      aria-label={t('candidates.downloadCv')}
                       href={`/api/candidates/${c.id}/resume`}
                       className="inline-flex items-center justify-center h-8 w-8 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-200/60 transition-colors shrink-0 ml-2"
-                      title="Yuklab olish"
+                      title={t('candidates.downloadCv')}
                     >
                       <Download size={17} />
                     </a>
@@ -675,37 +693,42 @@ export function CandidateDetail() {
                 )}
                 {c.resumeText && (
                   <details className="text-preview">
-                    <summary>View extracted CV text</summary>
+                    <summary>{t('candidates.viewExtractedText')}</summary>
                     <pre>{c.resumeText}</pre>
                   </details>
                 )}
                 <p className="muted small">
-                  Replacing a CV clears its previous AI analysis. Scanned PDFs need OCR before
-                  upload.
+                  {t('candidates.cvReplaceWarning')}
                 </p>
               </section>
               <section className="panel padded">
                 <div className="panel-heading flush">
                   <div>
                     <h2>
-                      <Sparkles size={19} /> Structured resume
+                      <Sparkles size={19} /> {t('candidates.structuredResumeTitle')}
                     </h2>
-                    <p>Organize experience into a readable profile.</p>
+                    <p>{t('candidates.structuredResumeDesc')}</p>
                   </div>
                 </div>
-                <AiConsent checked={consent} onChange={setConsent} configured={Boolean(user?.aiConfigured)} />
-                {c.publicSubmittedAt && !c.aiConsentAt && <p className="mt-2 text-sm text-amber-700">Nomzod AI tahliliga rozilik bermagan. CV faqat HR tomonidan ko‘rib chiqiladi.</p>}
+                {!user?.aiConfigured && (
+                  <div className="my-2">
+                    <Alert message={t('candidates.aiNotConfigured')} />
+                  </div>
+                )}
+                {c.publicSubmittedAt && !c.aiConsentAt && (
+                  <p className="mt-2 text-sm text-amber-700">{t('candidates.noAiConsentNotice')}</p>
+                )}
                 <Button
                   className="bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
-                  disabled={!consent || !user?.aiConfigured || !c.resumeText || Boolean(busy) || Boolean(c.publicSubmittedAt && !c.aiConsentAt)}
+                  disabled={!user?.aiConfigured || !c.resumeText || Boolean(busy) || Boolean(c.publicSubmittedAt && !c.aiConsentAt)}
                   onClick={() => void parseResume()}
                 >
                   <Sparkles size={16} />
                   {busy === 'parse'
-                    ? 'Parsing resume…'
+                    ? t('candidates.parsingResumeBtn')
                     : c.parsedResume
-                      ? 'Parse again'
-                      : 'Parse resume with AI'}
+                      ? t('candidates.parseAgain')
+                      : t('candidates.parseResumeAi')}
                 </Button>
                 {parseProgress && (
                   <div className="mt-4">
@@ -719,37 +742,37 @@ export function CandidateDetail() {
                   <div className="parsed-profile">
                     <p>{c.parsedResume.summary}</p>
                     <Separator className="my-4" />
-                    <h3>Skills</h3>
+                    <h3>{t('candidateDossier.skills')}</h3>
                     <div className="requirement-tags">
                       {c.parsedResume.skills.map((s, i) => (
                         <span key={i}>{s}</span>
                       ))}
                     </div>
                     <Separator className="my-4" />
-                    <h3>Experience</h3>
+                    <h3>{t('candidateDossier.experience')}</h3>
                     {c.parsedResume.experience.map((x, i) => (
                       <article key={i}>
-                        <strong>{x.title || 'Role not stated'}</strong>
+                        <strong>{x.title || t('candidates.roleNotStated')}</strong>
                         <small>{[x.company, x.period].filter(Boolean).join(' · ')}</small>
                         <p>{x.description}</p>
                       </article>
                     ))}
                     <Separator className="my-4" />
-                    <h3>Education</h3>
+                    <h3>{t('candidateDossier.education')}</h3>
                     {c.parsedResume.education.map((x, i) => (
                       <p key={i}>
                         {[x.qualification, x.institution, x.period].filter(Boolean).join(' · ')}
                       </p>
                     ))}
                     <Separator className="my-4" />
-                    <h3>Languages</h3>
-                    <p>{c.parsedResume.languages.join(', ') || 'Not stated'}</p>
+                    <h3>{t('candidateDossier.languages')}</h3>
+                    <p>{c.parsedResume.languages.join(', ') || t('candidates.notStated')}</p>
                   </div>
                 ) : (
                   <div className="quiet-note">
                     {c.resumeText
-                      ? "Your CV is ready. Parse it when you're ready to review."
-                      : 'Upload a CV to start building this profile.'}
+                      ? t('candidates.cvReadyPrompt')
+                      : t('candidates.uploadCvPrompt')}
                   </div>
                 )}
               </section>
@@ -758,8 +781,8 @@ export function CandidateDetail() {
               <section className="panel padded mt-4">
                 <div className="panel-heading flush">
                   <div>
-                    <h2>Timeline</h2>
-                    <p>Candidate and CV processing activity.</p>
+                    <h2>{t('candidates.timelineTitle')}</h2>
+                    <p>{t('candidates.timelineDesc')}</p>
                   </div>
                 </div>
                 <ol className="history-list">
@@ -785,18 +808,18 @@ export function CandidateDetail() {
             <AlertDialog open={anonymizeOpen} onOpenChange={setAnonymizeOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Nomzod ma‘lumotlarini anonimlashtirish?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('candidates.modalAnonymizeTitle')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Ushbu amal nomzodning ism-familiyasi, telefoni, emaili, Telegram ma'lumotlari va barcha yuklangan rezyume fayllarini butunlay o'chiradi. Bu jarayonni ortga qaytarib bo'lmaydi (GDPR Art. 17).
+                    {t('candidates.modalAnonymizeDesc')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                   <AlertDialogAction
                     className="bg-red-600 text-white hover:bg-red-700"
                     onClick={() => void confirmAnonymize()}
                   >
-                    {busy === 'anonymize' ? 'Anonimlashtirilmoqda…' : 'Anonimlashtirish'}
+                    {busy === 'anonymize' ? t('candidates.anonymizing') : t('candidates.anonymizeAction')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -804,15 +827,16 @@ export function CandidateDetail() {
             <AlertDialog open={Boolean(mergeCandidate)} onOpenChange={(open) => !open && setMergeCandidate(null)}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Nomzod profillarini birlashtirish?</AlertDialogTitle>
+                  <AlertDialogTitle>{t('candidates.modalMergeTitle')}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    <strong>{mergeCandidate?.fullName}</strong> profilidagi arizalar va CV yozuvlari <strong>{c.fullName}</strong> profiliga o‘tkaziladi. Eski profil tarix uchun saqlanadi. Ikkala profil bir vakansiyaga ariza yuborgan bo‘lsa, birlashtirish to‘xtatiladi.
+                    <strong>{mergeCandidate?.fullName}</strong>{' '}
+                    {t('candidates.modalMergeDesc')}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Bekor qilish</AlertDialogCancel>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
                   <AlertDialogAction disabled={busy === 'merge'} className="bg-[#245e4f] text-white hover:bg-[#1b4338]" onClick={() => void confirmMerge()}>
-                    {busy === 'merge' ? 'Birlashtirilmoqda…' : 'Birlashtirish'}
+                    {busy === 'merge' ? t('candidates.merging') : t('candidates.mergeAction')}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

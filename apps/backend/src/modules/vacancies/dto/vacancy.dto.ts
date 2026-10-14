@@ -18,6 +18,11 @@ export const vacancySchema = z
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
     requirements: z.array(requirementSchema).max(40).default([]),
+    hhAreaId: z.string().trim().max(40).nullable().optional(),
+    hhProfessionalRoleId: z.string().trim().max(40).nullable().optional(),
+    hhExperienceId: z.string().trim().max(40).nullable().optional(),
+    hhEmploymentId: z.string().trim().max(40).nullable().optional(),
+    hhScheduleId: z.string().trim().max(40).nullable().optional(),
   })
   .strict();
 

@@ -14,11 +14,24 @@ import {
 import { AuthGuard } from '../../common/guards/auth.guard';
 import type { AuthRequest } from '../../common/utils/security';
 import { TelegramService } from './telegram.service';
+import { TelegramAdminService } from './telegram-admin.service';
 import type { TelegramUpdate } from './types/telegram.types';
 
 @Controller('v1/integrations/telegram')
 export class TelegramController {
-  constructor(@Inject(TelegramService) private telegramService: TelegramService) {}
+  constructor(@Inject(TelegramService) private telegramService: TelegramService, @Inject(TelegramAdminService) private adminService: TelegramAdminService) {}
+
+  @Get('admin/status')
+  @UseGuards(AuthGuard)
+  adminStatus(@Req() req: AuthRequest) { return this.adminService.status(req.user); }
+
+  @Post('admin/connect-link')
+  @UseGuards(AuthGuard)
+  adminConnectLink(@Req() req: AuthRequest) { return this.adminService.createPairing(req.user); }
+
+  @Delete('admin/connection')
+  @UseGuards(AuthGuard)
+  adminDisconnect(@Req() req: AuthRequest) { return this.adminService.disconnect(req.user); }
 
   @Post('webhook')
   async webhook(

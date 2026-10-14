@@ -15,8 +15,8 @@ import {
   Plus,
   Search,
   Settings2,
-  ShieldCheck,
   Users,
+  User as UserIcon,
 } from 'lucide-react';
 import { send } from './lib/api';
 import { prefetchData } from './lib/query-client';
@@ -98,13 +98,6 @@ function SidebarNav({
           </NavLink>
         ))}
       </nav>
-      <div className="sidebar-bottom mt-auto">
-        <div className="sidebar-note">
-          <ShieldCheck size={20} className="shield-icon" />
-          <strong>{t('navigation.humanByDesign')}</strong>
-          <p>{t('navigation.humanByDesignText')}</p>
-        </div>
-      </div>
     </div>
   );
 }
@@ -123,6 +116,7 @@ function AppShell() {
   useEffect(() => {
     const paths = [
       '/dashboard',
+      '/profile',
       '/vacancies?page=1&search=',
       '/candidates?page=1&search=',
       '/applications?page=1&search=',
@@ -163,7 +157,11 @@ function AppShell() {
 
   const current =
     links.find((l) => l.to !== '/' && location.pathname.startsWith(l.to))?.title ||
-    (location.pathname.startsWith('/applications') ? t('navigation.applicationReview') : t('navigation.overview'));
+    (location.pathname.startsWith('/applications')
+      ? t('navigation.applicationReview')
+      : location.pathname.startsWith('/profile')
+      ? t('navigation.myProfile')
+      : t('navigation.overview'));
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -271,6 +269,12 @@ function AppShell() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <NavLink to="/profile" className="cursor-pointer flex items-center">
+                      <UserIcon className="mr-2.5 h-4 w-4 text-slate-500" />
+                      <span>{t('navigation.myProfile')}</span>
+                    </NavLink>
+                  </DropdownMenuItem>
                   {user.role === 'ADMIN' && (
                     <DropdownMenuItem asChild>
                       <NavLink to="/admin" className="cursor-pointer flex items-center">

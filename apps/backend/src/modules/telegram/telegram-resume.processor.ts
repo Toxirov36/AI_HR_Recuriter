@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Job, Worker } from 'bullmq';
+import { Job, Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
 import { Prisma } from '../../generated/prisma/client';
 import { Database } from '../../database/prisma.service';
@@ -9,6 +9,7 @@ import { extractResume } from '../resumes/resumes.service';
 import { TelegramApiService } from './telegram-api.service';
 import { TELEGRAM_RESUME_QUEUE } from './telegram-queue.service';
 import type { TelegramResumeJob } from './types/telegram.types';
+import { AUTO_MATCH_QUEUE, type AutoMatchJob } from '../ai/auto-match.service';
 
 @Injectable()
 export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
@@ -16,6 +17,7 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
   private readonly config = getConfig();
   private worker?: Worker<TelegramResumeJob>;
   private connection?: Redis;
+  private autoMatchQueue?: Queue<AutoMatchJob>;
 
   constructor(
     @Inject(Database) private db: Database,
@@ -27,6 +29,7 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
     if (!this.config.TELEGRAM_BOT_TOKEN || !this.storage.enabled) return;
     this.connection = new Redis(this.config.REDIS_URL, { maxRetriesPerRequest: null });
     this.connection.on('error', () => {});
+    this.autoMatchQueue = new Queue<AutoMatchJob>(AUTO_MATCH_QUEUE, { connection: this.connection });
     this.worker = new Worker<TelegramResumeJob>(TELEGRAM_RESUME_QUEUE, (job) => this.process(job), {
       connection: this.connection,
       concurrency: 2,
@@ -40,13 +43,13 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
   }
 
   private async process(job: Job<TelegramResumeJob>) {
-    const { resumeId, candidateId, companyId, fileId } = job.data;
+    const { resumeId, candidateId, companyId, fileId, applicationId } = job.data;
     const resume = await this.db.resume.findFirstOrThrow({
       where: { id: resumeId, candidateId, companyId },
     });
     const candidate = await this.db.candidate.findUniqueOrThrow({
       where: { id_companyId: { id: candidateId, companyId } },
-      select: { email: true, phone: true },
+      select: { email: true, phone: true, publicSubmittedAt: true, aiConsentAt: true },
     });
     await this.db.$transaction(async (tx) => {
       await tx.resume.update({
@@ -129,6 +132,14 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
           },
         });
       });
+      if (applicationId && candidate.publicSubmittedAt && candidate.aiConsentAt && this.autoMatchQueue) {
+        try {
+          const current = await this.db.candidate.findUniqueOrThrow({ where: { id_companyId: { id: candidateId, companyId } }, select: { resumeRevision: true } });
+          await this.autoMatchQueue.add('analyze', { companyId, candidateId, applicationId, resumeRevision: current.resumeRevision }, { jobId: `auto-match-${applicationId}-${current.resumeRevision}`, attempts: 3, backoff: { type: 'exponential', delay: 10_000 }, removeOnComplete: 100, removeOnFail: 200 });
+        } catch {
+          this.logger.warn(`Automatic match could not be queued candidateId=${candidateId}`);
+        }
+      }
     } catch (error) {
       if (objectKey) await this.storage.delete(objectKey).catch(() => undefined);
       const finalAttempt = job.attemptsMade + 1 >= (job.opts.attempts ?? 1);
@@ -151,6 +162,7 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
 
   async onModuleDestroy() {
     await this.worker?.close();
+    await this.autoMatchQueue?.close();
     this.connection?.disconnect();
   }
 }

@@ -18,8 +18,11 @@ import {
   Mail,
   Phone,
   Layers,
+  Globe,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { api, send } from '../../lib/api';
 import { label } from '../../lib/utils';
 import {
@@ -61,6 +64,43 @@ export interface TopCandidateItem {
     status: string;
     explanation?: string;
   }>;
+}
+
+export interface RecommendationItem {
+  id: number;
+  candidateId: number;
+  candidateName: string;
+  candidateEmail?: string | null;
+  candidatePhone?: string | null;
+  candidateSource?: string | null;
+  hasApplication: boolean;
+  applicationId: number | null;
+  applicationStatus: Stage | null;
+  matchScore: number;
+  mandatoryScore: number;
+  optionalScore: number;
+  supportedCount: number;
+  partialCount: number;
+  notFoundCount: number;
+  unknownCount: number;
+  strengths: string[];
+  gaps: string[];
+  partialMatches: string[];
+  requirementDetails?: Array<{
+    id: number;
+    name: string;
+    required: boolean;
+    status: string;
+    explanation?: string;
+  }>;
+}
+
+export interface HhResumeItem {
+  id: string;
+  title: string;
+  url: string | null;
+  area: string;
+  updatedAt: string | null;
 }
 
 export interface TopComparisonPayload {
@@ -108,19 +148,91 @@ export function TopCandidatesModal({
   onApplicationStageChanged,
   onOpenDossier,
 }: TopCandidatesModalProps) {
+  const { t } = useTranslation();
   const [data, setData] = useState<TopCandidatesResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'podium' | 'comparison' | 'matrix' | 'all'>('podium');
+  const [activeTab, setActiveTab] = useState<'podium' | 'comparison' | 'matrix' | 'all' | 'recommendations' | 'headhunter'>('podium');
   const [movingAppId, setMovingAppId] = useState<number | null>(null);
+
+  const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
+  const [loadingRecs, setLoadingRecs] = useState(false);
+  const [applyingCandidateId, setApplyingCandidateId] = useState<number | null>(null);
+
+  const [hhResumes, setHhResumes] = useState<HhResumeItem[]>([]);
+  const [hhTotal, setHhTotal] = useState<number>(0);
+  const [loadingHh, setLoadingHh] = useState(false);
+  const [hhNotConnected, setHhNotConnected] = useState(false);
 
   useEffect(() => {
     if (open && vacancyId) {
       void loadTopCandidates();
+      void loadRecommendations();
+      void loadHhResumes();
     } else {
       setData(null);
+      setRecommendations([]);
+      setHhResumes([]);
     }
   }, [open, vacancyId]);
+
+  async function loadRecommendations() {
+    if (!vacancyId) return;
+    setLoadingRecs(true);
+    try {
+      const res = await api<{ recommendations: RecommendationItem[]; total: number }>(
+        `/vacancies/${vacancyId}/recommendations`,
+      );
+      setRecommendations(res.recommendations || []);
+    } catch {
+      // Graceful fallback
+    } finally {
+      setLoadingRecs(false);
+    }
+  }
+
+  async function loadHhResumes() {
+    if (!vacancyId) return;
+    setLoadingHh(true);
+    setHhNotConnected(false);
+    try {
+      const res = await api<{ total: number; items: HhResumeItem[] }>(
+        `/integrations/recruiting/vacancies/${vacancyId}/headhunter/resumes?page=0`,
+      );
+      setHhResumes(res.items || []);
+      setHhTotal(res.total || 0);
+    } catch (err: any) {
+      if (err?.status === 403 || err?.message?.includes('HeadHunter')) {
+        setHhNotConnected(true);
+      }
+    } finally {
+      setLoadingHh(false);
+    }
+  }
+
+  async function applyRecommendation(rec: RecommendationItem) {
+    if (!vacancyId || applyingCandidateId) return;
+    setApplyingCandidateId(rec.candidateId);
+    try {
+      await api(`/vacancies/${vacancyId}/recommendations/${rec.candidateId}/apply`, {
+        method: 'POST',
+      });
+      toast.success(t('topCandidates.addedToPipeline'));
+      setRecommendations((prev) =>
+        prev.map((item) =>
+          item.candidateId === rec.candidateId
+            ? { ...item, hasApplication: true, applicationStatus: 'NEW' }
+            : item,
+        ),
+      );
+      onApplicationStageChanged?.();
+      void loadTopCandidates();
+    } catch (err: any) {
+      toast.error(err?.message || 'Nomzodni arizaga qo‘shishda xatolik yuz berdi');
+    } finally {
+      setApplyingCandidateId(null);
+    }
+  }
 
   async function loadTopCandidates() {
     if (!vacancyId) return;
@@ -156,7 +268,7 @@ export function TopCandidatesModal({
 
   async function moveToInterview(candidate: TopCandidateItem) {
     if (candidate.currentStage === 'INTERVIEW') {
-      toast.info('Nomzod allaqachon Suhbat bosqichida');
+      toast.info(t('topCandidates.inInterview'));
       return;
     }
     setMovingAppId(candidate.applicationId);
@@ -166,7 +278,7 @@ export function TopCandidatesModal({
         { status: 'INTERVIEW', expectedStatus: candidate.currentStage },
         'PUT',
       );
-      toast.success(`${candidate.candidateName} Suhbat (Interview) bosqichiga o'tkazildi!`);
+      toast.success(`${candidate.candidateName} -> ${t('topCandidates.inInterview')}`);
       // Update local state
       setData((prev) => {
         if (!prev) return prev;
@@ -182,7 +294,7 @@ export function TopCandidatesModal({
       });
       onApplicationStageChanged?.();
     } catch (err: any) {
-      toast.error(err?.message || 'Bosqichni almashtirishda xatolik');
+      toast.error(err?.message || 'Error updating stage');
     } finally {
       setMovingAppId(null);
     }
@@ -215,14 +327,14 @@ export function TopCandidatesModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                  Top 3 Mos Nomzodlar
+                  {t('topCandidates.title')}
                 </h2>
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
                   AI Ranked
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-0.5">
-                {data?.vacancy?.title ? `"${data.vacancy.title}" vakansiyasi bo'yicha tahlil` : 'Vakansiya talablari tahlili'}
+                {data?.vacancy?.title ? `${data.vacancy.title} · ${t('topCandidates.subtitle')}` : t('topCandidates.subtitle')}
               </p>
             </div>
           </div>
@@ -236,7 +348,7 @@ export function TopCandidatesModal({
               className="h-9 px-3 text-xs sm:text-sm font-medium border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
             >
               <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${analyzing ? 'animate-spin' : ''}`} />
-              {analyzing ? 'Tahlil qilinmoqda…' : 'AI Tahlilni yangilash'}
+              {analyzing ? t('topCandidates.analyzing') : t('topCandidates.runAnalysis')}
             </Button>
             <button
               onClick={onClose}
@@ -251,23 +363,23 @@ export function TopCandidatesModal({
         {data?.stats && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 px-6 py-3 bg-slate-50/80 dark:bg-zinc-800/40 border-b border-slate-100 dark:border-zinc-800 text-xs">
             <div className="flex flex-col">
-              <span className="text-slate-500 dark:text-zinc-400">Jami arizalar:</span>
-              <span className="font-semibold text-slate-900 dark:text-white">{data.stats.totalApplications} ta</span>
+              <span className="text-slate-500 dark:text-zinc-400">{t('topCandidates.quickStatsTotal')}:</span>
+              <span className="font-semibold text-slate-900 dark:text-white">{data.stats.totalApplications}</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-slate-500 dark:text-zinc-400">AI Tahlil qilingan:</span>
+              <span className="text-slate-500 dark:text-zinc-400">{t('topCandidates.quickStatsAnalyzed')}:</span>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {data.stats.analyzedCount} / {data.stats.totalApplications}
               </span>
             </div>
             <div className="flex flex-col">
-              <span className="text-slate-500 dark:text-zinc-400">O'rtacha moslik:</span>
+              <span className="text-slate-500 dark:text-zinc-400">{t('topCandidates.quickStatsAverage')}:</span>
               <span className="font-semibold text-slate-900 dark:text-white">{data.stats.averageScore}%</span>
             </div>
             <div className="flex flex-col">
-              <span className="text-slate-500 dark:text-zinc-400">Talablar soni:</span>
+              <span className="text-slate-500 dark:text-zinc-400">{t('topCandidates.quickStatsRequirements')}:</span>
               <span className="font-semibold text-slate-900 dark:text-white">
-                {data.vacancy.requirementsCount} ta mezoni
+                {data.vacancy.requirementsCount}
               </span>
             </div>
           </div>
@@ -284,7 +396,7 @@ export function TopCandidatesModal({
                   : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
               }`}
             >
-              <Trophy className="h-4 w-4" /> Top 3 Podium
+              <Trophy className="h-4 w-4" /> {t('topCandidates.tabPodium')}
             </button>
             <button
               onClick={() => setActiveTab('comparison')}
@@ -294,7 +406,7 @@ export function TopCandidatesModal({
                   : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
               }`}
             >
-              <Sparkles className="h-4 w-4" /> AI Xulosa & Tavsiya
+              <Sparkles className="h-4 w-4" /> {t('topCandidates.tabComparison')}
             </button>
             <button
               onClick={() => setActiveTab('matrix')}
@@ -304,7 +416,7 @@ export function TopCandidatesModal({
                   : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
               }`}
             >
-              <Layers className="h-4 w-4" /> Taqqoslama Matritsa
+              <Layers className="h-4 w-4" /> {t('topCandidates.tabMatrix')}
             </button>
             <button
               onClick={() => setActiveTab('all')}
@@ -314,18 +426,257 @@ export function TopCandidatesModal({
                   : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
               }`}
             >
-              <TrendingUp className="h-4 w-4" /> Barcha Nomzodlar ({data?.allCandidates?.length || 0})
+              <TrendingUp className="h-4 w-4" /> {t('topCandidates.tabAll')} ({data?.allCandidates?.length || 0})
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('recommendations');
+                void loadRecommendations();
+              }}
+              className={`pb-2.5 font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                activeTab === 'recommendations'
+                  ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <UserCheck className="h-4 w-4" /> {t('topCandidates.tabRecommendations')} ({recommendations.length})
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('headhunter');
+                void loadHhResumes();
+              }}
+              className={`pb-2.5 font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                activeTab === 'headhunter'
+                  ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400'
+                  : 'border-transparent text-slate-500 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
+              }`}
+            >
+              <ExternalLink className="h-4 w-4" /> {t('topCandidates.tabHeadhunter')}
             </button>
           </div>
         </div>
 
         {/* Modal Body / Tab Contents */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
-          {loading && !data ? (
+          {activeTab === 'recommendations' ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <UserCheck className="h-4 w-4 text-emerald-600" />
+                    {t('topCandidates.tabRecommendations')}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    {t('topCandidates.recommendationsSubtitle')}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void loadRecommendations()}
+                  disabled={loadingRecs}
+                  className="text-xs h-8"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${loadingRecs ? 'animate-spin' : ''}`} />
+                  {t('common.refresh', 'Yangilash')}
+                </Button>
+              </div>
+
+              {loadingRecs ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                  <div className="h-8 w-8 border-3 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs text-slate-500">{t('common.loading', 'Yuklanmoqda…')}</p>
+                </div>
+              ) : recommendations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-zinc-800/40 rounded-2xl border border-slate-200 dark:border-zinc-800 text-center space-y-2">
+                  <UserCheck className="h-10 w-10 text-slate-300 dark:text-zinc-600" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                    {t('topCandidates.noRecommendations')}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {recommendations.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="flex flex-col justify-between p-4 rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-100 dark:border-zinc-800">
+                          <div>
+                            <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                              {rec.candidateName}
+                            </h4>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                              {rec.candidateEmail && <span>{rec.candidateEmail}</span>}
+                              {rec.candidatePhone && <span>· {rec.candidatePhone}</span>}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300">
+                              {rec.matchScore}%
+                            </span>
+                            <span className="text-[10px] text-slate-400 mt-0.5">
+                              Majburiy: {rec.mandatoryScore}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {rec.strengths?.length > 0 && (
+                          <div className="mt-3">
+                            <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                              {t('topCandidates.strengths')}:
+                            </p>
+                            <ul className="text-xs text-slate-600 dark:text-zinc-300 space-y-1">
+                              {rec.strengths.slice(0, 2).map((str, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
+                                  <span>{str}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {rec.gaps?.length > 0 && (
+                          <div className="mt-2.5">
+                            <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                              {t('topCandidates.gaps')}:
+                            </p>
+                            <ul className="text-xs text-slate-600 dark:text-zinc-300 space-y-1">
+                              {rec.gaps.slice(0, 2).map((gap, idx) => (
+                                <li key={idx} className="flex items-start gap-1.5">
+                                  <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />
+                                  <span>{gap}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+                        <span className="text-[11px] text-slate-400">
+                          {rec.supportedCount} ta tasdiqlangan
+                        </span>
+                        {rec.hasApplication ? (
+                          <Badge variant="outline" className="text-emerald-700 dark:text-emerald-400 border-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 text-[11px]">
+                            {t('topCandidates.alreadyInPipeline')}
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => void applyRecommendation(rec)}
+                            disabled={applyingCandidateId === rec.candidateId}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-7 px-2.5"
+                          >
+                            <UserPlus className="h-3.5 w-3.5 mr-1" />
+                            {t('topCandidates.addToPipeline')}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'headhunter' ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <Globe className="h-4 w-4 text-red-500" />
+                    {t('topCandidates.tabHeadhunter')}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                    {t('topCandidates.hhLiveResumes')} · {t('topCandidates.hhTotalFound')}: {hhTotal}
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => void loadHhResumes()}
+                  disabled={loadingHh}
+                  className="text-xs h-8"
+                >
+                  <RefreshCw className={`h-3 w-3 mr-1 ${loadingHh ? 'animate-spin' : ''}`} />
+                  {t('common.refresh', 'Yangilash')}
+                </Button>
+              </div>
+
+              {loadingHh ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center space-y-2">
+                  <div className="h-8 w-8 border-3 border-red-500 border-t-transparent rounded-full animate-spin" />
+                  <p className="text-xs text-slate-500">{t('common.loading', 'Yuklanmoqda…')}</p>
+                </div>
+              ) : hhNotConnected ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-zinc-800/40 rounded-2xl border border-slate-200 dark:border-zinc-800 text-center space-y-3">
+                  <div className="h-12 w-12 rounded-full bg-red-100 dark:bg-red-950/50 text-red-600 flex items-center justify-center">
+                    <Globe className="h-6 w-6" />
+                  </div>
+                  <h4 className="font-semibold text-slate-900 dark:text-white text-sm">
+                    {t('topCandidates.hhNotConnected')}
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm">
+                    hh.uz orqali nomzodlarni qidirish uchun kompaniya sozlamalarida HeadHunter hisobini ulang.
+                  </p>
+                  <Button variant="outline" size="sm" asChild className="text-xs">
+                    <a href="/admin">
+                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                      {t('topCandidates.hhConnectSettings')}
+                    </a>
+                  </Button>
+                </div>
+              ) : hhResumes.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 bg-slate-50 dark:bg-zinc-800/40 rounded-2xl border border-slate-200 dark:border-zinc-800 text-center space-y-2">
+                  <Globe className="h-10 w-10 text-slate-300 dark:text-zinc-600" />
+                  <p className="text-sm font-semibold text-slate-700 dark:text-zinc-300">
+                    {t('topCandidates.noCandidates')}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {hhResumes.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-slate-300 dark:hover:border-zinc-700 transition-colors"
+                    >
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white">
+                          {item.title}
+                        </h4>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                          {item.area && <span>{item.area}</span>}
+                          {item.updatedAt && (
+                            <span>· Yangilangan: {new Date(item.updatedAt).toLocaleDateString()}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {item.url && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          asChild
+                          className="text-xs h-8 px-3 shrink-0"
+                        >
+                          <a href={item.url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                            {t('topCandidates.hhOpenInHh')}
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : loading && !data ? (
             <div className="flex flex-col items-center justify-center py-16 text-center space-y-3">
               <div className="h-10 w-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
               <p className="text-sm font-medium text-slate-600 dark:text-zinc-400">
-                Top nomzodlar tahlili hisoblanmoqda…
+                {t('topCandidates.loadingAnalysis')}
               </p>
             </div>
           ) : topCandidates.length === 0 ? (
@@ -334,10 +685,10 @@ export function TopCandidatesModal({
                 <AlertCircle className="h-8 w-8 mx-auto" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
-                Hali tahlil qilingan nomzodlar yo'q
+                {t('topCandidates.noAnalyzedTitle')}
               </h3>
               <p className="text-sm text-slate-500 dark:text-zinc-400">
-                Ushbu vakansiyaga biriktirilgan nomzodlar rezyumesi hali AI tahlilidan o'tkazilmagan yoki nomzodlar qo'shilmagan.
+                {t('topCandidates.noAnalyzedDesc')}
               </p>
               <Button
                 onClick={runBatchAnalysis}
@@ -345,7 +696,7 @@ export function TopCandidatesModal({
                 className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-xl"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                {analyzing ? 'Tahlil qilinmoqda…' : 'AI Tahlilni ishga tushirish'}
+                {analyzing ? t('topCandidates.analyzing') : t('topCandidates.startBatchAnalysis')}
               </Button>
             </div>
           ) : (
@@ -381,7 +732,7 @@ export function TopCandidatesModal({
                               </span>
                               <div>
                                 <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400 block">
-                                  {isFirst ? '🥇 Eng yuqori moslik' : index === 1 ? '🥈 2-o‘rin' : '🥉 3-o‘rin'}
+                                  {isFirst ? '🥇 #1' : index === 1 ? '🥈 #2' : '🥉 #3'}
                                 </span>
                               </div>
                             </div>
@@ -400,7 +751,7 @@ export function TopCandidatesModal({
                                 {candidate.matchScore}%
                               </div>
                               <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">
-                                Moslik
+                                {t('topCandidates.matchScore')}
                               </span>
                             </div>
                           </div>
@@ -441,21 +792,21 @@ export function TopCandidatesModal({
                           {/* Scoring Breakdown Bar */}
                           <div className="space-y-1.5 p-3 rounded-2xl bg-slate-50 dark:bg-zinc-800/80 border border-slate-100 dark:border-zinc-700/50 mb-4 text-xs">
                             <div className="flex justify-between text-slate-600 dark:text-zinc-300">
-                              <span>Majburiy talablar:</span>
+                              <span>{t('topCandidates.mandatory')}:</span>
                               <span className="font-bold text-emerald-600 dark:text-emerald-400">
                                 {candidate.mandatoryScore}%
                               </span>
                             </div>
                             <div className="flex justify-between text-slate-600 dark:text-zinc-300">
-                              <span>Ixtiyoriy talablar:</span>
+                              <span>{t('topCandidates.optional')}:</span>
                               <span className="font-semibold text-slate-700 dark:text-zinc-200">
                                 {candidate.optionalScore}%
                               </span>
                             </div>
                             <div className="flex justify-between text-slate-500 dark:text-zinc-400 text-[11px] pt-1 border-t border-slate-200/60 dark:border-zinc-700">
-                              <span>Tasdiqlangan:</span>
+                              <span>{t('candidateDossier.verified')}:</span>
                               <span>
-                                {candidate.supportedCount} ta / {candidate.supportedCount + candidate.partialCount + candidate.notFoundCount + candidate.unknownCount} ta
+                                {candidate.supportedCount} / {candidate.supportedCount + candidate.partialCount + candidate.notFoundCount + candidate.unknownCount}
                               </span>
                             </div>
                           </div>
@@ -464,7 +815,7 @@ export function TopCandidatesModal({
                           {candidate.strengths.length > 0 && (
                             <div className="mb-3 space-y-1.5">
                               <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
-                                Kuchli tomonlari:
+                                {t('topCandidates.keyStrengths')}:
                               </span>
                               <div className="flex flex-wrap gap-1">
                                 {candidate.strengths.slice(0, 3).map((s, idx) => (
@@ -484,7 +835,7 @@ export function TopCandidatesModal({
                           {candidate.gaps.length > 0 && (
                             <div className="mb-5 space-y-1.5">
                               <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
-                                Aniqlashtirish kerak:
+                                {t('topCandidates.areasToVerify')}:
                               </span>
                               <div className="flex flex-wrap gap-1">
                                 {candidate.gaps.slice(0, 2).map((g, idx) => (
@@ -512,7 +863,7 @@ export function TopCandidatesModal({
                               }`}
                             >
                               <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-                              {candidate.currentStage === 'INTERVIEW' ? 'Suhbatda' : 'Suhbatga chaqirish'}
+                              {candidate.currentStage === 'INTERVIEW' ? t('topCandidates.inInterview') : t('topCandidates.moveToInterview')}
                             </Button>
 
                             {onOpenDossier && (
@@ -521,7 +872,7 @@ export function TopCandidatesModal({
                                 size="sm"
                                 onClick={() => onOpenDossier({ id: candidate.applicationId })}
                                 className="rounded-xl h-auto py-2 px-2.5 text-xs"
-                                title="Nomzod dosyesini ko'rish"
+                                title={t('topCandidates.candidateDossierBtn')}
                               >
                                 <FileText className="h-3.5 w-3.5" />
                               </Button>
@@ -541,13 +892,13 @@ export function TopCandidatesModal({
                   <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-emerald-500/10 via-slate-50 to-teal-500/5 dark:from-emerald-950/30 dark:via-zinc-800/50 dark:to-teal-950/20 border border-emerald-200 dark:border-emerald-800/50 space-y-3">
                     <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300 font-bold text-sm">
                       <Sparkles className="h-4 w-4" />
-                      <span>Boshqaruv Xulosasi (Executive Summary)</span>
+                      <span>{t('topCandidates.executiveSummary')}</span>
                     </div>
                     <p className="text-sm leading-relaxed text-slate-700 dark:text-zinc-200">
                       {data.comparison.executiveSummary}
                     </p>
                     <div className="pt-3 border-t border-emerald-200/50 dark:border-emerald-800/30 flex items-center gap-2 text-xs text-emerald-700 dark:text-emerald-300">
-                      <strong>Tavsiya:</strong>
+                      <strong>{t('topCandidates.recommendation')}:</strong>
                       <span>{data.comparison.overallRecommendation}</span>
                     </div>
                   </div>
@@ -556,7 +907,7 @@ export function TopCandidatesModal({
                   {data.comparison.candidateHighlights && data.comparison.candidateHighlights.length > 0 && (
                     <div className="space-y-4">
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-wider">
-                        Top Nomzodlar Bo'yicha Tahliliy Taqqoslash
+                        {t('topCandidates.tabComparison')}
                       </h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {data.comparison.candidateHighlights.map((item, idx) => {
@@ -571,14 +922,14 @@ export function TopCandidatesModal({
                                   #{item.rank} {candidate?.candidateName || `Nomzod ${item.candidateId}`}
                                 </span>
                                 <Badge variant="secondary" className="text-xs">
-                                  {candidate?.matchScore}% Mos
+                                  {candidate?.matchScore}%
                                 </Badge>
                               </div>
 
                               <div className="text-xs space-y-2">
                                 <div>
                                   <strong className="text-emerald-700 dark:text-emerald-400 block mb-0.5">
-                                    Kuchli jihatlari:
+                                    {t('topCandidates.keyStrengths')}:
                                   </strong>
                                   <p className="text-slate-600 dark:text-zinc-300 leading-normal">
                                     {item.keyStrengthsSummary}
@@ -587,7 +938,7 @@ export function TopCandidatesModal({
 
                                 <div>
                                   <strong className="text-amber-700 dark:text-amber-400 block mb-0.5">
-                                    Tekshirilishi kerak:
+                                    {t('topCandidates.areasToVerify')}:
                                   </strong>
                                   <p className="text-slate-600 dark:text-zinc-300 leading-normal">
                                     {item.areasToVerify}
@@ -596,7 +947,7 @@ export function TopCandidatesModal({
 
                                 <div className="pt-2 border-t border-slate-100 dark:border-zinc-700">
                                   <strong className="text-slate-500 dark:text-zinc-400 block mb-0.5">
-                                    Suhbatda e'tibor qaratish:
+                                    {t('topCandidates.interviewFocus')}:
                                   </strong>
                                   <p className="text-slate-700 dark:text-zinc-200 italic">
                                     "{item.recommendedInterviewFocus}"
@@ -619,8 +970,8 @@ export function TopCandidatesModal({
                     <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-300">
                       <thead className="bg-slate-50 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-200 font-semibold border-b border-slate-200 dark:border-zinc-800">
                         <tr>
-                          <th className="p-3.5 w-1/3">Vakansiya Talabi</th>
-                          <th className="p-3.5 w-24">Turi</th>
+                          <th className="p-3.5 w-1/3">{t('vacancies.requirementsHeading')}</th>
+                          <th className="p-3.5 w-24">{t('common.status')}</th>
                           {topCandidates.map((c, i) => (
                             <th key={c.applicationId} className="p-3.5 text-center">
                               #{i + 1} {c.candidateName}
@@ -637,11 +988,11 @@ export function TopCandidatesModal({
                             <td className="p-3.5">
                               {req.required ? (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300">
-                                  Majburiy
+                                  {t('topCandidates.mandatory')}
                                 </span>
                               ) : (
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-400">
-                                  Ixtiyoriy
+                                  {t('topCandidates.optional')}
                                 </span>
                               )}
                             </td>
@@ -652,15 +1003,15 @@ export function TopCandidatesModal({
                                 <td key={c.applicationId} className="p-3.5 text-center">
                                   {status === 'SUPPORTED' ? (
                                     <span className="inline-flex items-center gap-1 font-bold text-emerald-600 dark:text-emerald-400">
-                                      <CheckCircle2 className="h-4 w-4" /> Mos
+                                      <CheckCircle2 className="h-4 w-4" /> {t('candidateDossier.verified')}
                                     </span>
                                   ) : status === 'PARTIAL' ? (
                                     <span className="inline-flex items-center gap-1 font-semibold text-amber-600 dark:text-amber-400">
-                                      <AlertCircle className="h-4 w-4" /> Qisman
+                                      <AlertCircle className="h-4 w-4" /> ±
                                     </span>
                                   ) : (
                                     <span className="inline-flex items-center gap-1 text-slate-400 dark:text-zinc-500">
-                                      <X className="h-4 w-4" /> Topilmadi
+                                      <X className="h-4 w-4" /> —
                                     </span>
                                   )}
                                 </td>
@@ -681,12 +1032,12 @@ export function TopCandidatesModal({
                     <table className="w-full text-left text-xs text-slate-600 dark:text-zinc-300">
                       <thead className="bg-slate-50 dark:bg-zinc-800/80 text-slate-700 dark:text-zinc-200 font-semibold border-b border-slate-200 dark:border-zinc-800">
                         <tr>
-                          <th className="p-3.5 w-12 text-center">O'rin</th>
-                          <th className="p-3.5">Nomzod</th>
-                          <th className="p-3.5">Moslik Bali</th>
-                          <th className="p-3.5">Majburiy</th>
-                          <th className="p-3.5">Bosqich</th>
-                          <th className="p-3.5 text-right">Amal</th>
+                          <th className="p-3.5 w-12 text-center">{t('topCandidates.rank')}</th>
+                          <th className="p-3.5">{t('candidates.tableFullName')}</th>
+                          <th className="p-3.5">{t('topCandidates.matchScore')}</th>
+                          <th className="p-3.5">{t('topCandidates.mandatory')}</th>
+                          <th className="p-3.5">{t('dashboard.tableStage')}</th>
+                          <th className="p-3.5 text-right">{t('common.actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-zinc-800 bg-white dark:bg-zinc-900">
@@ -699,7 +1050,7 @@ export function TopCandidatesModal({
                               <span className="font-bold text-slate-900 dark:text-white block">
                                 {c.candidateName}
                               </span>
-                              <span className="text-[11px] text-slate-400">{c.candidateEmail || 'Email kiritilmagan'}</span>
+                              <span className="text-[11px] text-slate-400">{c.candidateEmail || '—'}</span>
                             </td>
                             <td className="p-3.5">
                               <div className="flex items-center gap-2">
@@ -724,7 +1075,7 @@ export function TopCandidatesModal({
                                 disabled={movingAppId === c.applicationId || c.currentStage === 'INTERVIEW'}
                                 className="text-xs h-7 px-2.5"
                               >
-                                {c.currentStage === 'INTERVIEW' ? 'Suhbatda' : 'Suhbatga chaqirish'}
+                                {c.currentStage === 'INTERVIEW' ? t('topCandidates.inInterview') : t('topCandidates.moveToInterview')}
                               </Button>
                             </td>
                           </tr>
@@ -741,10 +1092,10 @@ export function TopCandidatesModal({
         {/* Modal Footer */}
         <div className="flex items-center justify-between p-4 sm:p-5 border-t border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/50">
           <p className="text-xs text-slate-400">
-            * Baholash NIST AI RMF va faktik rezyume dalillari asosida amalga oshirilgan.
+            * NIST AI RMF
           </p>
           <Button variant="outline" size="sm" onClick={onClose} className="rounded-xl">
-            Yopish
+            {t('common.close')}
           </Button>
         </div>
       </div>

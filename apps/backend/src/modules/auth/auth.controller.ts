@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Post, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { Request, Response } from 'express';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { OptionalAuthGuard } from '../../common/guards/optional-auth.guard';
@@ -21,6 +21,10 @@ import {
   invitationSchema,
   AcceptInviteDto,
   acceptInviteSchema,
+  UpdateProfileDto,
+  updateProfileSchema,
+  UpdatePasswordDto,
+  updatePasswordSchema,
 } from './dto';
 
 export { userSelect };
@@ -88,6 +92,24 @@ export class AuthController {
   @UseGuards(AuthGuard)
   async me(@Req() req: AuthRequest) {
     return this.authService.me(req.user);
+  }
+
+  @Put('profile')
+  @UseGuards(AuthGuard)
+  async updateProfile(
+    @Req() req: AuthRequest,
+    @Body(new ZodValidationPipe(updateProfileSchema)) dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(req.user, dto, req.sessionId);
+  }
+
+  @Put('password')
+  @UseGuards(AuthGuard)
+  async updatePassword(
+    @Req() req: AuthRequest,
+    @Body(new ZodValidationPipe(updatePasswordSchema)) dto: UpdatePasswordDto,
+  ) {
+    return this.authService.updatePassword(req.user, dto);
   }
 
   @Post('logout')

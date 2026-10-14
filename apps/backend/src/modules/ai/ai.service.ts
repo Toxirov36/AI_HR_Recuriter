@@ -20,13 +20,16 @@ import { vacancyDraftSchema } from './schemas/vacancy.schema';
 import { resumeSchema } from './schemas/resume.schema';
 import { evidenceSchema, validateEvidence } from './schemas/evidence.schema';
 import { questionsSchema } from './schemas/questions.schema';
+import { vacancyAssessmentSchema, type VacancyAssessment, type AssessmentQuestion } from './schemas/assessment.schema';
 import { vacancyInstructions } from './prompts/vacancy.prompt';
 import { instructions } from './prompts/evidence.prompt';
 import { comparisonInstructions } from './prompts/comparison.prompt';
+import { assessmentInstructions } from './prompts/assessment.prompt';
 import { GeminiProvider } from './providers/gemini.provider';
 import { ResumeQueueService } from '../resumes/resume-queue.service';
 import { NotificationService } from '../notifications/notification.service';
 import { calculateCandidateMatchScore } from './utils/matching-calculator';
+import { calculateAssessmentScore, getDefaultAssessmentForVacancy } from './utils/assessment-helper';
 import { topComparisonSchema, type TopComparisonResult } from './schemas/top-comparison.schema';
 
 export {
@@ -37,7 +40,14 @@ export {
   validateEvidence,
   topComparisonSchema,
   calculateCandidateMatchScore,
+  vacancyAssessmentSchema,
+  calculateAssessmentScore,
+  getDefaultAssessmentForVacancy,
 };
+
+function hasApplicationAiConsent(app: { aiConsentGranted?: boolean | null; candidate: { publicSubmittedAt?: Date | null; aiConsentAt?: Date | null } }) {
+  return app.aiConsentGranted !== false && (!app.candidate.publicSubmittedAt || Boolean(app.candidate.aiConsentAt));
+}
 
 @Injectable()
 export class AiService implements OnModuleInit {
@@ -61,7 +71,12 @@ export class AiService implements OnModuleInit {
   }
 
   async generateVacancy(companyId: number, userId: number, input: z.infer<typeof vacancyBrief>) {
-    const language = { uz: 'Uzbek (Latin script)', en: 'English', ru: 'Russian' }[input.language];
+    const language = {
+      uz: 'Uzbek (Latin script)',
+      en: 'English',
+      ru: 'Russian',
+      tg: 'Tajik (Cyrillic script)',
+    }[input.language];
     return this.locked(`vacancy-draft:${companyId}:${userId}`, userId, () =>
       this.generate(
         vacancyDraftSchema,
@@ -235,7 +250,7 @@ export class AiService implements OnModuleInit {
 
   async analyze(companyId: number, applicationId: number, userId: number, questions = false) {
     const app = await this.recruiting.application(companyId, applicationId);
-    if (app.candidate.publicSubmittedAt && !app.candidate.aiConsentAt)
+    if (!hasApplicationAiConsent(app))
       throw new ForbiddenException('Candidate did not opt in to AI analysis');
     if (!app.candidate.resumeText) throw new BadRequestException('Upload a CV first');
     if (!app.vacancy.requirements.length)
@@ -327,7 +342,9 @@ export class AiService implements OnModuleInit {
           const notFound = reqs.filter((r) => r.status === 'NOT_FOUND').length;
           const matchPercentage = Math.round(((supported + partial * 0.5) / reqs.length) * 100);
 
-          if (matchPercentage >= 85) {
+          // Telegram applicants receive one screening alert after their CV is submitted.
+          // A separate CV-match alert would also notify HR about applicants below 70%.
+          if (matchPercentage >= 85 && app.candidate.source !== 'TELEGRAM') {
             void this.notifications.notifyRecruitersStrongCandidate({
               applicationId,
               companyId,
@@ -374,7 +391,7 @@ export class AiService implements OnModuleInit {
     const skippedDetails: Array<{ applicationId: number; candidateName: string; reason: string }> = [];
 
     for (const app of applications) {
-      if (app.candidate.publicSubmittedAt && !app.candidate.aiConsentAt) {
+      if (!hasApplicationAiConsent(app)) {
         skippedCount++;
         skippedDetails.push({
           applicationId: app.id,
@@ -457,7 +474,7 @@ export class AiService implements OnModuleInit {
       );
 
       const isAnalyzed = Boolean(app.analysis);
-      const hasConsent = !app.candidate.publicSubmittedAt || Boolean(app.candidate.aiConsentAt);
+      const hasConsent = hasApplicationAiConsent(app);
       const hasResume = Boolean(app.candidate.resumeText);
 
       return {
@@ -610,5 +627,328 @@ export class AiService implements OnModuleInit {
       })),
       overallRecommendation: `${topCandidates.map((c) => c.candidateName).join(', ')} bilan suhbat o'tkazish tavsiya etiladi.`,
     };
+  }
+
+  async transcribeBriefAudio(
+    companyId: number,
+    userId: number,
+    audioBuffer: Buffer,
+    mimeType: string,
+    language = 'uz',
+  ): Promise<{ transcript: string }> {
+    if (!audioBuffer || audioBuffer.length === 0) {
+      throw new BadRequestException('Audio data is required');
+    }
+    if (audioBuffer.length > 5 * 1024 * 1024) {
+      throw new BadRequestException('Audio file exceeds maximum size limit of 5 MB');
+    }
+
+    const validMimes = [
+      'audio/webm',
+      'audio/ogg',
+      'audio/wav',
+      'audio/mp3',
+      'audio/mpeg',
+      'audio/mp4',
+      'audio/x-m4a',
+    ];
+    const normalizedMime = mimeType.split(';')[0].trim().toLowerCase();
+    if (!validMimes.includes(normalizedMime)) {
+      throw new BadRequestException(`Unsupported audio MIME type: ${mimeType}`);
+    }
+
+    return this.locked(`transcribe-brief:${companyId}:${userId}`, userId, async () => {
+      const transcript = await this.geminiProvider.transcribeAudio(
+        audioBuffer,
+        normalizedMime,
+        language,
+      );
+      return { transcript };
+    });
+  }
+
+  async evaluateCompanyCandidatesForVacancy(companyId: number, vacancyId: number) {
+    try {
+      const vacancy = await this.recruiting.vacancy(companyId, vacancyId);
+      if (!vacancy.requirements.length) return;
+
+      const candidates = await this.recruiting.db.candidate.findMany({
+        where: {
+          companyId,
+          isAnonymized: false,
+          resumeText: { not: null },
+        },
+        select: {
+          id: true,
+          resumeText: true,
+          resumeRevision: true,
+          publicSubmittedAt: true,
+          aiConsentAt: true,
+        },
+      });
+
+      for (const candidate of candidates) {
+        if (candidate.publicSubmittedAt && !candidate.aiConsentAt) {
+          continue;
+        }
+        if (!candidate.resumeText || !candidate.resumeText.trim()) {
+          continue;
+        }
+
+        const existing = await this.recruiting.db.vacancyRecommendation.findUnique({
+          where: {
+            vacancyId_candidateId: {
+              vacancyId,
+              candidateId: candidate.id,
+            },
+          },
+        });
+
+        if (
+          existing &&
+          existing.vacancyRevision === vacancy.revision &&
+          existing.resumeRevision === candidate.resumeRevision
+        ) {
+          continue;
+        }
+
+        try {
+          const input = {
+            cv: candidate.resumeText,
+            vacancy: {
+              title: vacancy.title,
+              description: vacancy.description,
+              requirements: vacancy.requirements.map(({ id, name, description, required }) => ({
+                id,
+                name,
+                description,
+                required,
+              })),
+            },
+          };
+
+          const generated = await this.generate(
+            evidenceSchema,
+            'Return exactly one entry per requirement ID. SUPPORTED means explicit CV evidence covers the requirement, PARTIAL means some aspects have evidence, NOT_FOUND means no relevant statement appears, UNKNOWN means ambiguous or not assessable from a CV. For SUPPORTED and PARTIAL include exact verbatim quotes copied from the CV. Explain the factual evidence or uncertainty. For sensitive, discriminatory or non-job-related requirements use UNKNOWN without assessment.',
+            input,
+          );
+
+          const verified = validateEvidence(
+            generated,
+            vacancy.requirements,
+            candidate.resumeText,
+          );
+
+          const score = calculateCandidateMatchScore(
+            vacancy.requirements,
+            verified as any,
+          );
+
+          await this.recruiting.db.vacancyRecommendation.upsert({
+            where: {
+              vacancyId_candidateId: {
+                vacancyId,
+                candidateId: candidate.id,
+              },
+            },
+            create: {
+              companyId,
+              vacancyId,
+              candidateId: candidate.id,
+              matchScore: score.matchScore,
+              mandatoryScore: score.mandatoryScore,
+              optionalScore: score.optionalScore,
+              analysis: verified as any,
+              vacancyRevision: vacancy.revision,
+              resumeRevision: candidate.resumeRevision,
+            },
+            update: {
+              matchScore: score.matchScore,
+              mandatoryScore: score.mandatoryScore,
+              optionalScore: score.optionalScore,
+              analysis: verified as any,
+              vacancyRevision: vacancy.revision,
+              resumeRevision: candidate.resumeRevision,
+            },
+          });
+        } catch (err: any) {
+          this.logger.warn(
+            `Auto-matching candidate ${candidate.id} for vacancy ${vacancyId} failed: ${err?.message}`,
+          );
+        }
+      }
+    } catch (err: any) {
+      this.logger.warn(
+        `evaluateCompanyCandidatesForVacancy for vacancy ${vacancyId} failed: ${err?.message}`,
+      );
+    }
+  }
+
+  async getVacancyRecommendations(companyId: number, vacancyId: number, limit = 20) {
+    const vacancy = await this.recruiting.vacancy(companyId, vacancyId);
+
+    const recommendations = await this.recruiting.db.vacancyRecommendation.findMany({
+      where: {
+        companyId,
+        vacancyId,
+        vacancyRevision: vacancy.revision,
+      },
+      include: {
+        candidate: {
+          select: {
+            id: true,
+            fullName: true,
+            email: true,
+            phone: true,
+            source: true,
+            resumeName: true,
+            skills: true,
+            resumeRevision: true,
+            publicSubmittedAt: true,
+            aiConsentAt: true,
+          },
+        },
+      },
+      orderBy: [
+        { matchScore: 'desc' },
+        { mandatoryScore: 'desc' },
+      ],
+      take: Math.max(1, limit),
+    });
+
+    const existingApplications = await this.recruiting.db.application.findMany({
+      where: {
+        companyId,
+        vacancyId,
+        candidateId: { in: recommendations.map((r) => r.candidateId) },
+      },
+      select: { candidateId: true, id: true, status: true },
+    });
+    const appMap = new Map(existingApplications.map((a) => [a.candidateId, a]));
+
+    const items = recommendations.map((rec) => {
+      const score = calculateCandidateMatchScore(
+        vacancy.requirements,
+        rec.analysis as any,
+      );
+      const app = appMap.get(rec.candidateId);
+
+      return {
+        id: rec.id,
+        candidateId: rec.candidate.id,
+        candidateName: rec.candidate.fullName,
+        candidateEmail: rec.candidate.email,
+        candidatePhone: rec.candidate.phone,
+        candidateSource: rec.candidate.source,
+        hasApplication: Boolean(app),
+        applicationId: app?.id ?? null,
+        applicationStatus: app?.status ?? null,
+        matchScore: rec.matchScore,
+        mandatoryScore: rec.mandatoryScore,
+        optionalScore: rec.optionalScore,
+        supportedCount: score.supportedCount,
+        partialCount: score.partialCount,
+        notFoundCount: score.notFoundCount,
+        unknownCount: score.unknownCount,
+        strengths: score.strengths,
+        gaps: score.gaps,
+        partialMatches: score.partialMatches,
+        requirementDetails: score.requirementDetails,
+      };
+    });
+
+    return {
+      vacancyId,
+      vacancyTitle: vacancy.title,
+      total: items.length,
+      recommendations: items,
+    };
+  }
+
+  async addRecommendationToApplication(
+    companyId: number,
+    userId: number,
+    vacancyId: number,
+    candidateId: number,
+  ) {
+    await this.recruiting.vacancy(companyId, vacancyId);
+    await this.recruiting.candidate(companyId, candidateId);
+
+    const existing = await this.recruiting.db.application.findUnique({
+      where: {
+        vacancyId_candidateId: { vacancyId, candidateId },
+      },
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    const rec = await this.recruiting.db.vacancyRecommendation.findUnique({
+      where: {
+        vacancyId_candidateId: { vacancyId, candidateId },
+      },
+    });
+
+    return this.recruiting.db.application.create({
+      data: {
+        companyId,
+        vacancyId,
+        candidateId,
+        status: 'NEW',
+        aiConsentGranted: true,
+        analysis: rec?.analysis ?? Prisma.DbNull,
+        analyzedVacancyRevision: rec?.vacancyRevision,
+        analyzedResumeRevision: rec?.resumeRevision,
+      },
+    });
+  }
+
+  async getOrGenerateVacancyAssessment(
+    companyId: number,
+    vacancyId: number,
+  ): Promise<VacancyAssessment> {
+    const vacancy = await this.recruiting.vacancy(companyId, vacancyId);
+
+    // If assessment is already cached for the current vacancy revision, return it
+    if (
+      vacancy.assessmentQuestions &&
+      vacancy.assessmentRevision === vacancy.revision
+    ) {
+      const parsed = vacancyAssessmentSchema.safeParse(vacancy.assessmentQuestions);
+      if (parsed.success) {
+        return parsed.data;
+      }
+    }
+
+    if (!this.security.config.GEMINI_API_KEY) throw new ServiceUnavailableException('AI assessment provider is not configured');
+    const inputData = {
+          title: vacancy.title,
+          description: vacancy.description,
+          requirements: vacancy.requirements.map((r) => ({
+            name: r.name,
+            description: r.description,
+            required: r.required,
+          })),
+        };
+
+    const assessment = await this.generate(
+          vacancyAssessmentSchema,
+          `Generate 10 screening assessment questions (5 Hard Skills + 5 Soft Skills) for the role "${vacancy.title}".`,
+          inputData,
+          assessmentInstructions,
+        );
+
+    await this.recruiting.db.vacancy.updateMany({
+      where: { id: vacancyId, companyId, revision: vacancy.revision,
+        OR: [{ assessmentRevision: null }, { assessmentRevision: { not: vacancy.revision } }] },
+      data: { assessmentQuestions: assessment, assessmentRevision: vacancy.revision },
+    });
+    const cached = await this.recruiting.db.vacancy.findUnique({ where: { id: vacancyId }, select: { assessmentQuestions: true, assessmentRevision: true } });
+    if (cached?.assessmentRevision === vacancy.revision) {
+      const parsed = vacancyAssessmentSchema.safeParse(cached.assessmentQuestions);
+      if (parsed.success) return parsed.data;
+    }
+    return assessment;
   }
 }

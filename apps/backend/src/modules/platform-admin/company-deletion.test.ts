@@ -29,6 +29,7 @@ describe('company deletion', () => {
         findUnique: vi.fn().mockResolvedValue({ id: 20, name: 'Tenant', isActive: true }),
         delete: vi.fn(),
       },
+      vacancyPublication: { count: vi.fn().mockResolvedValue(0) },
       candidate: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
       resume: { findMany: vi.fn().mockResolvedValue([]) },
       companyFileCleanup: {
@@ -78,6 +79,11 @@ describe('company deletion', () => {
   it('returns not found for an already deleted company', async () => {
     tx.company.findUnique.mockResolvedValue(null);
     await expect(service.remove(actor, 20, input)).rejects.toBeInstanceOf(NotFoundException);
+  });
+  it('keeps the company while external vacancy posts are open', async () => {
+    tx.vacancyPublication.count.mockResolvedValue(1);
+    await expect(service.remove(actor, 20, input)).rejects.toBeInstanceOf(ConflictException);
+    expect(tx.company.delete).not.toHaveBeenCalled();
   });
   it('removes only tenant-owned rows and keeps platform audit history', async () => {
     expect(await service.remove(actor, 20, input)).toEqual({ deleted: true, pendingFiles: 0 });

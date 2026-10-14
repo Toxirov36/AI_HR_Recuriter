@@ -52,6 +52,20 @@ export class TelegramApiService {
     return data.result;
   }
 
+  async getChat(chatId: string) {
+    const response = await fetch(`${this.baseUrl}/getChat?chat_id=${encodeURIComponent(chatId)}`, { signal: AbortSignal.timeout(10_000) });
+    const data = await response.json() as TelegramResponse<{ id: number; title?: string; username?: string; type: string }>;
+    if (!response.ok || !data.ok || !data.result) throw new ServiceUnavailableException('Telegram channel could not be found');
+    return data.result;
+  }
+
+  async getChatMember(chatId: string, userId: number) {
+    const response = await fetch(`${this.baseUrl}/getChatMember?chat_id=${encodeURIComponent(chatId)}&user_id=${userId}`, { signal: AbortSignal.timeout(10_000) });
+    const data = await response.json() as TelegramResponse<{ status: string; can_post_messages?: boolean }>;
+    if (!response.ok || !data.ok || !data.result) throw new ServiceUnavailableException('Telegram channel permissions could not be verified');
+    return data.result;
+  }
+
   async downloadFile(filePath: string, maxBytes = 10 * 1024 * 1024) {
     const response = await fetch(
       `https://api.telegram.org/file/bot${this.config.TELEGRAM_BOT_TOKEN}/${filePath}`,
@@ -70,7 +84,7 @@ export class TelegramApiService {
     chatId: string | number,
     text: string,
     options?: { businessConnectionId?: string; parseMode?: string; replyMarkup?: any },
-  ) {
+  ): Promise<TelegramResponse<any> & { uncertain?: boolean }> {
     if (!this.config.TELEGRAM_BOT_TOKEN) {
       return { ok: false, description: 'Telegram bot token is not configured' };
     }
@@ -95,9 +109,9 @@ export class TelegramApiService {
         signal: AbortSignal.timeout(15_000),
       });
       const data = (await response.json()) as TelegramResponse<any>;
-      return data;
+      return { ...data, uncertain: response.status >= 500 };
     } catch (err) {
-      return { ok: false, description: (err as Error).message };
+      return { ok: false, description: (err as Error).message, uncertain: true };
     }
   }
 

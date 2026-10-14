@@ -50,6 +50,19 @@ export const invitation = z
   .object({ email, role: z.enum(['HR', 'RECRUITER', 'INTERVIEWER']) })
   .strict();
 
+export const updateProfile = z
+  .object({
+    fullName: text(160),
+    companyName: text(160).optional(),
+  })
+  .strict();
+
+export const updatePassword = z
+  .object({
+    password,
+  })
+  .strict();
+
 export const requirement = z
   .object({
     name: text(200),
@@ -64,6 +77,11 @@ export const vacancy = z
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
     requirements: z.array(requirement).max(40).default([]),
+    hhAreaId: z.string().trim().max(40).nullable().optional(),
+    hhProfessionalRoleId: z.string().trim().max(40).nullable().optional(),
+    hhExperienceId: z.string().trim().max(40).nullable().optional(),
+    hhEmploymentId: z.string().trim().max(40).nullable().optional(),
+    hhScheduleId: z.string().trim().max(40).nullable().optional(),
   })
   .strict();
 
@@ -162,6 +180,6 @@ export const consent = z.object({ consent: z.literal(true) }).strict();
 export const vacancyBrief = z
   .object({
     brief: text(3000).min(5),
-    language: z.enum(['uz', 'en', 'ru']).default('uz'),
+    language: z.enum(['uz', 'en', 'ru', 'tg']).default('uz'),
   })
   .strict();

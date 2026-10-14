@@ -25,6 +25,7 @@ export function normalizeLocale(raw?: string | null): Locale {
   if (clean.startsWith('uz')) return 'uz';
   if (clean.startsWith('ru')) return 'ru';
   if (clean.startsWith('en')) return 'en';
+  if (clean.startsWith('tg')) return 'tg';
 
   return defaultLocale;
 }
@@ -202,7 +203,7 @@ export function formatDate(
     return `${day}-${UZ_MONTHS[month]} ${year}`;
   }
 
-  const intlLocale = locale === 'ru' ? 'ru-RU' : 'en-US';
+  const intlLocale = locale === 'ru' ? 'ru-RU' : locale === 'tg' ? 'tg-TJ' : 'en-US';
   const defaultOpts: Intl.DateTimeFormatOptions = options || {
     year: 'numeric',
     month: 'long',
@@ -237,7 +238,8 @@ export function formatRelativeTime(
     if (Math.abs(diffInSeconds) >= seconds || unit === 'second') {
       const count = Math.round(diffInSeconds / seconds);
       try {
-        const intlLocale = locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : 'en-US';
+        const intlLocale =
+          locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : locale === 'tg' ? 'tg-TJ' : 'en-US';
         const rtf = new Intl.RelativeTimeFormat(intlLocale, { numeric: 'auto' });
         return rtf.format(count, unit);
       } catch {
@@ -261,7 +263,8 @@ export function formatNumber(
   locale: Locale = defaultLocale,
   options?: Intl.NumberFormatOptions,
 ): string {
-  const intlLocale = locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : 'en-US';
+  const intlLocale =
+    locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : locale === 'tg' ? 'tg-TJ' : 'en-US';
   return new Intl.NumberFormat(intlLocale, options).format(value);
 }
 
@@ -273,7 +276,8 @@ export function formatPercent(
   locale: Locale = defaultLocale,
   options?: Intl.NumberFormatOptions,
 ): string {
-  const intlLocale = locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : 'en-US';
+  const intlLocale =
+    locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : locale === 'tg' ? 'tg-TJ' : 'en-US';
   return new Intl.NumberFormat(intlLocale, {
     style: 'percent',
     maximumFractionDigits: 1,
@@ -290,7 +294,8 @@ export function formatCurrency(
   locale: Locale = defaultLocale,
   options?: Intl.NumberFormatOptions,
 ): string {
-  const intlLocale = locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : 'en-US';
+  const intlLocale =
+    locale === 'uz' ? 'uz-UZ' : locale === 'ru' ? 'ru-RU' : locale === 'tg' ? 'tg-TJ' : 'en-US';
   try {
     return new Intl.NumberFormat(intlLocale, {
       style: 'currency',
@@ -305,7 +310,7 @@ export function formatCurrency(
 /**
  * Helper to translate system-controlled statuses (Pipeline stages, Vacancy statuses, Roles, Sources)
  */
-export const SYSTEM_STATUS_LABELS: Record<Locale, Record<string, string>> = {
+export const SYSTEM_STATUS_LABELS: Partial<Record<Locale, Record<string, string>>> = {
   uz: {
     // Pipeline stages
     NEW: 'Yangi',
@@ -410,6 +415,41 @@ export const SYSTEM_STATUS_LABELS: Record<Locale, Record<string, string>> = {
     RECRUITER: 'Recruiter',
     INTERVIEWER: 'Interviewer',
     SUPER_ADMIN: 'Super Admin',
+  },
+  tg: {
+    // Pipeline stages
+    NEW: 'Нав',
+    REVIEWING: 'Дар баррасӣ',
+    INTERVIEW: 'Мусоҳиба',
+    OFFER: 'Пешниҳод',
+    HIRED: 'Қабул шуд',
+    REJECTED: 'Рад шуд',
+    // Vacancy statuses
+    DRAFT: 'Сиёҳнавис',
+    ACTIVE: 'Фаъол',
+    CLOSED: 'Пӯшида',
+    // Candidate sources
+    WEBSITE: 'Вебсайт',
+    TELEGRAM: 'Телеграм',
+    MANUAL: 'Дастӣ',
+    REFERRAL: 'Тавсия',
+    // Resume processing
+    PENDING: 'Дар интизорӣ',
+    PROCESSING: 'Дар ҳоли коркард',
+    COMPLETED: 'Тайёр',
+    FAILED: 'Хатогӣ',
+    // Scorecard decisions
+    STRONG_HIRE: 'Қабули қатъӣ',
+    HIRE: 'Қабул кардан',
+    NO_HIRE: 'Қабул накардан',
+    STRONG_NO_HIRE: 'Ради қатъӣ',
+    UNDECIDED: 'Қарор қабул нашудааст',
+    // Roles
+    ADMIN: 'Мудир (Admin)',
+    HR: 'HR',
+    RECRUITER: 'Рекрутер',
+    INTERVIEWER: 'Мусоҳибакунанда',
+    SUPER_ADMIN: 'Супер Мудир',
   },
 };
 

@@ -41,7 +41,7 @@ describe('public applications', () => {
       data: expect.objectContaining({ email: 'ali@example.com', phone: null, aiConsentAt: null, publicSubmittedAt: expect.any(Date) }),
     }));
     expect(resumes.upload).toHaveBeenCalledWith(2, 9, file);
-    expect(tx.application.create).toHaveBeenCalledWith({ data: { companyId: 2, vacancyId: 4, candidateId: 9, status: 'NEW' } });
+    expect(tx.application.create).toHaveBeenCalledWith({ data: { companyId: 2, vacancyId: 4, candidateId: 9, status: 'NEW', aiConsentGranted: false } });
   });
 
   it('removes the partial candidate if the vacancy closes during upload', async () => {

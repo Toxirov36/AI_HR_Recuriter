@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Check, ChevronDown, Plus, Search, Pencil, Trash2, Sparkles, Link2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { Check, ChevronDown, Plus, Search, Pencil, Trash2, Sparkles, Link2, Send } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { api, send } from '../../lib/api';
 import {
@@ -49,6 +50,9 @@ import type { Page, Vacancy, Requirement } from '../../types';
 import { useAuth } from '../../features/auth';
 import { VacancyGenerator } from '../../features/create-vacancy';
 import { TopCandidatesModal } from '../../features/ai-matching';
+import { PublicationModal } from './publication-modal';
+
+type HhFields = { areas: Array<{ id: string; name: string }>; roles: Array<{ id: string; name: string }>; experiences: Array<{ id: string; name: string }>; employments: Array<{ id: string; name: string }>; schedules: Array<{ id: string; name: string }> };
 
 export function parseDescriptionMeta(rawDescription: string, rawTitle: string = '') {
   let description = rawDescription || '';
@@ -122,6 +126,7 @@ export function VacancyForm({
   close: () => void;
   saved: () => void;
 }) {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const initialMeta = parseDescriptionMeta(value?.description || '', value?.title || '');
 
@@ -143,6 +148,18 @@ export function VacancyForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [tab, setTab] = useState<'details' | 'ai'>('details');
+  const [hhFields, setHhFields] = useState<HhFields | null>(null);
+  const [hhAreaId, setHhAreaId] = useState(value?.hhAreaId ?? '');
+  const [hhProfessionalRoleId, setHhProfessionalRoleId] = useState(value?.hhProfessionalRoleId ?? '');
+  const [hhExperienceId, setHhExperienceId] = useState(value?.hhExperienceId ?? '');
+  const [hhEmploymentId, setHhEmploymentId] = useState(value?.hhEmploymentId ?? '');
+  const [hhScheduleId, setHhScheduleId] = useState(value?.hhScheduleId ?? '');
+
+  useEffect(() => {
+    void api<{ connected: boolean; connectedByUserId: number | null }>('/integrations/recruiting/headhunter/status')
+      .then(status => status.connected && status.connectedByUserId === user?.id ? api<HhFields>('/integrations/recruiting/headhunter/fields').then(setHhFields) : undefined)
+      .catch(() => undefined);
+  }, [user?.id]);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -168,10 +185,15 @@ export function VacancyForm({
               description: description || null,
               required: Boolean(required),
             })),
+          hhAreaId: hhAreaId || null,
+          hhProfessionalRoleId: hhProfessionalRoleId || null,
+          hhExperienceId: hhExperienceId || null,
+          hhEmploymentId: hhEmploymentId || null,
+          hhScheduleId: hhScheduleId || null,
         },
         value ? 'PUT' : 'POST',
       );
-      toast.success(value ? 'Vacancy updated successfully!' : 'Vacancy created successfully!');
+      toast.success(value ? t('vacancies.savedSuccess') : t('vacancies.createdSuccess'));
       saved();
     } catch (e) {
       setError((e as Error).message);
@@ -182,8 +204,8 @@ export function VacancyForm({
 
   return (
     <Modal
-      title={value ? 'Edit vacancy' : 'Create vacancy'}
-      subtitle="Write it yourself, or let the assistant prepare a draft you review before applying."
+      title={value ? t('vacancies.modalEditTitle') : t('vacancies.modalCreateTitle')}
+      subtitle={t('vacancies.modalSubtitle')}
       close={close}
       className="vacancy-modal-custom"
     >
@@ -201,7 +223,7 @@ export function VacancyForm({
             className={`modal-pill-tab ${tab === 'details' ? 'active' : ''}`}
             onClick={() => setTab('details')}
           >
-            Details
+            {t('vacancies.tabDetails')}
           </button>
           <button
             id="vacancy-ai-tab"
@@ -212,7 +234,7 @@ export function VacancyForm({
             className={`modal-pill-tab ${tab === 'ai' ? 'active' : ''}`}
             onClick={() => setTab('ai')}
           >
-            <Sparkles size={14} className="tab-sparkle-icon" /> AI draft
+            <Sparkles size={14} className="tab-sparkle-icon" /> {t('vacancies.tabAiGenerator')}
           </button>
         </div>
 
@@ -228,12 +250,12 @@ export function VacancyForm({
               {/* Row 1 */}
               <div className="form-group">
                 <label className="form-label" htmlFor="field-title">
-                  Title
+                  {t('vacancies.labelTitle')}
                 </label>
                 <input
                   id="field-title"
                   name="title"
-                  aria-label="Job title"
+                  aria-label={t('vacancies.labelTitle')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   required
@@ -245,12 +267,12 @@ export function VacancyForm({
 
               <div className="form-group">
                 <label className="form-label" htmlFor="field-dept">
-                  Department
+                  {t('vacancies.labelDepartment')}
                 </label>
                 <input
                   id="field-dept"
                   name="department"
-                  aria-label="Department"
+                  aria-label={t('vacancies.labelDepartment')}
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   maxLength={100}
@@ -262,12 +284,12 @@ export function VacancyForm({
               {/* Row 2 */}
               <div className="form-group">
                 <label className="form-label" htmlFor="field-loc">
-                  Location
+                  {t('vacancies.labelLocation')}
                 </label>
                 <input
                   id="field-loc"
                   name="location"
-                  aria-label="Location"
+                  aria-label={t('vacancies.labelLocation')}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   maxLength={100}
@@ -277,7 +299,7 @@ export function VacancyForm({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Employment type</label>
+                <label className="form-label">{t('vacancies.labelEmploymentType')}</label>
                 <div className="form-select-wrapper">
                   <Select value={employmentType} onValueChange={setEmploymentType}>
                     <SelectTrigger className="form-control-select">
@@ -295,7 +317,7 @@ export function VacancyForm({
 
               {/* Row 3 */}
               <div className="form-group">
-                <label className="form-label">Seniority</label>
+                <label className="form-label">{t('vacancies.labelSeniority')}</label>
                 <div className="form-select-wrapper">
                   <Select value={seniority} onValueChange={setSeniority}>
                     <SelectTrigger className="form-control-select">
@@ -312,19 +334,19 @@ export function VacancyForm({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Status</label>
+                <label className="form-label">{t('vacancies.labelStatus')}</label>
                 <div className="form-select-wrapper">
                   <Select value={status} onValueChange={setStatus}>
                     <SelectTrigger
                       className="form-control-select status-select-field"
-                      aria-label="Status"
+                      aria-label={t('vacancies.labelStatus')}
                     >
-                      <SelectValue placeholder="Draft" />
+                      <SelectValue placeholder={t('vacancies.statusDraft')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="DRAFT">Draft</SelectItem>
-                      <SelectItem value="ACTIVE">Active</SelectItem>
-                      <SelectItem value="CLOSED">Closed</SelectItem>
+                      <SelectItem value="DRAFT">{t('vacancies.statusDraft')}</SelectItem>
+                      <SelectItem value="ACTIVE">{t('vacancies.statusActive')}</SelectItem>
+                      <SelectItem value="CLOSED">{t('vacancies.statusClosed')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -334,12 +356,12 @@ export function VacancyForm({
             {/* Description */}
             <div className="form-group" style={{ marginTop: '16px' }}>
               <label className="form-label" htmlFor="field-desc">
-                Description
+                {t('vacancies.labelDescription')}
               </label>
               <textarea
                 id="field-desc"
                 name="description"
-                aria-label="Description"
+                aria-label={t('vacancies.labelDescription')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
@@ -353,17 +375,17 @@ export function VacancyForm({
             {/* Requirements Section */}
             <div className="form-requirements-section">
               <div className="requirements-header-row">
-                <h3 className="requirements-title">Requirements</h3>
+                <h3 className="requirements-title">{t('vacancies.requirementsHeading')}</h3>
                 <button
                   type="button"
                   className="add-requirement-btn"
-                  aria-label="Add requirement"
+                  aria-label={t('vacancies.addRequirement')}
                   disabled={requirements.length >= 40}
                   onClick={() =>
                     setRequirements((v) => [...v, { name: '', description: '', required: true }])
                   }
                 >
-                  <Plus size={15} /> Add
+                  <Plus size={15} /> {t('common.add')}
                 </button>
               </div>
 
@@ -375,7 +397,7 @@ export function VacancyForm({
                         aria-label={`Requirement ${i + 1}`}
                         maxLength={200}
                         value={r.name}
-                        placeholder={`Requirement ${i + 1}`}
+                        placeholder={t('vacancies.reqNamePlaceholder')}
                         className="requirement-name-input"
                         onChange={(e) =>
                           setRequirements((v) =>
@@ -387,7 +409,7 @@ export function VacancyForm({
                         aria-label={`Requirement ${i + 1} details`}
                         maxLength={1000}
                         value={r.description || ''}
-                        placeholder="Evidence or experience to look for (optional)"
+                        placeholder={t('vacancies.reqDescPlaceholder')}
                         className="requirement-details-input"
                         onChange={(e) =>
                           setRequirements((v) =>
@@ -409,7 +431,7 @@ export function VacancyForm({
                       <div className="must-have-circle">
                         <Check size={11} className="check-mark" />
                       </div>
-                      <span>Must have</span>
+                      <span>{t('vacancies.reqRequired')}</span>
                     </button>
 
                     <button
@@ -430,6 +452,19 @@ export function VacancyForm({
                 ))}
               </div>
             </div>
+            {hhFields && <div className="mt-5 rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold text-slate-900">hh.uz maydonlari</h3>
+              <p className="mt-1 text-sm text-slate-500">HeadHunter’da e’lon qilish uchun to‘ldiring. Telegram e’loni uchun talab qilinmaydi.</p>
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {[
+                  { label: 'Hudud', value: hhAreaId, set: setHhAreaId, options: hhFields.areas },
+                  { label: 'Kasb yo‘nalishi', value: hhProfessionalRoleId, set: setHhProfessionalRoleId, options: hhFields.roles },
+                  { label: 'Tajriba', value: hhExperienceId, set: setHhExperienceId, options: hhFields.experiences },
+                  { label: 'Bandlik', value: hhEmploymentId, set: setHhEmploymentId, options: hhFields.employments },
+                  { label: 'Ish jadvali', value: hhScheduleId, set: setHhScheduleId, options: hhFields.schedules },
+                ].map(field => <label key={field.label} className="text-sm text-slate-700">{field.label}<select className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2" value={field.value} onChange={event => field.set(event.target.value)}><option value="">Tanlang</option>{field.options.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>)}
+              </div>
+            </div>}
           </div>
         ) : (
           <div
@@ -452,7 +487,7 @@ export function VacancyForm({
                 setEmploymentType(parsed.employmentType);
                 setSeniority(parsed.seniority);
                 setTab('details');
-                toast.success('Draft applied. Review it before saving.');
+                toast.success(t('vacancyGenerator.draftApplied'));
               }}
             />
           </div>
@@ -461,15 +496,15 @@ export function VacancyForm({
         {/* Modal Footer Actions */}
         <div className="modal-footer-actions">
           <button type="button" className="btn-modal-cancel" onClick={close}>
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="submit"
             className="btn-modal-submit"
-            aria-label={value ? 'Save vacancy' : 'Create vacancy'}
+            aria-label={value ? t('vacancies.saveVacancy') : t('vacancies.createVacancy')}
             disabled={busy}
           >
-            {busy ? 'Saving...' : value ? 'Save vacancy' : 'Create vacancy'}
+            {busy ? t('vacancies.saving') : value ? t('vacancies.saveVacancy') : t('vacancies.createVacancy')}
           </button>
         </div>
       </form>
@@ -524,18 +559,13 @@ function getVacancyMeta(v: Vacancy): VacancyMeta {
   };
 }
 
-const statusOptions = [
-  { label: 'All statuses', value: 'ALL' },
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'Draft', value: 'DRAFT' },
-  { label: 'Closed', value: 'CLOSED' },
-];
-
 export function Vacancies() {
+  const { t } = useTranslation();
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<Vacancy | null>(null);
   const [deletingVacancy, setDeletingVacancy] = useState<Vacancy | null>(null);
   const [topModalVacancyId, setTopModalVacancyId] = useState<number | null>(null);
+  const [publishing, setPublishing] = useState<Vacancy | null>(null);
   const [open, setOpen] = useState(params.has('new'));
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -543,6 +573,13 @@ export function Vacancies() {
   const statusAccordionRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(1);
   const [actionError, setActionError] = useState('');
+
+  const statusOptions = [
+    { label: t('vacancies.statusAll'), value: 'ALL' },
+    { label: t('vacancies.statusActive'), value: 'ACTIVE' },
+    { label: t('vacancies.statusDraft'), value: 'DRAFT' },
+    { label: t('vacancies.statusClosed'), value: 'CLOSED' },
+  ];
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -588,7 +625,7 @@ export function Vacancies() {
   async function confirmDelete(v: Vacancy) {
     try {
       await api(`/vacancies/${v.id}`, { method: 'DELETE' });
-      toast.success(`"${v.title}" vacancy deleted`);
+      toast.success(`"${v.title}" ${t('vacancies.deletedSuccess')}`);
       reload();
     } catch (e) {
       setActionError((e as Error).message);
@@ -602,9 +639,9 @@ export function Vacancies() {
       {/* Page Header matching screenshot */}
       <div className="vacancies-page-header">
         <div className="vacancies-header-text">
-          <div className="vacancies-eyebrow">HIRING</div>
-          <h1 className="vacancies-title">Vacancies</h1>
-          <p className="vacancies-subtitle">Every open, draft and closed role in your workspace.</p>
+          <div className="vacancies-eyebrow">{t('pipeline.eyebrow')}</div>
+          <h1 className="vacancies-title">{t('vacancies.title')}</h1>
+          <p className="vacancies-subtitle">{t('vacancies.subtitle')}</p>
         </div>
         <Button
           onClick={() => {
@@ -613,7 +650,7 @@ export function Vacancies() {
           }}
           className="vacancies-create-btn"
         >
-          <Plus size={16} /> Create vacancy
+          <Plus size={16} /> {t('vacancies.createVacancy')}
         </Button>
       </div>
 
@@ -623,8 +660,8 @@ export function Vacancies() {
           <Search className="vacancies-search-icon" size={17} />
           <input
             type="text"
-            aria-label="Search vacancies"
-            placeholder="Search by title, team or location..."
+            aria-label={t('vacancies.searchPlaceholder')}
+            placeholder={t('vacancies.searchToolbarPlaceholder')}
             value={search}
             className="vacancies-search-input"
             onChange={(e) => {
@@ -645,7 +682,7 @@ export function Vacancies() {
             <AccordionItem value="status" className="border-none">
               <AccordionTrigger className="vacancies-filter-trigger h-10 px-3.5 py-0 text-xs font-normal text-slate-800 rounded-xl bg-white border border-slate-200 hover:no-underline hover:border-slate-300 shadow-sm transition-all flex items-center justify-between data-[state=open]:border-[#1a5d4c] data-[state=open]:ring-2 data-[state=open]:ring-[#1a5d4c]/15">
                 <span className="truncate pr-2 text-left">
-                  {statusOptions.find((opt) => opt.value === statusFilter)?.label || 'All statuses'}
+                  {statusOptions.find((opt) => opt.value === statusFilter)?.label || t('vacancies.statusAll')}
                 </span>
               </AccordionTrigger>
               <AccordionContent
@@ -699,10 +736,10 @@ export function Vacancies() {
                       <h2 className="vacancy-card-heading">{v.title}</h2>
                       <span className={`vacancy-pill-badge status-${v.status.toLowerCase()}`}>
                         {v.status === 'ACTIVE'
-                          ? 'Active'
+                          ? t('vacancies.statusActive')
                           : v.status === 'DRAFT'
-                            ? 'Draft'
-                            : 'Closed'}
+                            ? t('vacancies.statusDraft')
+                            : t('vacancies.statusClosed')}
                       </span>
                     </div>
 
@@ -716,21 +753,28 @@ export function Vacancies() {
                       <div className="vacancy-footer-meta-tags">
                         <span className="tag-item">{meta.seniority}</span>
                         <span className="tag-item">{meta.employmentType}</span>
-                        <span className="tag-item">{appCount} applications</span>
+                        <span className="tag-item">{t('vacancies.applicationsCount', { count: appCount })}</span>
                         <span className="tag-item">{meta.openedDate}</span>
                       </div>
 
                       <div className="vacancy-quick-actions">
+                        <button
+                          type="button"
+                          className="quick-action-btn"
+                          aria-label={`${t('vacancies.publishPlatform')}: ${v.title}`}
+                          title={t('vacancies.publishPlatform')}
+                          onClick={() => setPublishing(v)}
+                        ><Send size={14} /></button>
                         {v.status === 'ACTIVE' && v.publicToken && (
                           <button
                             type="button"
                             className="quick-action-btn"
-                            aria-label={`Copy application link for ${v.title}`}
-                            title="Ariza havolasini nusxalash"
+                            aria-label={`${t('vacancies.copyApplyLink')} for ${v.title}`}
+                            title={t('vacancies.copyApplyLink')}
                             onClick={() => {
                               void navigator.clipboard.writeText(`${window.location.origin}/apply/${v.publicToken}`)
-                                .then(() => toast.success('Ariza havolasi nusxalandi'))
-                                .catch(() => setActionError('Havolani nusxalab bo‘lmadi'));
+                                .then(() => toast.success(t('vacancies.copyApplySuccess')))
+                                .catch(() => setActionError(t('vacancies.copyApplyFailed')));
                             }}
                           >
                             <Link2 size={14} />
@@ -739,8 +783,8 @@ export function Vacancies() {
                         <button
                           type="button"
                           className="quick-action-btn text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
-                          aria-label={`View Top 3 candidates for ${v.title}`}
-                          title="Top 3 mos nomzodlarni ko‘rish (AI)"
+                          aria-label={`${t('vacancies.viewTop3')} for ${v.title}`}
+                          title={t('vacancies.viewTop3')}
                           onClick={() => setTopModalVacancyId(v.id)}
                         >
                           <Sparkles size={14} className="text-emerald-600" />
@@ -748,8 +792,8 @@ export function Vacancies() {
                         <button
                           type="button"
                           className="quick-action-btn"
-                          aria-label={`Edit ${v.title}`}
-                          title={`Edit ${v.title}`}
+                          aria-label={`${t('common.edit')} ${v.title}`}
+                          title={`${t('common.edit')} ${v.title}`}
                           onClick={() => {
                             setEditing(v);
                             setOpen(true);
@@ -760,8 +804,8 @@ export function Vacancies() {
                         <button
                           type="button"
                           className="quick-action-btn danger"
-                          aria-label={`Delete ${v.title}`}
-                          title={`Delete ${v.title}`}
+                          aria-label={`${t('common.delete')} ${v.title}`}
+                          title={`${t('common.delete')} ${v.title}`}
                           onClick={() => setDeletingVacancy(v)}
                         >
                           <Trash2 size={14} />
@@ -777,17 +821,17 @@ export function Vacancies() {
               <Empty
                 title={
                   search || statusFilter !== 'ALL'
-                    ? 'No matching vacancies'
-                    : 'Make your first opportunity'
+                    ? t('vacancies.emptySearchTitle')
+                    : t('vacancies.makeFirstTitle')
                 }
                 text={
                   search || statusFilter !== 'ALL'
-                    ? 'Try a different search or status filter.'
-                    : 'Add a role and the evidence you want to explore with candidates.'
+                    ? t('vacancies.emptySearchSubtitle')
+                    : t('vacancies.makeFirstSubtitle')
                 }
               >
                 <Button onClick={() => setOpen(true)}>
-                  <Plus size={16} /> Create vacancy
+                  <Plus size={16} /> {t('vacancies.createVacancy')}
                 </Button>
               </Empty>
             </section>
@@ -819,19 +863,18 @@ export function Vacancies() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete vacancy?</AlertDialogTitle>
+            <AlertDialogTitle>{t('vacancies.deleteConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete <strong>{deletingVacancy?.title}</strong> and its
-              applications? This action cannot be undone.
+              {t('vacancies.deleteConfirmDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-[#dc2626] text-white hover:bg-[#b91c1c]"
               onClick={() => deletingVacancy && void confirmDelete(deletingVacancy)}
             >
-              Delete vacancy
+              {t('vacancies.deleteVacancy')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -843,6 +886,7 @@ export function Vacancies() {
         onClose={() => setTopModalVacancyId(null)}
         onApplicationStageChanged={() => reload()}
       />
+      {publishing && <PublicationModal vacancy={publishing} close={() => { setPublishing(null); reload(); }} />}
     </div>
   );
 }

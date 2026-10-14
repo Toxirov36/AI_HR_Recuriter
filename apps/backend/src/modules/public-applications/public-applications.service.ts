@@ -81,7 +81,7 @@ export class PublicApplicationsService {
           throw new NotFoundException('This vacancy is not accepting applications');
         }
         createdApp = await tx.application.create({
-          data: { companyId: vacancy.companyId, vacancyId: vacancy.id, candidateId: candidate.id, status: 'NEW' },
+          data: { companyId: vacancy.companyId, vacancyId: vacancy.id, candidateId: candidate.id, status: 'NEW', aiConsentGranted: input.aiConsent === 'true' },
         });
         await tx.candidateEvent.create({
           data: { companyId: vacancy.companyId, candidateId: candidate.id, type: 'PUBLIC_APPLICATION_RECEIVED', label: `Applied for ${vacancy.title} through public form` },

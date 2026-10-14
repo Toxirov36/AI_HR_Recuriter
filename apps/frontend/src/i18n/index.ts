@@ -7,11 +7,13 @@ import { detectInitialLocale, saveLocale } from './utils';
 import uz from './locales/uz.json';
 import ru from './locales/ru.json';
 import en from './locales/en.json';
+import tg from './locales/tg.json';
 
 export const resources = {
   uz: { translation: uz },
   ru: { translation: ru },
   en: { translation: en },
+  tg: { translation: tg },
 } as const;
 
 const initialLocale = detectInitialLocale();

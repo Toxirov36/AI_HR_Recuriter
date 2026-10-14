@@ -17,6 +17,19 @@ export type TelegramDirectMessage = {
   chat: { id: number; type: string };
   date: number;
   text?: string;
+  document?: {
+    file_id: string;
+    file_unique_id: string;
+    file_name?: string;
+    mime_type?: string;
+    file_size?: number;
+  };
+  contact?: {
+    phone_number: string;
+    first_name?: string;
+    last_name?: string;
+    user_id?: number;
+  };
 };
 
 export type TelegramBusinessMessage = {
@@ -48,6 +61,7 @@ export type TelegramCallbackQuery = {
 export type TelegramUpdate = {
   update_id: number;
   message?: TelegramDirectMessage;
+  channel_post?: { message_id: number; chat: { id: number; username?: string }; text?: string };
   business_connection?: TelegramBusinessConnectionUpdate;
   business_message?: TelegramBusinessMessage;
   edited_business_message?: TelegramBusinessMessage;
@@ -60,4 +74,5 @@ export type TelegramResumeJob = {
   candidateId: number;
   companyId: number;
   fileId: string;
+  applicationId?: number;
 };

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Check, Loader2, AlertCircle, Sparkles, RefreshCw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Progress } from './ui/progress';
 import { Button } from './ui/button';
 
@@ -22,11 +23,12 @@ export interface ParseProgressProps {
 export const PARSE_STEPS = [
   { step: 1, label: "Matn o'qildi va kontaktlar ajratilmoqda…" },
   { step: 2, label: "Ko'nikmalar va texnologiyalar aniqlanmoqda…" },
-  { step: 3, label: "Ish tajribasi va ta'lim tahlil qilinmoqda…" },
+  { step: 3, label: "Ish tajribasi va ta'lim xronologiyasi tuzilmoqda…" },
   { step: 4, label: "Rezyume to'liq tahlil qilindi!" },
 ];
 
 export function ParseProgress({ progress, onRetry, className = '' }: ParseProgressProps) {
+  const { t } = useTranslation();
   if (!progress) return null;
 
   const { status, message, error } = progress;
@@ -37,6 +39,13 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
   const currentStep = progress.step || (isCompleted ? 4 : 1);
   const totalSteps = progress.totalSteps || 4;
   const stepPercent = isCompleted ? 100 : Math.round((currentStep / totalSteps) * 100);
+
+  const steps = [
+    { step: 1, label: t('parseProgress.step1') },
+    { step: 2, label: t('parseProgress.step2') },
+    { step: 3, label: t('parseProgress.step3') },
+    { step: 4, label: t('parseProgress.step4') },
+  ];
 
   return (
     <div
@@ -65,15 +74,15 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
           </div>
           <div className="min-w-0">
             <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
-              <span>AI Rezyume tahlili</span>
+              <span>{t('parseProgress.title')}</span>
               {!isCompleted && !isFailed && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-normal text-[#245e4f] bg-[#245e4f]/10 px-1.5 py-0.5 rounded-md">
-                  <Loader2 size={11} className="animate-spin" /> Fonga o'tkazildi
+                  <Loader2 size={11} className="animate-spin" /> {t('parseProgress.backgrounded')}
                 </span>
               )}
             </h4>
             <p className="text-xs text-slate-500 truncate" title={message}>
-              {message || (isCompleted ? "Tahlil muvaffaqiyatli yakunlandi" : "Kutilmoqda…")}
+              {message || (isCompleted ? t('parseProgress.completedMessage') : t('parseProgress.waiting'))}
             </p>
           </div>
         </div>
@@ -81,7 +90,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
         <div className="text-right shrink-0">
           {isFailed ? (
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-100 text-red-700">
-              Xatolik
+              {t('common.error')}
             </span>
           ) : isCompleted ? (
             <span className="text-sm font-bold text-emerald-600">
@@ -89,7 +98,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
             </span>
           ) : (
             <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#245e4f]/10 text-[#245e4f]">
-              Bosqich {currentStep} / {totalSteps}
+              {t('parseProgress.stepLabel', { step: currentStep, total: totalSteps })}
             </span>
           )}
         </div>
@@ -119,7 +128,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
         <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 text-xs flex flex-col gap-2">
           <div className="flex items-start gap-2">
             <AlertCircle size={15} className="shrink-0 mt-0.5 text-red-600" />
-            <span>{error || message || "Tahlil jarayonida xatolik yuz berdi."}</span>
+            <span>{error || message || t('parseProgress.defaultError')}</span>
           </div>
           {onRetry && (
             <div className="pt-1 flex justify-end">
@@ -129,7 +138,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
                 className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-100 gap-1.5"
                 onClick={onRetry}
               >
-                <RefreshCw size={12} /> Qayta urinish
+                <RefreshCw size={12} /> {t('parseProgress.retry')}
               </Button>
             </div>
           )}
@@ -137,7 +146,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
       ) : (
         /* Steps List */
         <div className="space-y-2 pt-1 border-t border-slate-100">
-          {PARSE_STEPS.map((s) => {
+          {steps.map((s) => {
             const isStepDone = isCompleted || s.step < currentStep;
             const isStepActive = !isCompleted && s.step === currentStep;
 
@@ -172,13 +181,13 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
                 <span className="truncate flex-1">{s.label}</span>
                 <span className="text-[11px] font-medium shrink-0">
                   {isStepDone ? (
-                    <span className="text-emerald-600">Bajarildi</span>
+                    <span className="text-emerald-600">{t('parseProgress.done')}</span>
                   ) : isStepActive ? (
                     <span className="text-[#245e4f] flex items-center gap-1">
-                      <Loader2 size={10} className="animate-spin" /> Jarayonda
+                      <Loader2 size={10} className="animate-spin" /> {t('parseProgress.inProgress')}
                     </span>
                   ) : (
-                    <span className="text-slate-400">Kutilmoqda</span>
+                    <span className="text-slate-400">{t('parseProgress.waiting')}</span>
                   )}
                 </span>
               </div>

@@ -41,6 +41,27 @@ enum ResumeStatus {
   COMPLETED
   FAILED
 }
+enum PublicationPlatform {
+  TELEGRAM
+  HEADHUNTER
+}
+enum PublicationStatus {
+  PENDING_APPROVAL
+  QUEUED
+  SENDING
+  PUBLISHED
+  FAILED
+  UNKNOWN
+  STALE
+  CLOSED
+}
+enum TelegramApplyStep {
+  PRIVACY
+  AI_CONSENT
+  ASSESSMENT
+  CONTACT_PHONE
+  DOCUMENT
+}
 model Company {
   id Int @id @default(autoincrement())
   name String
@@ -52,8 +73,15 @@ model Company {
   invitations Invitation[]
   telegramConnections TelegramBusinessConnection[]
   telegramConnectRequests TelegramConnectRequest[]
+  telegramAdminPairings TelegramAdminPairing[]
+  telegramAdminLinks TelegramAdminLink[]
   retentionDays Int @default(180)
   auditLogs AuditLog[]
+  telegramChannels TelegramChannel[]
+  hhConnection HeadHunterConnection?
+  publications VacancyPublication[]
+  telegramApplySessions TelegramApplySession[]
+  recommendations VacancyRecommendation[]
   createdAt DateTime @default(now())
 }
 model User {
@@ -73,6 +101,9 @@ model User {
   company Company @relation(fields: [companyId], references: [id])
   telegramConnections TelegramBusinessConnection[]
   telegramConnectRequests TelegramConnectRequest[]
+  telegramAdminPairings TelegramAdminPairing[]
+  telegramAdminLink TelegramAdminLink?
+  hhConnections HeadHunterConnection[]
   auditLogs AuditLog[]
   createdAt DateTime @default(now())
   @@index([companyId])
@@ -122,11 +153,91 @@ model Vacancy {
   company Company @relation(fields: [companyId], references: [id])
   requirements Requirement[]
   applications Application[]
+  recommendations VacancyRecommendation[]
+  publications VacancyPublication[]
+  telegramApplySessions TelegramApplySession[]
+  hhAreaId String?
+  hhProfessionalRoleId String?
+  hhExperienceId String?
+  hhEmploymentId String?
+  hhScheduleId String?
+  hhSearchCount Int?
+  hhSearchedAt DateTime?
+  hhSearchError String?
+  assessmentQuestions Json?
+  assessmentRevision Int?
+  assessmentEditVersion Int @default(0)
   revision Int @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@unique([id, companyId])
   @@index([companyId, createdAt])
+}
+model TelegramChannel {
+  id Int @id @default(autoincrement())
+  companyId Int
+  chatId String @unique
+  title String
+  username String?
+  enabled Boolean @default(true)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  publications VacancyPublication[]
+  createdAt DateTime @default(now())
+  @@index([companyId])
+}
+model HeadHunterConnection {
+  companyId Int @id
+  connectedByUserId Int
+  employerId String
+  managerId String
+  accessTokenEncrypted String
+  refreshTokenEncrypted String
+  expiresAt DateTime
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  connectedBy User @relation(fields: [connectedByUserId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+}
+model VacancyPublication {
+  id Int @id @default(autoincrement())
+  companyId Int
+  vacancyId Int
+  platform PublicationPlatform
+  destinationKey String
+  channelId Int?
+  status PublicationStatus @default(PENDING_APPROVAL)
+  approvedRevision Int?
+  approvedPayload Json?
+  externalId String?
+  externalUrl String?
+  error String?
+  approvedById Int?
+  approvedAt DateTime?
+  publishedAt DateTime?
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
+  channel TelegramChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([vacancyId, platform, destinationKey])
+  @@index([companyId, status])
+}
+model TelegramApplySession {
+  telegramUserId String @id
+  companyId Int
+  vacancyId Int
+  step TelegramApplyStep
+  privacyAcceptedAt DateTime?
+  aiConsentAt DateTime?
+  currentQuestionIndex Int @default(0)
+  answers Json?
+  assessmentQuestions Json?
+  assessmentRevision Int?
+  phone String?
+  expiresAt DateTime
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  @@index([companyId, expiresAt])
 }
 model Requirement {
   id Int @id @default(autoincrement())
@@ -169,6 +280,7 @@ model Candidate {
   anonymizedAt DateTime?
   isOcrProcessed Boolean @default(false)
   applications Application[]
+  recommendations VacancyRecommendation[]
   resumes Resume[]
   events CandidateEvent[]
   createdAt DateTime @default(now())
@@ -216,6 +328,7 @@ model TelegramBusinessConnection {
   canReply Boolean @default(false)
   canReadMessages Boolean @default(false)
   enabled Boolean @default(true)
+  screeningAlertsEnabled Boolean @default(true)
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
@@ -223,6 +336,29 @@ model TelegramBusinessConnection {
   @@index([companyId])
   @@index([userId])
   @@index([telegramUserId])
+}
+model TelegramAdminPairing {
+  id Int @id @default(autoincrement())
+  companyId Int
+  userId Int
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String @unique
+  expiresAt DateTime
+  usedAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([companyId, userId, expiresAt])
+}
+model TelegramAdminLink {
+  userId Int @id
+  companyId Int
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  telegramUserId String @unique
+  telegramUsername String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId])
 }
 model TelegramConnectRequest {
   id Int @id @default(autoincrement())
@@ -252,19 +388,39 @@ model Application {
   company Company @relation(fields: [companyId], references: [id])
   vacancyId Int
   candidateId Int
+  aiConsentGranted Boolean?
   vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
   candidate Candidate @relation(fields: [candidateId, companyId], references: [id, companyId], onDelete: Cascade)
   analysis Json?
   interviewQuestions Json?
   interviewReview Json?
+  assessmentScore Int?
+  assessmentResult Json?
   reviewRevision Int @default(0)
   stageHistory ApplicationStageChange[]
+  screeningAlerts TelegramScreeningAlert[]
   analyzedResumeRevision Int?
   analyzedVacancyRevision Int?
   status ApplicationStatus @default(NEW)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@unique([vacancyId, candidateId])
+  @@index([companyId, status])
+}
+
+model TelegramScreeningAlert {
+  id Int @id @default(autoincrement())
+  companyId Int
+  applicationId Int
+  chatId String
+  status String @default("PENDING")
+  attempts Int @default(0)
+  nextAttemptAt DateTime @default(now())
+  sentAt DateTime?
+  lastError String?
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  @@unique([applicationId, chatId])
+  @@index([status, nextAttemptAt])
   @@index([companyId, status])
 }
 model ApplicationStageChange {
@@ -298,4 +454,26 @@ model AuditLog {
   @@index([companyId, createdAt])
   @@index([companyId, action])
   @@index([userId])
+}
+
+model VacancyRecommendation {
+  id Int @id @default(autoincrement())
+  companyId Int
+  vacancyId Int
+  candidateId Int
+  matchScore Int
+  mandatoryScore Int
+  optionalScore Int
+  analysis Json
+  vacancyRevision Int
+  resumeRevision Int
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
+  candidate Candidate @relation(fields: [candidateId, companyId], references: [id, companyId], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vacancyId, candidateId])
+  @@index([companyId, vacancyId, matchScore])
+  @@index([candidateId])
 }

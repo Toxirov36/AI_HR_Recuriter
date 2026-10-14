@@ -70,4 +70,17 @@ describe('VacancyGenerator feature', () => {
     expect(screen.getByRole('button', { name: 'Generate job description' })).toBeDisabled();
     expect(send).not.toHaveBeenCalled();
   });
+
+  it('renders microphone button and handles mic permissions gracefully', async () => {
+    render(<VacancyGenerator configured={true} disabled={false} apply={vi.fn()} />);
+
+    const micBtn = screen.getByRole('button', { name: /Record voice/i });
+    expect(micBtn).toBeInTheDocument();
+    expect(micBtn).toBeEnabled();
+
+    // Clicking mic when navigator.mediaDevices is not available triggers permission alert
+    fireEvent.click(micBtn);
+    await screen.findByRole('alert');
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
 });

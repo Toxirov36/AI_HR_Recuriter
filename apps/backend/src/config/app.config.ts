@@ -37,6 +37,11 @@ export const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().default(''),
   TELEGRAM_WEBHOOK_SECRET: z.string().default(''),
   TELEGRAM_WEBHOOK_URL: z.string().default(''),
+  HH_CLIENT_ID: z.string().default(''),
+  HH_CLIENT_SECRET: z.string().default(''),
+  HH_CALLBACK_URL: z.string().default(''),
+  HH_TOKEN_ENCRYPTION_KEY: z.string().default(''),
+  HH_USER_AGENT: z.string().default(''),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
@@ -67,6 +72,16 @@ export function getConfig(): AppConfig {
   ];
   if (r2Values.some(Boolean) && !r2Values.every(Boolean)) {
     throw new Error('R2 configuration is incomplete. Set all five R2 environment variables.');
+  }
+  const hhValues = [result.data.HH_CLIENT_ID, result.data.HH_CLIENT_SECRET, result.data.HH_CALLBACK_URL, result.data.HH_TOKEN_ENCRYPTION_KEY, result.data.HH_USER_AGENT];
+  if (hhValues.some(Boolean) && !hhValues.every(Boolean)) {
+    throw new Error('HeadHunter configuration is incomplete. Set all five HH environment variables.');
+  }
+  if (hhValues.every(Boolean)) {
+    if (!result.data.HH_CALLBACK_URL.startsWith('https://') && result.data.NODE_ENV === 'production')
+      throw new Error('HeadHunter callback URL must use HTTPS in production');
+    if (Buffer.from(result.data.HH_TOKEN_ENCRYPTION_KEY, 'base64').length !== 32)
+      throw new Error('HH_TOKEN_ENCRYPTION_KEY must be a base64 encoded 32-byte key');
   }
   return (_config = result.data);
 }

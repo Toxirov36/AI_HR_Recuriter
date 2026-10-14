@@ -155,4 +155,35 @@ describe('Settings Hub (RBAC, Audit Logs, Retention, Telegram)', () => {
     expect(screen.getByText('@dilshodbek_hr')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Ulanishni uzish/i })).toBeInTheDocument();
   });
+
+  it('translates admin panel content when switching to English, Russian, and Tajik', async () => {
+    const { i18n } = await import('../../i18n');
+    await i18n.changeLanguage('en');
+    const { unmount } = render(<Team />);
+
+    expect(screen.getByText('Company admin panel')).toBeInTheDocument();
+    expect(screen.getByText('SYSTEM SETTINGS')).toBeInTheDocument();
+    expect(screen.getByText('Company settings')).toBeInTheDocument();
+    expect(screen.getByLabelText('Company name')).toHaveValue('Apex');
+    expect(screen.getByText('SMTP configured')).toBeInTheDocument();
+
+    unmount();
+    await i18n.changeLanguage('ru');
+    const ruRender = render(<Team />);
+    expect(screen.getByText('Панель администратора компании')).toBeInTheDocument();
+    expect(screen.getByText('СИСТЕМНЫЕ НАСТРОЙКИ')).toBeInTheDocument();
+    expect(screen.getByText('Настройки компании')).toBeInTheDocument();
+    expect(screen.getByLabelText('Название компании')).toHaveValue('Apex');
+
+    ruRender.unmount();
+    await i18n.changeLanguage('tg');
+    const tgRender = render(<Team />);
+    expect(screen.getByText('Панели мудирияти ширкат')).toBeInTheDocument();
+    expect(screen.getByText('ТАНЗИМОТИ СИСТЕМА')).toBeInTheDocument();
+    expect(screen.getByText('Танзимоти ширкат')).toBeInTheDocument();
+    expect(screen.getByLabelText('Номи ширкат')).toHaveValue('Apex');
+
+    tgRender.unmount();
+    await i18n.changeLanguage('uz');
+  });
 });

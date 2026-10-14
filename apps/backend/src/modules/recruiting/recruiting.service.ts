@@ -11,6 +11,7 @@ export const candidateSelect = {
   fullName: true,
   email: true,
   phone: true,
+  source: true,
   publicSubmittedAt: true,
   aiConsentAt: true,
   resumeName: true,

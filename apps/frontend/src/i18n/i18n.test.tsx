@@ -17,6 +17,7 @@ import {
 import uzTranslations from './locales/uz.json';
 import ruTranslations from './locales/ru.json';
 import enTranslations from './locales/en.json';
+import tgTranslations from './locales/tg.json';
 import { LanguageSwitcher } from '../components/language-switcher';
 
 describe('Multilingual System (i18n / l10n)', () => {
@@ -55,6 +56,12 @@ describe('Multilingual System (i18n / l10n)', () => {
       expect(normalizeLocale('EN')).toBe('en');
     });
 
+    it('normalizes standard Tajik locales', () => {
+      expect(normalizeLocale('tg')).toBe('tg');
+      expect(normalizeLocale('tg-TJ')).toBe('tg');
+      expect(normalizeLocale('TG')).toBe('tg');
+    });
+
     it('falls back safely to defaultLocale (uz) for unsupported or empty values', () => {
       expect(normalizeLocale('fr')).toBe('uz');
       expect(normalizeLocale('de-DE')).toBe('uz');
@@ -73,6 +80,10 @@ describe('Multilingual System (i18n / l10n)', () => {
       saveLocale('ru');
       expect(localStorage.getItem('shortlist_locale')).toBe('ru');
       expect(getSavedLocale()).toBe('ru');
+
+      saveLocale('tg');
+      expect(localStorage.getItem('shortlist_locale')).toBe('tg');
+      expect(getSavedLocale()).toBe('tg');
 
       saveLocale('en', 42);
       expect(localStorage.getItem('shortlist_locale')).toBe('en');
@@ -144,7 +155,7 @@ describe('Multilingual System (i18n / l10n)', () => {
      4. Runtime Translation & Safe Fallback
      ======================================================================== */
   describe('Runtime Translation and Fallback', () => {
-    it('translates common keys in all three languages', async () => {
+    it('translates common keys in all four languages', async () => {
       await changeLanguage('uz');
       expect(i18n.t('common.save')).toBe('Saqlash');
       expect(i18n.t('common.cancel')).toBe('Bekor qilish');
@@ -156,6 +167,10 @@ describe('Multilingual System (i18n / l10n)', () => {
       await changeLanguage('en');
       expect(i18n.t('common.save')).toBe('Save');
       expect(i18n.t('common.cancel')).toBe('Cancel');
+
+      await changeLanguage('tg');
+      expect(i18n.t('common.save')).toBe('Сабт кардан');
+      expect(i18n.t('common.cancel')).toBe('Бекор кардан');
     });
 
     it('updates document.documentElement.lang on language change', async () => {
@@ -196,6 +211,11 @@ describe('Multilingual System (i18n / l10n)', () => {
       expect(i18n.t('dashboard.greeting', { name: 'Dilshodbek' })).toBe(
         'GOOD TO SEE YOU, Dilshodbek',
       );
+
+      await changeLanguage('tg');
+      expect(i18n.t('dashboard.greeting', { name: 'Дильшодбек' })).toBe(
+        'ХУШ ОМАДЕД, Дильшодбек',
+      );
     });
 
     it('interpolates counts and company names in companyDeletion and publicApply', async () => {
@@ -212,7 +232,7 @@ describe('Multilingual System (i18n / l10n)', () => {
   });
 
   /* ========================================================================
-     6. Translation Key Parity Across uz, ru, en
+     6. Translation Key Parity Across uz, ru, en, tg
      ======================================================================== */
   describe('Translation Key Parity', () => {
     function getLeafKeys(obj: Record<string, any>, prefix = ''): string[] {
@@ -244,6 +264,14 @@ describe('Multilingual System (i18n / l10n)', () => {
       expect(missingInEn).toEqual([]);
     });
 
+    it('verifies that all keys in uz.json exist in tg.json', () => {
+      const uzKeys = getLeafKeys(uzTranslations);
+      const tgKeys = new Set(getLeafKeys(tgTranslations));
+
+      const missingInTg = uzKeys.filter((key) => !tgKeys.has(key));
+      expect(missingInTg).toEqual([]);
+    });
+
     it('ensures no empty string translations exist in any locale', () => {
       const checkNonEmpty = (obj: Record<string, any>, path = '') => {
         for (const [key, value] of Object.entries(obj)) {
@@ -260,6 +288,7 @@ describe('Multilingual System (i18n / l10n)', () => {
       checkNonEmpty(uzTranslations, 'uz');
       checkNonEmpty(ruTranslations, 'ru');
       checkNonEmpty(enTranslations, 'en');
+      checkNonEmpty(tgTranslations, 'tg');
     });
   });
 
@@ -269,7 +298,7 @@ describe('Multilingual System (i18n / l10n)', () => {
   describe('Intl Localization Formatting', () => {
     const testDate = new Date('2026-10-12T10:00:00Z');
 
-    it('formats dates accurately for uz, ru, and en', () => {
+    it('formats dates accurately for uz, ru, en, and tg', () => {
       const uzDate = formatDate(testDate, 'uz');
       expect(uzDate).toContain('2026');
       expect(uzDate.toLowerCase()).toContain('oktabr');
@@ -281,6 +310,9 @@ describe('Multilingual System (i18n / l10n)', () => {
       const enDate = formatDate(testDate, 'en');
       expect(enDate).toContain('2026');
       expect(enDate).toContain('October');
+
+      const tgDate = formatDate(testDate, 'tg');
+      expect(tgDate).toContain('2026');
     });
 
     it('formats numbers and percentages according to locale', () => {
@@ -299,6 +331,9 @@ describe('Multilingual System (i18n / l10n)', () => {
       const usdFormatted = formatCurrency(1500, 'USD', 'en');
       expect(usdFormatted).toContain('$');
       expect(usdFormatted).toContain('1,500');
+
+      const tjsFormatted = formatCurrency(500, 'TJS', 'tg');
+      expect(tjsFormatted).toBeDefined();
     });
 
     it('formats relative time safely', () => {
@@ -320,7 +355,7 @@ describe('Multilingual System (i18n / l10n)', () => {
       expect(trigger).toHaveTextContent('O‘zbekcha');
     });
 
-    it('opens dropdown and displays all 3 supported languages with checkmark for active language', () => {
+    it('opens dropdown and displays all 4 supported languages with checkmark for active language', () => {
       render(<LanguageSwitcher />);
       const trigger = screen.getByRole('button', { name: /select language/i });
       fireEvent.click(trigger);
@@ -328,6 +363,7 @@ describe('Multilingual System (i18n / l10n)', () => {
       expect(screen.getAllByText('O‘zbekcha').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Русский')).toBeInTheDocument();
       expect(screen.getByText('English')).toBeInTheDocument();
+      expect(screen.getByText('Тоҷикӣ')).toBeInTheDocument();
     });
 
     it('changes language to Russian when selected from menu', async () => {
@@ -357,6 +393,21 @@ describe('Multilingual System (i18n / l10n)', () => {
         expect(i18n.language).toBe('en');
         expect(document.documentElement.lang).toBe('en');
         expect(localStorage.getItem('shortlist_locale')).toBe('en');
+      });
+    });
+
+    it('changes language to Tajik when selected from menu', async () => {
+      render(<LanguageSwitcher />);
+      const trigger = screen.getByRole('button', { name: /select language/i });
+      fireEvent.click(trigger);
+
+      const tgOption = screen.getByText('Тоҷикӣ');
+      fireEvent.click(tgOption);
+
+      await waitFor(() => {
+        expect(i18n.language).toBe('tg');
+        expect(document.documentElement.lang).toBe('tg');
+        expect(localStorage.getItem('shortlist_locale')).toBe('tg');
       });
     });
   });

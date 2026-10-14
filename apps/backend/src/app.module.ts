@@ -35,6 +35,7 @@ import { RetentionModule } from './modules/retention/retention.module';
 import { PublicApplicationsModule } from './modules/public-applications/public-applications.module';
 import { CompanyAdminModule } from './modules/company-admin/company-admin.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
+import { ExternalRecruitingModule } from './modules/external-recruiting/external-recruiting.module';
 
 @Controller('health')
 export class HealthController {
@@ -72,6 +73,7 @@ export class HealthController {
     PublicApplicationsModule,
     CompanyAdminModule,
     PlatformAdminModule,
+    ExternalRecruitingModule,
   ],
   controllers: [HealthController],
 })

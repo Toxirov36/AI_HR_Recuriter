@@ -1,6 +1,6 @@
-export type Locale = 'uz' | 'ru' | 'en';
+export type Locale = 'uz' | 'ru' | 'en' | 'tg';
 
-export const locales = ['uz', 'ru', 'en'] as const;
+export const locales = ['uz', 'ru', 'en', 'tg'] as const;
 export const defaultLocale: Locale = 'uz';
 
 export const SHORTLIST_LOCALE_KEY = 'shortlist_locale';
@@ -30,5 +30,11 @@ export const languages: Record<Locale, LanguageOption> = {
     name: 'English',
     nativeName: 'English',
     flag: '🇺🇸',
+  },
+  tg: {
+    code: 'tg',
+    name: 'Tajik',
+    nativeName: 'Тоҷикӣ',
+    flag: '🇹🇯',
   },
 };

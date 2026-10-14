@@ -157,4 +157,85 @@ export class GeminiProvider {
       );
     }
   }
+
+  async transcribeAudio(
+    audioBuffer: Buffer,
+    mimeType: string,
+    language = 'uz',
+  ): Promise<string> {
+    const config = this.security.config;
+    if (!config.GEMINI_API_KEY) {
+      throw new ServiceUnavailableException(
+        'AI is not configured. Set GEMINI_API_KEY on the backend to enable this feature.',
+      );
+    }
+
+    const languageDescription = {
+      uz: 'Uzbek (Latin script)',
+      ru: 'Russian',
+      en: 'English',
+      tg: 'Tajik (Cyrillic script)',
+    }[language] ?? 'Uzbek (Latin script)';
+
+    const prompt = `You are an expert audio transcriber for HR recruitment.
+Transcribe the spoken audio verbatim into clean text.
+The spoken language is primarily ${languageDescription}.
+CRITICAL INSTRUCTIONS:
+1. Preserve technical terminology, programming languages, and industry job titles in standard form (e.g., "Node.js", "NestJS", "Docker", "Middle", "Senior", "PostgreSQL", "React", "TypeScript", "DevOps").
+2. Output ONLY the plain transcription text without quotation marks, markdown formatting, explanations, or introductory text.
+3. If the audio is silent or unintelligible, output an empty response.`;
+
+    try {
+      const response = await this.request(config.GEMINI_MODEL, 'generateContent', {
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              {
+                inlineData: {
+                  mimeType,
+                  data: audioBuffer.toString('base64'),
+                },
+              },
+              { text: prompt },
+            ],
+          },
+        ],
+        generationConfig: {
+          maxOutputTokens: 2048,
+          temperature: 0.1,
+        },
+      });
+
+      const parsed = z
+        .object({
+          candidates: z
+            .array(
+              z.object({
+                content: z.object({
+                  parts: z.array(
+                    z.object({ text: z.string().optional(), thought: z.boolean().optional() }),
+                  ),
+                }),
+              }),
+            )
+            .min(1),
+        })
+        .safeParse(response);
+
+      if (!parsed.success) return '';
+
+      const text = parsed.data.candidates[0].content.parts
+        .filter((part) => !part.thought)
+        .map((part) => part.text ?? '')
+        .join('')
+        .trim();
+
+      return text;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      this.logger.warn(`Audio transcription failed: ${(error as Error).message}`);
+      throw new BadGatewayException('Audio transcription failed. Please retry.');
+    }
+  }
 }

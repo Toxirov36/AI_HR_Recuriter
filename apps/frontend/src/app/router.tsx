@@ -16,8 +16,11 @@ const ApplicationDetail = lazy(() =>
   loadPipeline().then((module) => ({ default: module.ApplicationDetail })),
 );
 const Team = lazy(() => loadTeam().then((module) => ({ default: module.Team })));
+const loadProfile = () => import('../pages/profile');
+const Profile = lazy(() => loadProfile().then((module) => ({ default: module.Profile })));
 
 export function preloadRoute(path: string) {
+  if (path.startsWith('/profile')) return loadProfile();
   if (path.startsWith('/platform-admin')) return loadPlatform();
   if (path.startsWith('/pipeline') || path.startsWith('/applications')) return loadPipeline();
   if (path.startsWith('/team') || path.startsWith('/admin')) return loadTeam();
@@ -63,6 +66,14 @@ export function AppRouter() {
           ) : (
             <Navigate to="/" replace />
           )
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <LazyPage>
+            <Profile />
+          </LazyPage>
         }
       />
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -6,6 +6,7 @@ import { Checkbox } from './checkbox';
 import { Badge as ShadcnBadge } from './badge';
 import { Alert as ShadcnAlert } from './alert';
 import { Skeleton } from './skeleton';
+import { useTranslation } from 'react-i18next';
 
 export { cn, label } from '../../lib/utils';
 export { useData } from '../../lib/query-client';
@@ -204,21 +205,22 @@ export function Pagination({
   total: number;
   setPage: (page: number) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="pagination">
       <span>
-        {total ? `${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} of ${total}` : '0 results'}
+        {total ? `${(page - 1) * 20 + 1}–${Math.min(page * 20, total)} ${t('common.of')} ${total}` : `0 ${t('common.records')}`}
       </span>
       <div>
         <button className="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>
-          <ArrowLeft size={15} /> Previous
+          <ArrowLeft size={15} /> {t('common.back')}
         </button>
         <button
           className="secondary"
           disabled={page * 20 >= total}
           onClick={() => setPage(page + 1)}
         >
-          Next <ArrowRight size={15} />
+          {t('common.next')} <ArrowRight size={15} />
         </button>
       </div>
     </div>
@@ -233,19 +235,27 @@ export function AiConsent({
   onChange: (v: boolean) => void;
   configured: boolean;
 }) {
+  const { t } = useTranslation();
   return (
-    <div className="ai-consent">
+    <div className="ai-consent my-3">
       {!configured && (
-        <Alert message="AI is not configured. Add GEMINI_API_KEY to the backend environment to enable it." />
+        <Alert message={t('candidates.aiNotConfigured')} />
       )}
-      <label className="check">
-        <Checkbox checked={checked} onCheckedChange={(value) => onChange(value === true)} /> I am
-        authorized to send this CV and vacancy information to Google Gemini for processing.
+      <label className={`ai-consent-card ${checked ? 'checked' : ''}`}>
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(value) => onChange(value === true)}
+          className="ai-consent-round-checkbox"
+        />
+        <div className="ai-consent-content">
+          <span className="ai-consent-title">
+            {t('candidates.aiConsentLabel')}
+          </span>
+          <span className="ai-consent-disclaimer">
+            {t('candidates.aiDisclaimer')}
+          </span>
+        </div>
       </label>
-      <small>
-        AI output can be incomplete or incorrect. Verify evidence yourself. Hiring decisions stay
-        with your team.
-      </small>
     </div>
   );
 }
