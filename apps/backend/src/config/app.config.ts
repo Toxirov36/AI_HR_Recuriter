@@ -28,6 +28,7 @@ export const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().trim().default(''),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
+  GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.5-flash-lite'),
   GEMINI_EMBEDDING_MODEL: z.string().default('gemini-embedding-2'),
   AI_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(60000),
   R2_ACCOUNT_ID: z.string().default(''),

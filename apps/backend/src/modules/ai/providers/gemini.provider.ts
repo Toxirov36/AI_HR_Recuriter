@@ -95,12 +95,21 @@ export class GeminiProvider {
         );
         if (response.ok) return await response.json();
         // Log only status and operation; never provider bodies, CVs, or credentials.
-        this.logger.warn(`Gemini ${method} HTTP ${response.status} (attempt ${attempt + 1})`);
+        this.logger.warn(`Gemini ${model} ${method} HTTP ${response.status} (attempt ${attempt + 1})`);
         await response.body?.cancel();
         const retryable = response.status === 429 || response.status >= 500;
         if (retryable && attempt === 0) {
           await delay(500, undefined, { signal });
           continue;
+        }
+        if (
+          response.status === 503 &&
+          method === 'generateContent' &&
+          config.GEMINI_FALLBACK_MODEL &&
+          config.GEMINI_FALLBACK_MODEL !== model
+        ) {
+          this.logger.warn(`Gemini ${model} unavailable; trying ${config.GEMINI_FALLBACK_MODEL}`);
+          return this.request(config.GEMINI_FALLBACK_MODEL, method, body);
         }
         if (response.status === 429)
           throw new ServiceUnavailableException(

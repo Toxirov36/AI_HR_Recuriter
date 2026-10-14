@@ -116,7 +116,6 @@ function AppShell() {
   useEffect(() => {
     const paths = [
       '/dashboard',
-      '/profile',
       '/vacancies?page=1&search=',
       '/candidates?page=1&search=',
       '/applications?page=1&search=',
