@@ -19,6 +19,7 @@ for (const envPath of envPaths) {
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
+  HOST: z.string().min(1).default('0.0.0.0'),
   DATABASE_URL: z.string().min(1),
   DB_POOL_MAX: z.coerce.number().int().min(2).max(100).default(20),
   REDIS_URL: z.string().min(1),
