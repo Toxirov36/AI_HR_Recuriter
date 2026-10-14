@@ -55,7 +55,7 @@ jobs:
     timeout-minutes: 30
     environment: production
     concurrency:
-      group: production-deploy
+      group: production-deploy-v2
       cancel-in-progress: false
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
