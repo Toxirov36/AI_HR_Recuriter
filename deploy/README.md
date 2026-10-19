@@ -1,5 +1,18 @@
 # Google Cloud deployment
 
+## Contabo VPS updates
+
+The rootless deployment checks the public `main` branch every three minutes.
+The user-level systemd timer runs `deploy/update-vps.sh`, which builds the fetched
+commit in a versioned release directory, applies database migrations, switches the
+`current` symlink, and restarts the API and web services. If either service fails
+its local health check, the script restores the previous release.
+
+Install `hr-recruiter-update.service` and `hr-recruiter-update.timer` in
+`~/.config/systemd/user`, then enable the timer with
+`systemctl --user enable --now hr-recruiter-update.timer`. The user service
+manager must remain enabled after logout (`loginctl enable-linger <deployment-user>`).
+
 - VM: `hr-recuriter`, Debian 13, `southamerica-west1-b`.
 - URL: `https://34.176.204.70`.
 - SSH user: `dilshodbektohirov40`.

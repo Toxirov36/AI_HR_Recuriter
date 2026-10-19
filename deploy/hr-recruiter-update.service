@@ -1,13 +1,10 @@
 [Unit]
 Description=Update the HR Recruiter deployment from GitHub
-After=docker.service network-online.target
+After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=deploy
-Group=deploy
-SupplementaryGroups=docker
-Environment=HOME=/home/deploy
-WorkingDirectory=/home/deploy/hr-recruiter/app
-ExecStart=/home/deploy/hr-recruiter/app/deploy/update-vps.sh
+WorkingDirectory=%h/hr-recruiter/github
+ExecStart=/bin/bash %h/hr-recruiter/github/deploy/update-vps.sh
+TimeoutStartSec=30min

@@ -3,7 +3,7 @@ Description=Check GitHub for HR Recruiter updates
 
 [Timer]
 OnBootSec=2min
-OnUnitActiveSec=2min
+OnUnitActiveSec=3min
 AccuracySec=30s
 Persistent=true
 
