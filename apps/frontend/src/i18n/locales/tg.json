@@ -399,7 +399,10 @@
     "resumeUploaded": "Боргиришуда",
     "resumeNotUploaded": "Боргиринашуда",
     "sourceTelegram": "Telegram",
-    "sourceWebsite": "Сомона"
+    "sourceWebsite": "Сомона",
+    "testPassed": "Тест: {{score}}% ✅",
+    "testFailed": "Тест: {{score}}% ❌",
+    "testNoScore": "Тест нест"
   },
   "pipeline": {
     "exportCurrentPage": "Содироти саҳифаи ҷорӣ",

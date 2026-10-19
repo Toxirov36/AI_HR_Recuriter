@@ -306,6 +306,31 @@ export function Candidates() {
                             {c.telegramUsername && (
                               <small className="block muted">@{c.telegramUsername}</small>
                             )}
+                            {c.source === 'TELEGRAM' && (() => {
+                              const app = c.applications?.[0];
+                              const score = app?.assessmentScore;
+                              if (score === null || score === undefined) {
+                                return (
+                                  <small className="block muted" style={{ marginTop: '3px', fontSize: '11px' }}>
+                                    {t('candidates.testNoScore')}
+                                  </small>
+                                );
+                              }
+                              const passed = score >= 70;
+                              return (
+                                <small
+                                  className="block"
+                                  style={{
+                                    marginTop: '3px',
+                                    fontSize: '11px',
+                                    fontWeight: 600,
+                                    color: passed ? '#15803d' : '#dc2626',
+                                  }}
+                                >
+                                  {t(passed ? 'candidates.testPassed' : 'candidates.testFailed', { score })}
+                                </small>
+                              );
+                            })()}
                           </TableCell>
                           <TableCell>
                             <span className={`file-state ${c.resumeName ? 'has-file' : ''}`}>

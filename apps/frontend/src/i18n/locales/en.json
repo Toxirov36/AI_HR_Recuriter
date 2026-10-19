@@ -399,7 +399,10 @@
     "resumeUploaded": "Uploaded",
     "resumeNotUploaded": "Not uploaded",
     "sourceTelegram": "Telegram",
-    "sourceWebsite": "Website"
+    "sourceWebsite": "Website",
+    "testPassed": "Test: {{score}}% ✅",
+    "testFailed": "Test: {{score}}% ❌",
+    "testNoScore": "No test"
   },
   "pipeline": {
     "exportCurrentPage": "Export current page",

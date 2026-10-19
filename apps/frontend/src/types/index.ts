@@ -81,6 +81,7 @@ export type Candidate = {
   events?: Array<{ id: number; type: string; label: string; createdAt: string }>;
   createdAt: string;
   _count?: { applications: number };
+  applications?: Array<{ assessmentScore: number | null; status: string }>;
 };
 export const stages = ['NEW', 'REVIEWING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED'] as const;
 export type Stage = (typeof stages)[number];

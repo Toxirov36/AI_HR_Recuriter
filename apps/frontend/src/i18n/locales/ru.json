@@ -399,7 +399,10 @@
     "resumeUploaded": "Загружено",
     "resumeNotUploaded": "Не загружено",
     "sourceTelegram": "Telegram",
-    "sourceWebsite": "Сайт"
+    "sourceWebsite": "Сайт",
+    "testPassed": "Тест: {{score}}% ✅",
+    "testFailed": "Тест: {{score}}% ❌",
+    "testNoScore": "Нет теста"
   },
   "pipeline": {
     "exportCurrentPage": "Экспорт текущей страницы",

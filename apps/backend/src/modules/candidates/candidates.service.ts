@@ -62,6 +62,11 @@ export const candidateListSelect = {
   isOcrProcessed: true,
   createdAt: true,
   _count: { select: { applications: true } },
+  applications: {
+    select: { assessmentScore: true, status: true },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+  },
 } as const;
 
 @Injectable()

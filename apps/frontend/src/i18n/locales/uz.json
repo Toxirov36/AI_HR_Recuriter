@@ -399,7 +399,10 @@
     "resumeUploaded": "Yuklangan",
     "resumeNotUploaded": "Yuklanmagan",
     "sourceTelegram": "Telegram",
-    "sourceWebsite": "Veb-sayt"
+    "sourceWebsite": "Veb-sayt",
+    "testPassed": "Test: {{score}}% ✅",
+    "testFailed": "Test: {{score}}% ❌",
+    "testNoScore": "Test yo'q"
   },
   "pipeline": {
     "exportCurrentPage": "Joriy sahifani eksport qilish",

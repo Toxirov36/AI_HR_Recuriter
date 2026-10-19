@@ -264,6 +264,32 @@ export class TelegramApplyService {
         await this.sendQuestion(chatId, session.vacancyId, assessment.data.questions, nextIndex);
       } else {
         const result = calculateAssessmentScore(assessment.data.questions, updatedAnswers);
+
+        // Test tugashi bilanoq nomzodni bazaga saqlaymiz (CV yuborishni kutmasdan)
+        const fullName =
+          [query.from.first_name, query.from.last_name].filter(Boolean).join(' ').trim() ||
+          `Telegram user ${userId}`;
+        await this.db.candidate.upsert({
+          where: { companyId_telegramUserId: { companyId: session.companyId, telegramUserId: userId } },
+          create: {
+            companyId: session.companyId,
+            telegramUserId: userId,
+            telegramUsername: query.from?.username ?? null,
+            fullName,
+            phone: null,
+            source: 'TELEGRAM',
+            publicSubmittedAt: new Date(),
+            privacyAcceptedAt: session.privacyAcceptedAt!,
+            aiConsentAt: session.aiConsentAt,
+          },
+          update: {
+            telegramUsername: query.from?.username ?? null,
+            publicSubmittedAt: new Date(),
+            privacyAcceptedAt: session.privacyAcceptedAt!,
+            aiConsentAt: session.aiConsentAt,
+          },
+        });
+
         await this.telegram.sendMessage(chatId,
           `📊 <b>Test natijangiz: ${result.score}%</b> (${result.correctCount}/10)\n` +
           `• Hard skills: ${result.hardSkillScore}%\n` +
@@ -314,6 +340,32 @@ export class TelegramApplyService {
       });
       if (!updated.count) return true;
 
+      // Telefon kiritilganda nomzodni bazaga saqlaymiz (test bo'lmagan holat uchun)
+      const fullName =
+        [message.from.first_name, message.from.last_name].filter(Boolean).join(' ').trim() ||
+        `Telegram user ${userId}`;
+      await this.db.candidate.upsert({
+        where: { companyId_telegramUserId: { companyId: session.companyId, telegramUserId: userId } },
+        create: {
+          companyId: session.companyId,
+          telegramUserId: userId,
+          telegramUsername: message.from?.username ?? null,
+          fullName,
+          phone: cleanedPhone,
+          source: 'TELEGRAM',
+          publicSubmittedAt: new Date(),
+          privacyAcceptedAt: session.privacyAcceptedAt!,
+          aiConsentAt: session.aiConsentAt,
+        },
+        update: {
+          telegramUsername: message.from?.username ?? null,
+          phone: cleanedPhone,
+          publicSubmittedAt: new Date(),
+          privacyAcceptedAt: session.privacyAcceptedAt!,
+          aiConsentAt: session.aiConsentAt,
+        },
+      });
+
       await this.telegram.sendMessage(
         message.chat.id,
         `✅ Telefon raqamingiz saqlandi: <b>${cleanedPhone}</b>\n\n` +
@@ -357,6 +409,32 @@ export class TelegramApplyService {
         },
       });
       if (!updated.count) return true;
+
+      // Kontakt orqali telefon kiritilganda nomzodni bazaga saqlaymiz
+      const fullName =
+        [message.from.first_name, message.from.last_name].filter(Boolean).join(' ').trim() ||
+        `Telegram user ${userId}`;
+      await this.db.candidate.upsert({
+        where: { companyId_telegramUserId: { companyId: session.companyId, telegramUserId: userId } },
+        create: {
+          companyId: session.companyId,
+          telegramUserId: userId,
+          telegramUsername: message.from?.username ?? null,
+          fullName,
+          phone: cleanedPhone,
+          source: 'TELEGRAM',
+          publicSubmittedAt: new Date(),
+          privacyAcceptedAt: session.privacyAcceptedAt!,
+          aiConsentAt: session.aiConsentAt,
+        },
+        update: {
+          telegramUsername: message.from?.username ?? null,
+          phone: cleanedPhone,
+          publicSubmittedAt: new Date(),
+          privacyAcceptedAt: session.privacyAcceptedAt!,
+          aiConsentAt: session.aiConsentAt,
+        },
+      });
 
       await this.telegram.sendMessage(
         message.chat.id,
