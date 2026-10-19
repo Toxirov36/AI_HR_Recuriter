@@ -3,6 +3,7 @@ import { api, send } from '../../lib/api';
 import { Modal } from '../../components/ui';
 import { useAuth } from '../../features/auth';
 import type { Vacancy } from '../../types';
+import { TelegramRecommendations } from './telegram-recommendations';
 
 type Publication = { id: number; platform: 'TELEGRAM' | 'HEADHUNTER'; destinationKey: string; status: string; approvedRevision: number | null; externalUrl: string | null; error: string | null };
 type Channel = { id: number; chatId: string; title: string; username: string | null };
@@ -91,6 +92,8 @@ export function PublicationModal({ vacancy, close }: { vacancy: Vacancy; close: 
           <div className="flex gap-2"><input className="min-w-0 flex-1 rounded border px-3 py-2" value={newChannel} onChange={event => setNewChannel(event.target.value)} placeholder="@kanal_nomi" aria-label="Telegram kanal nomi yoki ID" /><button className="rounded border px-3 py-2" type="button" disabled={busy || !newChannel.trim()} onClick={() => void action(async () => { await send(`${base}/telegram/channels`, { chatId: newChannel.trim() }); setNewChannel(''); })}>Kanalni ulash</button></div>
         </div>}
       </section>
+
+      <TelegramRecommendations vacancyId={vacancy.id} />
 
       <section className="rounded-xl border border-slate-200 p-4 space-y-3">
         <h3 className="font-semibold text-base">HeadHunter (hh.uz)</h3>

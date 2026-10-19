@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 const text = (max: number) => z.string().trim().min(1).max(max);
+const optionalMeta = (max: number) => z.string().trim().max(max).nullable().optional().transform((value) => value === '' ? null : value);
 
 export const requirementSchema = z
   .object({
@@ -17,6 +18,12 @@ export const vacancySchema = z
     title: text(200),
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
+    department: optionalMeta(100),
+    location: optionalMeta(100),
+    workModel: optionalMeta(50),
+    employmentType: optionalMeta(50),
+    seniority: optionalMeta(50),
+    confirmMetadataReview: z.boolean().optional(),
     requirements: z.array(requirementSchema).max(40).default([]),
     hhAreaId: z.string().trim().max(40).nullable().optional(),
     hhProfessionalRoleId: z.string().trim().max(40).nullable().optional(),

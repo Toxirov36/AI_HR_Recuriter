@@ -1,11 +1,13 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import { Database } from '../../database/prisma.service';
 import { z } from 'zod';
+import { Prisma } from '../../generated/prisma/client';
 
 import { vacancy } from '../../common/pipes/validation';
 import { RecruitingService } from '../recruiting/recruiting.service';
 import { ExternalRecruitingService } from '../external-recruiting/external-recruiting.service';
 import { AiService } from '../ai/ai.service';
+import { QueryVacancyDto } from './dto/query-vacancy.dto';
 
 @Injectable()
 export class VacanciesService {
@@ -16,16 +18,30 @@ export class VacanciesService {
     @Optional() @Inject(AiService) private ai?: AiService,
   ) {}
 
-  async list(companyId: number, page: number, search: string) {
-    const where = {
+  async list(companyId: number, query: QueryVacancyDto) {
+    const { page, search, status, sort } = query;
+    const where: Prisma.VacancyWhereInput = {
       companyId,
-      title: { contains: search, mode: 'insensitive' as const },
+      ...(status ? { status } : {}),
+      ...(search.trim() ? { OR: [
+        { title: { contains: search.trim(), mode: 'insensitive' } },
+        { description: { contains: search.trim(), mode: 'insensitive' } },
+        { department: { contains: search.trim(), mode: 'insensitive' } },
+        { location: { contains: search.trim(), mode: 'insensitive' } },
+        { workModel: { contains: search.trim(), mode: 'insensitive' } },
+        { employmentType: { contains: search.trim(), mode: 'insensitive' } },
+        { seniority: { contains: search.trim(), mode: 'insensitive' } },
+        { requirements: { some: { OR: [
+          { name: { contains: search.trim(), mode: 'insensitive' } },
+          { description: { contains: search.trim(), mode: 'insensitive' } },
+        ] } } },
+      ] } : {}),
     };
     const [items, total] = await Promise.all([
       this.db.vacancy.findMany({
         where,
         include: { requirements: true, _count: { select: { applications: true } } },
-        orderBy: { createdAt: 'desc' },
+        orderBy: sort === 'title' ? [{ title: 'asc' }, { id: 'desc' }] : [{ createdAt: sort === 'oldest' ? 'asc' : 'desc' }, { id: 'desc' }],
         skip: (page - 1) * 20,
         take: 20,
       }),

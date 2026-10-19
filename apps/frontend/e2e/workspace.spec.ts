@@ -6,7 +6,7 @@ test('register, create vacancy and candidate, review pipeline, invite teammate, 
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/');
-  await page.getByRole('button', { name: 'Create a workspace' }).click();
+  await page.getByRole('link', { name: 'Get started free' }).first().click();
   await page.getByLabel('Company name').fill('Northstar Studio');
   await page.getByLabel('Full name', { exact: true }).fill('Alex Morgan');
   await page.getByLabel('Work email').fill(`browser-${randomBytes(6).toString('hex')}@example.com`);

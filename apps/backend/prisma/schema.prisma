@@ -55,6 +55,12 @@ enum PublicationStatus {
   STALE
   CLOSED
 }
+enum ChannelDiscoveryStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
 enum TelegramApplyStep {
   PRIVACY
   AI_CONSENT
@@ -80,6 +86,7 @@ model Company {
   telegramChannels TelegramChannel[]
   hhConnection HeadHunterConnection?
   publications VacancyPublication[]
+  channelDiscoveryRuns TelegramChannelDiscovery[]
   telegramApplySessions TelegramApplySession[]
   recommendations VacancyRecommendation[]
   createdAt DateTime @default(now())
@@ -149,12 +156,19 @@ model Vacancy {
   title String
   description String
   status VacancyStatus @default(ACTIVE)
+  department String?
+  location String?
+  workModel String?
+  employmentType String?
+  seniority String?
+  metadataReviewRequired Boolean @default(false)
   companyId Int
   company Company @relation(fields: [companyId], references: [id])
   requirements Requirement[]
   applications Application[]
   recommendations VacancyRecommendation[]
   publications VacancyPublication[]
+  channelDiscoveryRuns TelegramChannelDiscovery[]
   telegramApplySessions TelegramApplySession[]
   hhAreaId String?
   hhProfessionalRoleId String?
@@ -184,6 +198,22 @@ model TelegramChannel {
   publications VacancyPublication[]
   createdAt DateTime @default(now())
   @@index([companyId])
+}
+model TelegramChannelDiscovery {
+  id Int @id @default(autoincrement())
+  companyId Int
+  vacancyId Int
+  vacancyRevision Int
+  status ChannelDiscoveryStatus @default(QUEUED)
+  results Json?
+  error String?
+  finishedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
+  @@index([companyId, vacancyId, createdAt])
+  @@index([status, updatedAt])
 }
 model HeadHunterConnection {
   companyId Int @id

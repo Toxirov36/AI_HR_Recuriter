@@ -22,10 +22,20 @@ export const AuthContext = createContext<{ user: User; refresh: () => Promise<vo
 );
 export const useAuth = () => useContext(AuthContext);
 
-export function AuthPage({ onSuccess }: { onSuccess: () => Promise<void> }) {
+export function AuthPage({
+  onSuccess,
+  initialMode,
+  onModeChange,
+}: {
+  onSuccess: () => Promise<void>;
+  initialMode?: 'login' | 'register';
+  onModeChange?: (mode: 'login' | 'register') => void;
+}) {
   const { t } = useTranslation();
   const token = new URLSearchParams(window.location.search).get('invite');
-  const [mode, setMode] = useState<'login' | 'register'>(token ? 'register' : 'login');
+  const [mode, setMode] = useState<'login' | 'register'>(
+    token ? 'register' : (initialMode ?? 'login'),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -106,7 +116,6 @@ export function AuthPage({ onSuccess }: { onSuccess: () => Promise<void> }) {
         token ? { ...data, token } : data,
       );
 
-      if (token) window.history.replaceState({}, '', '/');
       await onSuccess();
     } catch (e) {
       setError(
@@ -328,7 +337,9 @@ export function AuthPage({ onSuccess }: { onSuccess: () => Promise<void> }) {
                   type="button"
                   className="text-button"
                   onClick={() => {
-                    setMode(mode === 'login' ? 'register' : 'login');
+                    const nextMode = mode === 'login' ? 'register' : 'login';
+                    setMode(nextMode);
+                    onModeChange?.(nextMode);
                     setError('');
                   }}
                 >

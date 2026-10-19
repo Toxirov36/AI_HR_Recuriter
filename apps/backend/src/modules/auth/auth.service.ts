@@ -176,7 +176,7 @@ export class AuthService {
       },
     });
     return {
-      inviteUrl: `${this.security.config.FRONTEND_ORIGIN}/?invite=${token}`,
+      inviteUrl: `${this.security.config.FRONTEND_ORIGIN}/register?invite=${token}`,
       expiresInHours: 24,
     };
   }

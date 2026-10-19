@@ -11,10 +11,12 @@ export class DashboardController {
   @Get()
   async dashboard(@Req() req: AuthRequest) {
     const where = { companyId: req.user.companyId };
-    const [vacancies, candidates, applications, stages, recent] = await Promise.all([
+    const [vacancies, draftVacancies, candidates, applications, newApplications, stages, recent] = await Promise.all([
       this.db.vacancy.count({ where: { ...where, status: 'ACTIVE' } }),
+      this.db.vacancy.count({ where: { ...where, status: 'DRAFT' } }),
       this.db.candidate.count({ where }),
       this.db.application.count({ where }),
+      this.db.application.count({ where: { ...where, status: 'NEW' } }),
       this.db.application.groupBy({ by: ['status'], where, _count: true }),
       this.db.application.findMany({
         where,
@@ -26,6 +28,6 @@ export class DashboardController {
         },
       }),
     ]);
-    return { vacancies, candidates, applications, stages, recent };
+    return { vacancies, draftVacancies, candidates, applications, newApplications, stages, recent };
   }
 }

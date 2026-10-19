@@ -20,6 +20,8 @@
     "storage:migrate": "npm run storage:migrate -w apps/backend",
     "contacts:backfill": "npm run contacts:backfill -w apps/backend",
     "telegram:webhook": "npm run telegram:webhook -w apps/backend",
+    "telegram:discovery:setup": "npm run telegram:discovery:setup -w apps/backend",
+    "telegram:discovery:qr": "npm run telegram:discovery:qr -w apps/backend",
     "infra:up": "docker compose up -d postgres redis",
     "infra:stop": "docker compose stop"
   },

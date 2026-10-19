@@ -146,7 +146,7 @@ export interface ComboboxInputProps extends React.InputHTMLAttributes<HTMLInputE
 }
 
 export const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputProps>(
-  ({ className, placeholder = 'Search or select…', ...props }, ref) => {
+  ({ className, placeholder = 'Search or select…', onChange, ...props }, ref) => {
     const {
       search,
       setSearch,
@@ -194,6 +194,7 @@ export const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputPro
           value={inputValue}
           onChange={(e) => {
             setSearch(e.target.value);
+            onChange?.(e);
             if (!isOpen) setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}

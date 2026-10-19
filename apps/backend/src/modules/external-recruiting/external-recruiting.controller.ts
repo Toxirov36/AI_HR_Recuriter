@@ -6,6 +6,7 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { ExternalRecruitingService } from './external-recruiting.service';
 import { HeadHunterService } from './headhunter.service';
 import { getConfig } from '../../config/app.config';
+import { TelegramDiscoveryService } from './telegram-discovery.service';
 
 const channelSchema = z.object({ chatId: z.string().trim().min(2).max(100) }).strict();
 const foundSchema = z.object({ externalId: z.string().regex(/^\d{1,20}$/) }).strict();
@@ -17,7 +18,7 @@ const approvalSchema = z.discriminatedUnion('platform', [
 @Controller('integrations/recruiting')
 @UseGuards(AuthGuard)
 export class ExternalRecruitingController {
-  constructor(@Inject(ExternalRecruitingService) private service: ExternalRecruitingService, @Inject(HeadHunterService) private hh: HeadHunterService) {}
+  constructor(@Inject(ExternalRecruitingService) private service: ExternalRecruitingService, @Inject(HeadHunterService) private hh: HeadHunterService, @Inject(TelegramDiscoveryService) private discovery: TelegramDiscoveryService) {}
 
   @Get('telegram/channels')
   channels(@Req() req: AuthRequest) { return this.service.channels(req.user.companyId); }
@@ -53,6 +54,12 @@ export class ExternalRecruitingController {
 
   @Get('vacancies/:id/preview')
   preview(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) { return this.service.preview(req.user.companyId, id); }
+
+  @Post('vacancies/:id/telegram/discover')
+  discoverChannels(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) { return this.discovery.start(req.user, id); }
+
+  @Get('vacancies/:id/telegram/recommendations')
+  channelRecommendations(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) { return this.discovery.status(req.user.companyId, id); }
 
   @Post('vacancies/:id/approve')
   approve(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number, @Body(new ZodValidationPipe(approvalSchema)) input: z.infer<typeof approvalSchema>) { return this.service.approve(req.user, id, input); }

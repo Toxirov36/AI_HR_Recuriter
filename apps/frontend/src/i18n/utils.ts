@@ -453,14 +453,48 @@ export const SYSTEM_STATUS_LABELS: Partial<Record<Locale, Record<string, string>
   },
 };
 
-export function getSystemLabel(key: string, locale: Locale = defaultLocale): string {
+export const STAGE_TRANSLATION_KEYS: Record<string, string> = {
+  NEW: 'pipeline.stageNew',
+  REVIEWING: 'pipeline.stageReviewing',
+  INTERVIEW: 'pipeline.stageInterview',
+  OFFER: 'pipeline.stageOffer',
+  HIRED: 'pipeline.stageHired',
+  REJECTED: 'pipeline.stageRejected',
+  DRAFT: 'vacancies.statusDraft',
+  ACTIVE: 'vacancies.statusActive',
+  CLOSED: 'vacancies.statusClosed',
+};
+
+export function getSystemLabel(key: string, locale?: Locale): string {
+  const activeLocale: Locale =
+    locale ||
+    (typeof document !== 'undefined' &&
+    document.documentElement.lang &&
+    locales.includes(document.documentElement.lang as Locale)
+      ? (document.documentElement.lang as Locale)
+      : defaultLocale);
   const normalizedKey = key.toUpperCase();
   return (
-    SYSTEM_STATUS_LABELS[locale]?.[normalizedKey] ||
+    SYSTEM_STATUS_LABELS[activeLocale]?.[normalizedKey] ||
     SYSTEM_STATUS_LABELS.en?.[normalizedKey] ||
     key
       .replaceAll('_', ' ')
       .toLowerCase()
       .replace(/^./, (c) => c.toUpperCase())
   );
+}
+
+export function getStageLabel(
+  stage?: string | null,
+  t?: (key: string, def?: any) => string,
+  locale?: Locale,
+): string {
+  if (!stage) return '';
+  const key = stage.toUpperCase();
+  const translationKey = STAGE_TRANSLATION_KEYS[key];
+  if (t && translationKey) {
+    const fallback = getSystemLabel(key, locale);
+    return t(translationKey, fallback);
+  }
+  return getSystemLabel(key, locale);
 }

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter, Link, NavLink, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import {
   BriefcaseBusiness,
   ChevronRight,
@@ -88,7 +88,7 @@ function SidebarNav({
           <NavLink
             key={l.to}
             to={l.to}
-            end={l.to === '/'}
+            end={l.to === '/dashboard'}
             onPointerEnter={() => void preloadRoute(l.to)}
             onFocus={() => void preloadRoute(l.to)}
             onClick={() => onNavigate?.()}
@@ -103,6 +103,7 @@ function SidebarNav({
 }
 
 function AppShell() {
+  const navigate = useNavigate();
   const { t } = useTranslation();
   const { user, refresh } = useAuth();
   const [error, setError] = useState('');
@@ -110,6 +111,10 @@ function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
   const location = useLocation();
+
+  useEffect(() => {
+    document.title = `${t('navigation.recruitingWorkspace')} · Shortlist`;
+  }, [t]);
 
   useEffect(() => setMenu(false), [location.pathname]);
 
@@ -140,27 +145,32 @@ function AppShell() {
     try {
       await send('/auth/logout', {});
       await refresh();
+      navigate('/', { replace: true });
     } catch (e) {
       setError((e as Error).message);
     }
   }
 
   const links = [
-    { to: '/', title: t('navigation.overview'), icon: LayoutDashboard },
+    { to: '/dashboard', title: t('navigation.overview'), icon: LayoutDashboard },
     { to: '/vacancies', title: t('navigation.vacancies'), icon: BriefcaseBusiness },
     { to: '/candidates', title: t('navigation.candidates'), icon: Users },
     { to: '/pipeline', title: t('navigation.hiringPipeline'), icon: GitBranch },
-    ...(user.role === 'ADMIN' ? [{ to: '/admin', title: t('navigation.adminPanel'), icon: Settings2 }] : []),
-    ...(user.platformRole === 'SUPER_ADMIN' ? [{ to: '/platform-admin', title: t('navigation.platformAdmin'), icon: Layers3 }] : []),
+    ...(user.role === 'ADMIN'
+      ? [{ to: '/admin', title: t('navigation.adminPanel'), icon: Settings2 }]
+      : []),
+    ...(user.platformRole === 'SUPER_ADMIN'
+      ? [{ to: '/platform-admin', title: t('navigation.platformAdmin'), icon: Layers3 }]
+      : []),
   ];
 
   const current =
-    links.find((l) => l.to !== '/' && location.pathname.startsWith(l.to))?.title ||
+    links.find((l) => l.to !== '/dashboard' && location.pathname.startsWith(l.to))?.title ||
     (location.pathname.startsWith('/applications')
       ? t('navigation.applicationReview')
       : location.pathname.startsWith('/profile')
-      ? t('navigation.myProfile')
-      : t('navigation.overview'));
+        ? t('navigation.myProfile')
+        : t('navigation.overview'));
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent) => {
@@ -203,7 +213,10 @@ function AppShell() {
           <div className="topbar-breadcrumb-wrap">
             <Sheet open={menu} onOpenChange={setMenu}>
               <SheetTrigger asChild>
-                <button className="mobile-only icon-button" aria-label={t('navigation.openNavigation')}>
+                <button
+                  className="mobile-only icon-button"
+                  aria-label={t('navigation.openNavigation')}
+                >
                   <Menu size={20} />
                 </button>
               </SheetTrigger>

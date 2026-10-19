@@ -28,6 +28,7 @@ import { label } from '../../lib/utils';
 import {
   Button,
   Badge,
+  getStageLabel,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -763,7 +764,7 @@ export function TopCandidatesModal({
                             </h3>
                             <div className="flex items-center gap-2 mt-1">
                               <Badge variant="outline" className="text-[11px] font-semibold">
-                                {label(candidate.currentStage)}
+                                {getStageLabel(candidate.currentStage, t)}
                               </Badge>
                               {candidate.candidateSource && (
                                 <span className="text-[11px] text-slate-400">
@@ -1064,7 +1065,7 @@ export function TopCandidatesModal({
                             </td>
                             <td className="p-3.5">
                               <Badge variant="outline" className="text-[11px]">
-                                {label(c.currentStage)}
+                                {getStageLabel(c.currentStage, t)}
                               </Badge>
                             </td>
                             <td className="p-3.5 text-right">

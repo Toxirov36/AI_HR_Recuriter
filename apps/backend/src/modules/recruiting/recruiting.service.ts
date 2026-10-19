@@ -200,7 +200,7 @@ export class RecruitingService {
   }
 
   async saveVacancy(companyId: number, id: number | null, data: z.infer<typeof vacancy>) {
-    const { requirements, ...fields } = data;
+    const { requirements, confirmMetadataReview, ...fields } = data;
     if (id === null)
       return this.db.vacancy.create({
         data: { ...fields, companyId, requirements: { create: requirements } },
@@ -212,6 +212,7 @@ export class RecruitingService {
         where: { id_companyId: { id, companyId } },
         data: {
           ...fields,
+          ...(confirmMetadataReview ? { metadataReviewRequired: false } : {}),
           revision: { increment: 1 },
           requirements: { deleteMany: {}, create: requirements },
         },

@@ -7,8 +7,10 @@ import { Badge as ShadcnBadge } from './badge';
 import { Alert as ShadcnAlert } from './alert';
 import { Skeleton } from './skeleton';
 import { useTranslation } from 'react-i18next';
+import { getStageLabel } from '../../i18n/utils';
 
 export { cn, label } from '../../lib/utils';
+export { getStageLabel } from '../../i18n/utils';
 export { useData } from '../../lib/query-client';
 
 export const date = (value: string) =>
@@ -110,11 +112,12 @@ export function Badge({
   variant?: any;
   [key: string]: any;
 }) {
+  const { t } = useTranslation();
   if (value) {
     return (
       <span className={`badge ${value.toLowerCase()} ${className || ''}`} {...props}>
         <i />
-        {label(value)}
+        {getStageLabel(value, t)}
       </span>
     );
   }

@@ -38,6 +38,9 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://${POSTGRES_USER:-recruiter}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-recruiter}?schema=public
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      TELEGRAM_USER_SESSION_FILE: /run/secrets/telegram-discovery/session
+    volumes:
+      - ./.local/telegram-discovery:/run/secrets/telegram-discovery:ro
     ports: ['127.0.0.1:${BACKEND_PORT:-3000}:3000']
     depends_on:
       postgres: { condition: service_healthy }

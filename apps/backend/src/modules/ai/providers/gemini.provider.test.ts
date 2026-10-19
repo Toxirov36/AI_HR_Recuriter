@@ -31,13 +31,22 @@ describe('Gemini model fallback', () => {
     expect(fetchMock.mock.calls[2][0]).toContain('/models/gemini-3.5-flash-lite:generateContent');
   });
 
-  it('does not change models when the key reaches its quota', async () => {
+  it('uses the fallback model when the primary is rate limited', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(null, { status: 429 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ result: 'ok' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(provider().request('gemini-3.6-flash', 'generateContent', {})).resolves.toEqual({ result: 'ok' });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[1][0]).toContain('/models/gemini-3.5-flash-lite:generateContent');
+  });
+
+  it('reports quota exhaustion when the fallback is also rate limited', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 429 }));
     vi.stubGlobal('fetch', fetchMock);
 
-    await expect(provider().request('gemini-3.6-flash', 'generateContent', {})).rejects.toThrow(
-      'quota reached',
-    );
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    await expect(provider().request('gemini-3.6-flash', 'generateContent', {})).rejects.toThrow('quota reached');
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 });

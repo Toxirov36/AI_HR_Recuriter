@@ -33,6 +33,10 @@ http {{
   uwsgi_temp_path {nginx_dir / 'uwsgi'};
   scgi_temp_path {nginx_dir / 'scgi'};
   client_max_body_size 6m;
+  map $http_x_forwarded_proto $hsts_header {{
+    default "";
+    https "max-age=300";
+  }}
   server {{
     listen 127.0.0.1:8081;
     server_name _;
@@ -42,6 +46,7 @@ http {{
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), microphone=(self), geolocation=()" always;
     add_header Cross-Origin-Opener-Policy same-origin-allow-popups always;
+    add_header Strict-Transport-Security $hsts_header always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
     location /api/ {{
       proxy_pass http://127.0.0.1:3000;
@@ -53,7 +58,17 @@ http {{
       proxy_read_timeout 130s;
     }}
     location /assets/ {{ try_files $uri =404; expires 1y; access_log off; }}
-    location / {{ try_files $uri $uri/ /index.html; }}
+    location = / {{ try_files /index.html =404; }}
+    location ~ ^/(login|register|dashboard|vacancies|candidates|pipeline|applications|admin|profile|team|platform-admin)/?$ {{
+      try_files /index.html =404;
+    }}
+    location ~ ^/(candidates|applications)/[^/]+/?$ {{
+      try_files /index.html =404;
+    }}
+    location ~ ^/apply/[^/]+/?$ {{
+      try_files /index.html =404;
+    }}
+    location / {{ try_files $uri $uri/ =404; }}
   }}
 }}
 """)

@@ -23,6 +23,12 @@ export type Vacancy = {
   title: string;
   description: string;
   status: string;
+  department?: string | null;
+  location?: string | null;
+  workModel?: string | null;
+  employmentType?: string | null;
+  seniority?: string | null;
+  metadataReviewRequired?: boolean;
   requirements: Requirement[];
   hhAreaId?: string | null;
   hhProfessionalRoleId?: string | null;
@@ -168,6 +174,8 @@ export type Application = {
 export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
 export type DashboardData = {
   vacancies: number;
+  draftVacancies: number;
+  newApplications: number;
   candidates: number;
   applications: number;
   stages: { status: Stage; _count: number }[];

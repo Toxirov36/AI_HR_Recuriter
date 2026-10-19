@@ -1,7 +1,7 @@
 import { Printer, X, Download, ShieldCheck, Mail, Phone, Calendar, Sparkles, Building2, User, Award, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Application, Candidate } from '../types';
-import { label, Button, useData } from './ui';
+import { label, getStageLabel, Button, useData } from './ui';
 import { getEvidenceSummary } from '../lib/match-score';
 
 export interface CandidateDossierModalProps {
@@ -110,7 +110,7 @@ export function CandidateDossierModal({
 
               <div className="text-right">
                 <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide bg-slate-100 text-slate-800 border border-slate-300">
-                  {application ? label(application.status) : t('common.anonymous')}
+                  {application ? getStageLabel(application.status, t) : t('common.anonymous')}
                 </span>
                 <p className="text-[11px] text-slate-400 mt-1 font-mono">{nowStr}</p>
                 <span className="text-[10px] text-red-600 font-semibold uppercase tracking-wider block mt-0.5">

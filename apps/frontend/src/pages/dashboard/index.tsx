@@ -26,6 +26,7 @@ import {
   TableHeader,
   TableRow,
   useData,
+  getStageLabel,
 } from '../../components/ui';
 import { stages } from '../../types';
 import type { DashboardData } from '../../types';
@@ -56,14 +57,28 @@ export function Dashboard() {
       ) : (
         data && (
           <>
-            <div className="stats stats-four">
+            <div className="stats stats-six">
               {[
                 {
                   title: t('dashboard.activeVacancies'),
                   value: data.vacancies,
                   icon: BriefcaseBusiness,
                   text: t('dashboard.opportunitiesOpen'),
-                  to: '/vacancies',
+                  to: '/vacancies?status=ACTIVE',
+                },
+                {
+                  title: t('dashboard.draftVacancies'),
+                  value: data.draftVacancies,
+                  icon: BriefcaseBusiness,
+                  text: t('dashboard.reviewDrafts'),
+                  to: '/vacancies?status=DRAFT',
+                },
+                {
+                  title: t('dashboard.newApplications'),
+                  value: data.newApplications,
+                  icon: GitBranch,
+                  text: t('dashboard.reviewNew'),
+                  to: '/pipeline?stage=NEW',
                 },
                 {
                   title: t('dashboard.yourCandidates'),
@@ -84,7 +99,7 @@ export function Dashboard() {
                   value: data.stages.find((stage) => stage.status === 'HIRED')?._count || 0,
                   icon: FileCheck2,
                   text: t('dashboard.confirmedByTeam'),
-                  to: '/pipeline',
+                  to: '/pipeline?stage=HIRED',
                 },
               ].map((s) => (
                 <Link to={s.to} className="stat" key={s.title}>
@@ -125,7 +140,7 @@ export function Dashboard() {
                             }}
                           />
                         </div>
-                        <span>{stage.toLowerCase()}</span>
+                        <span>{getStageLabel(stage, t)}</span>
                       </div>
                     );
                   })}

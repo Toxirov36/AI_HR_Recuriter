@@ -37,7 +37,7 @@ export class ApplicationsController {
     @Req() req: AuthRequest,
     @Query(new ZodValidationPipe(paginationSchema)) query: QueryApplicationDto,
   ) {
-    return this.service.list(req.user.companyId, query.page, query.search);
+    return this.service.list(req.user.companyId, query);
   }
 
   @Get(':id')

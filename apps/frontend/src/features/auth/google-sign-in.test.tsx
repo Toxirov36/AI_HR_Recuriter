@@ -31,6 +31,7 @@ describe('Google SDK button', () => {
       <GoogleSignInButton disabled={false} onCredential={credential} onError={vi.fn()} />,
     );
     await waitFor(() => expect(initialize).toHaveBeenCalledOnce());
+    expect(renderButton).toHaveBeenCalledOnce();
     const configuration = initialize.mock.calls[0][0];
     expect(configuration).toMatchObject({
       client_id: 'google-client',

@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /apply/
+Disallow: /dashboard
+Disallow: /vacancies
+Disallow: /candidates
+Disallow: /pipeline
+Disallow: /applications
+Disallow: /admin
+Disallow: /platform-admin
+Disallow: /profile
+Disallow: /team
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://hr-recruiter.ddns.net/sitemap.xml

@@ -1,6 +1,8 @@
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Database } from '../../database/prisma.service';
 import { z } from 'zod';
+import { Prisma } from '../../generated/prisma/client';
+import { QueryApplicationDto } from './dto/query-application.dto';
 import { application, pipeline, interviewReview } from '../../common/pipes/validation';
 import { candidateSelect } from '../candidates/candidates.service';
 import { NotificationService } from '../notifications/notification.service';
@@ -12,17 +14,20 @@ export class ApplicationsService {
     @Inject(NotificationService) private readonly notifications: NotificationService,
   ) {}
 
-  async list(companyId: number, page: number, search: string) {
-    const where = {
+  async list(companyId: number, query: QueryApplicationDto) {
+    const { page, search, stage, vacancyId, sort } = query;
+    const baseWhere: Prisma.ApplicationWhereInput = {
       companyId,
-      OR: [
-        { candidate: { fullName: { contains: search, mode: 'insensitive' as const } } },
-        { candidate: { email: { contains: search, mode: 'insensitive' as const } } },
-        { candidate: { phone: { contains: search, mode: 'insensitive' as const } } },
-        { vacancy: { title: { contains: search, mode: 'insensitive' as const } } },
-      ],
+      ...(vacancyId ? { vacancyId } : {}),
+      ...(search.trim() ? { OR: [
+        { candidate: { fullName: { contains: search.trim(), mode: 'insensitive' } } },
+        { candidate: { email: { contains: search.trim(), mode: 'insensitive' } } },
+        { candidate: { phone: { contains: search.trim(), mode: 'insensitive' } } },
+        { vacancy: { title: { contains: search.trim(), mode: 'insensitive' } } },
+      ] } : {}),
     };
-    const [items, total] = await Promise.all([
+    const where: Prisma.ApplicationWhereInput = { ...baseWhere, ...(stage ? { status: stage } : {}) };
+    const [items, total, counts] = await Promise.all([
       this.db.application.findMany({
         where,
         include: {
@@ -48,13 +53,14 @@ export class ApplicationsService {
             take: 1,
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: sort === 'candidate' ? [{ candidate: { fullName: 'asc' } }, { id: 'desc' }] : [{ createdAt: sort === 'oldest' ? 'asc' : 'desc' }, { id: 'desc' }],
         skip: (page - 1) * 20,
         take: 20,
       }),
       this.db.application.count({ where }),
+      this.db.application.groupBy({ by: ['status'], where, _count: true }),
     ]);
-    return { items, total, page, pageSize: 20 };
+    return { items, total, page, pageSize: 20, stageCounts: Object.fromEntries(counts.map((entry) => [entry.status, entry._count])) };
   }
 
   async application(companyId: number, id: number) {

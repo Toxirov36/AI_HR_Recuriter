@@ -1,6 +1,7 @@
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
+import { useData } from '../../components/ui';
 import { Pipeline } from './pipeline';
 import { changeLanguage } from '../../i18n';
 
@@ -44,6 +45,7 @@ const mockCandidates = {
 const mockApplications = {
   data: {
     total: 2,
+    stageCounts: { NEW: 22, REVIEWING: 2, INTERVIEW: 6, OFFER: 1, HIRED: 0, REJECTED: 0 },
     page: 1,
     pageSize: 20,
     items: [
@@ -123,6 +125,14 @@ describe('Pipeline hiring workflow', () => {
 
     expect(screen.getByText('Active candidates')).toBeInTheDocument();
     expect(screen.getByText('Review interview outcome')).toBeInTheDocument();
+    expect(screen.getByText('31')).toBeInTheDocument();
+  });
+
+  it('requests the second filtered page from the server', () => {
+    window.history.pushState({}, '', '/pipeline?stage=NEW&page=2');
+    render(<BrowserRouter><Pipeline /></BrowserRouter>);
+    expect(vi.mocked(useData)).toHaveBeenCalledWith(expect.stringContaining('/applications?page=2&search=&stage=NEW'));
+    window.history.pushState({}, '', '/');
   });
 
   it('renders filters and switches between board and list views', () => {
@@ -157,5 +167,44 @@ describe('Pipeline hiring workflow', () => {
     expect(screen.getAllByText('Senior Go Developer').length).toBeGreaterThan(0);
     // Closed vacancy should NOT be present
     expect(screen.queryByText('Archived Python Dev')).not.toBeInTheDocument();
+  });
+
+  it('translates pipeline kanban stage headers when changing language to Russian and Uzbek', async () => {
+    const { unmount } = render(
+      <BrowserRouter>
+        <Pipeline />
+      </BrowserRouter>,
+    );
+
+    // In English
+    expect(screen.getByText('New')).toBeInTheDocument();
+    expect(screen.getByText('Reviewing')).toBeInTheDocument();
+    expect(screen.getByText('Interview')).toBeInTheDocument();
+    expect(screen.getByText('Offer')).toBeInTheDocument();
+    unmount();
+
+    // Switch to Russian
+    await changeLanguage('ru');
+    const { unmount: unmountRu } = render(
+      <BrowserRouter>
+        <Pipeline />
+      </BrowserRouter>,
+    );
+    expect(screen.getByText('Новый')).toBeInTheDocument();
+    expect(screen.getByText('Рассмотрение')).toBeInTheDocument();
+    expect(screen.getByText('Интервью')).toBeInTheDocument();
+    expect(screen.getByText('Оффер')).toBeInTheDocument();
+    unmountRu();
+
+    // Switch to Uzbek
+    await changeLanguage('uz');
+    render(
+      <BrowserRouter>
+        <Pipeline />
+      </BrowserRouter>,
+    );
+    expect(screen.getByText('Yangi')).toBeInTheDocument();
+    expect(screen.getByText('Ko‘rib chiqilmoqda')).toBeInTheDocument();
+    expect(screen.getByText('Suhbat')).toBeInTheDocument();
   });
 });

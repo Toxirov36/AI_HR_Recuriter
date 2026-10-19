@@ -62,6 +62,7 @@ export function GoogleSignInButton({
 }) {
   const { t, i18n } = useTranslation();
   const activeSdk = useRef<GoogleSdk | null>(null);
+  const renderedLocale = useRef<string | null>(null);
   const button = useRef<HTMLDivElement>(null);
   const latest = useRef({ disabled, onCredential, onError });
   latest.current = { disabled, onCredential, onError };
@@ -93,14 +94,16 @@ export function GoogleSignInButton({
           },
         });
         const width = Math.max(200, Math.min(400, Math.floor(button.current.clientWidth || 400)));
+        const locale = i18n.resolvedLanguage || i18n.language;
         sdk.accounts.id.renderButton(button.current, {
           theme: 'outline',
           size: 'large',
           text: 'continue_with',
           width,
-          locale: i18n.resolvedLanguage || i18n.language,
+          locale,
         });
         activeSdk.current = sdk;
+        renderedLocale.current = locale;
         setState('ready');
       } catch (error) {
         if (!cancelled) {
@@ -112,18 +115,22 @@ export function GoogleSignInButton({
     return () => {
       cancelled = true;
       activeSdk.current = null;
+      renderedLocale.current = null;
       sdk?.accounts.id.cancel();
     };
   }, []);
   useEffect(() => {
     if (state !== 'ready' || !activeSdk.current || !button.current) return;
+    const locale = i18n.resolvedLanguage || i18n.language;
+    if (renderedLocale.current === locale) return;
     activeSdk.current.accounts.id.renderButton(button.current, {
       theme: 'outline',
       size: 'large',
       text: 'continue_with',
       width: Math.max(200, Math.min(400, Math.floor(button.current.clientWidth || 400))),
-      locale: i18n.resolvedLanguage || i18n.language,
+      locale,
     });
+    renderedLocale.current = locale;
   }, [state, i18n.resolvedLanguage, i18n.language]);
 
   return (

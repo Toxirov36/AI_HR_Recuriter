@@ -24,6 +24,7 @@ export class GeminiProvider {
     task: string,
     input: unknown,
     systemInstructions = instructions,
+    modelOverride?: string,
   ): Promise<z.infer<T>> {
     const config = this.security.config;
     if (!config.GEMINI_API_KEY)
@@ -31,7 +32,7 @@ export class GeminiProvider {
         'AI is not configured. Set GEMINI_API_KEY on the backend to enable this feature.',
       );
     try {
-      const response = await this.request(config.GEMINI_MODEL, 'generateContent', {
+      const response = await this.request(modelOverride || config.GEMINI_MODEL, 'generateContent', {
         systemInstruction: { parts: [{ text: `${systemInstructions}\n${task}` }] },
         contents: [{ role: 'user', parts: [{ text: JSON.stringify(input) }] }],
         generationConfig: {
@@ -97,6 +98,15 @@ export class GeminiProvider {
         // Log only status and operation; never provider bodies, CVs, or credentials.
         this.logger.warn(`Gemini ${model} ${method} HTTP ${response.status} (attempt ${attempt + 1})`);
         await response.body?.cancel();
+        if (
+          response.status === 429 &&
+          method === 'generateContent' &&
+          config.GEMINI_FALLBACK_MODEL &&
+          config.GEMINI_FALLBACK_MODEL !== model
+        ) {
+          this.logger.warn(`Gemini ${model} rate limited; trying ${config.GEMINI_FALLBACK_MODEL}`);
+          return this.request(config.GEMINI_FALLBACK_MODEL, method, body);
+        }
         const retryable = response.status === 429 || response.status >= 500;
         if (retryable && attempt === 0) {
           await delay(500, undefined, { signal });

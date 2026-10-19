@@ -35,7 +35,7 @@ export class VacanciesController {
     @Req() req: AuthRequest,
     @Query(new ZodValidationPipe(paginationSchema)) query: QueryVacancyDto,
   ) {
-    return this.service.list(req.user.companyId, query.page, query.search);
+    return this.service.list(req.user.companyId, query);
   }
 
   @Get(':id')

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/accordion';
 import {
   Alert,
+  Badge,
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -22,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   Button,
+  Card,
   Checkbox,
   DropdownMenu,
   DropdownMenuContent,
@@ -54,67 +56,18 @@ import { PublicationModal } from './publication-modal';
 
 type HhFields = { areas: Array<{ id: string; name: string }>; roles: Array<{ id: string; name: string }>; experiences: Array<{ id: string; name: string }>; employments: Array<{ id: string; name: string }>; schedules: Array<{ id: string; name: string }> };
 
-export function parseDescriptionMeta(rawDescription: string, rawTitle: string = '') {
-  let description = rawDescription || '';
-  let department = 'Engineering';
-  let location = 'Tashkent · Hybrid';
-  let employmentType = 'Full-time';
-  let seniority = 'Middle';
-
-  const deptMatch = description.match(/^Department:\s*([^\n]+)/im);
-  const locMatch = description.match(/^Location:\s*([^\n]+)/im);
-  const empMatch = description.match(/^Employment type:\s*([^\n]+)/im);
-  const senMatch = description.match(/^Seniority:\s*([^\n]+)/im);
-
-  if (deptMatch || locMatch || empMatch || senMatch) {
-    if (deptMatch) department = deptMatch[1].trim();
-    if (locMatch) location = locMatch[1].trim();
-    if (empMatch) employmentType = empMatch[1].trim();
-    if (senMatch) seniority = senMatch[1].trim();
-
-    description = description
-      .replace(/^Department:\s*[^\n]+\n?/im, '')
-      .replace(/^Location:\s*[^\n]+\n?/im, '')
-      .replace(/^Employment type:\s*[^\n]+\n?/im, '')
-      .replace(/^Seniority:\s*[^\n]+\n?/im, '')
-      .trim();
-  } else if (rawTitle || rawDescription) {
-    const title = rawTitle.toLowerCase();
-    const desc = rawDescription.toLowerCase();
-
-    if (/design|ui|ux|graphic|visual|product design/i.test(title + ' ' + desc)) {
-      department = 'Design';
-    } else if (/recruiter|talent|people|hr|human resources|sourcing/i.test(title + ' ' + desc)) {
-      department = 'People';
-    } else if (/product manager|product owner|\bpm\b/i.test(title)) {
-      department = 'Product';
-    } else if (/marketing|copywriter|content|seo|growth|smm/i.test(title + ' ' + desc)) {
-      department = 'Marketing';
-    } else if (/sales|account executive|\bbdr\b|\bsdr\b/i.test(title + ' ' + desc)) {
-      department = 'Sales';
-    } else if (/finance|accountant/i.test(title)) {
-      department = 'Finance';
-    } else {
-      department = 'Engineering';
-    }
-
-    if (/remote/i.test(title + ' ' + desc) && !/tashkent/i.test(title + ' ' + desc)) {
-      location = 'Remote · CET ±3';
-    } else if (/on-site|onsite|office/i.test(title + ' ' + desc) || /nestjs/i.test(title)) {
-      location = 'Tashkent · On-site';
-    } else {
-      location = 'Tashkent · Hybrid';
-    }
-
-    if (/\bsenior\b|\bsr\b/i.test(title)) seniority = 'Senior';
-    else if (/\blead\b|\bprincipal\b|\bhead\b/i.test(title)) seniority = 'Lead';
-    else if (/\bjunior\b|\bjr\b|\bintern\b/i.test(title)) seniority = 'Junior';
-    else seniority = 'Middle';
-
-    employmentType = /part-time|contract/i.test(desc) ? 'Part-time' : 'Full-time';
-  }
-
-  return { description, department, location, employmentType, seniority };
+export function parseDescriptionMeta(rawDescription: string) {
+  const match = rawDescription.match(/^Department: ([^\r\n]+)\r?\nLocation: ([^\r\n]+)\r?\nEmployment type: ([^\r\n]+)\r?\nSeniority: ([^\r\n]+)\r?\n\r?\n/);
+  if (!match) return { description: rawDescription, department: '', location: '', workModel: '', employmentType: '', seniority: '' };
+  const locationParts = match[2].trim().match(/^(.*?) · (Hybrid|On-site|Remote)$/);
+  return {
+    description: rawDescription.slice(match[0].length),
+    department: match[1].trim(),
+    location: locationParts ? locationParts[1] : match[2].trim(),
+    workModel: locationParts ? locationParts[2] : '',
+    employmentType: match[3].trim(),
+    seniority: match[4].trim(),
+  };
 }
 
 export function VacancyForm({
@@ -128,15 +81,15 @@ export function VacancyForm({
 }) {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const initialMeta = parseDescriptionMeta(value?.description || '', value?.title || '');
+  const initialMeta = parseDescriptionMeta(value?.description || '');
 
   const [title, setTitle] = useState(value?.title ?? '');
-  const [department, setDepartment] = useState(value ? initialMeta.department : '');
-  const [location, setLocation] = useState(value ? initialMeta.location : '');
-  const [employmentType, setEmploymentType] = useState(
-    value ? initialMeta.employmentType : 'Full-time',
-  );
-  const [seniority, setSeniority] = useState(value ? initialMeta.seniority : 'Middle');
+  const [department, setDepartment] = useState(value?.department ?? initialMeta.department);
+  const [location, setLocation] = useState(value?.location ?? initialMeta.location);
+  const [workModel, setWorkModel] = useState(value?.workModel ?? initialMeta.workModel);
+  const [employmentType, setEmploymentType] = useState(value?.employmentType ?? initialMeta.employmentType);
+  const [seniority, setSeniority] = useState(value?.seniority ?? initialMeta.seniority);
+  const [confirmMetadataReview, setConfirmMetadataReview] = useState(false);
   const [status, setStatus] = useState(value?.status || 'DRAFT');
   const [description, setDescription] = useState(value ? initialMeta.description : '');
 
@@ -167,16 +120,19 @@ export function VacancyForm({
     setError('');
 
     const cleanDesc = description.trim();
-    const deptVal = department.trim() || 'Engineering';
-    const locVal = location.trim() || 'Tashkent · Hybrid';
-    const encodedDescription = `Department: ${deptVal}\nLocation: ${locVal}\nEmployment type: ${employmentType.trim()}\nSeniority: ${seniority.trim()}\n\n${cleanDesc}`;
 
     try {
       await send(
         `/vacancies${value ? `/${value.id}` : ''}`,
         {
           title: title.trim(),
-          description: encodedDescription,
+          description: cleanDesc,
+          department: department.trim() || null,
+          location: location.trim() || null,
+          workModel: workModel || null,
+          employmentType: employmentType || null,
+          seniority: seniority || null,
+          confirmMetadataReview,
           status,
           requirements: requirements
             .filter((r) => r.name.trim().length > 0)
@@ -211,6 +167,7 @@ export function VacancyForm({
     >
       <form onSubmit={submit} className="vacancy-modal-form">
         <Alert message={error} />
+        {error && <p className="text-sm text-amber-900">{t('vacancies.fixFormError')}</p>}
 
         {/* Capsule Pill Tab Bar */}
         <div className="vacancy-modal-tab-bar" role="tablist" aria-label="Vacancy editor">
@@ -276,7 +233,7 @@ export function VacancyForm({
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   maxLength={100}
-                  placeholder="Engineering"
+                  placeholder={t('vacancies.optionalPlaceholder')}
                   className="form-control-input"
                 />
               </div>
@@ -293,44 +250,42 @@ export function VacancyForm({
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   maxLength={100}
-                  placeholder="Tashkent · Hybrid"
+                  placeholder={t('vacancies.optionalPlaceholder')}
                   className="form-control-input"
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">{t('vacancies.labelEmploymentType')}</label>
-                <div className="form-select-wrapper">
-                  <Select value={employmentType} onValueChange={setEmploymentType}>
-                    <SelectTrigger className="form-control-select">
-                      <SelectValue placeholder="Full-time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Full-time">Full-time</SelectItem>
-                      <SelectItem value="Part-time">Part-time</SelectItem>
-                      <SelectItem value="Contract">Contract</SelectItem>
-                      <SelectItem value="Internship">Internship</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <label className="form-label" htmlFor="field-work-model">{t('vacancies.labelWorkModel')}</label>
+                <select id="field-work-model" className="form-control-select" value={workModel} onChange={(e) => setWorkModel(e.target.value)}>
+                  <option value="">{t('vacancies.notSpecified')}</option>
+                  <option value="On-site">On-site</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="Remote">Remote</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="field-employment">{t('vacancies.labelEmploymentType')}</label>
+                <select id="field-employment" className="form-control-select" value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
+                  <option value="">{t('vacancies.notSpecified')}</option>
+                  <option value="Full-time">Full-time</option>
+                  <option value="Part-time">Part-time</option>
+                  <option value="Contract">Contract</option>
+                  <option value="Internship">Internship</option>
+                </select>
               </div>
 
               {/* Row 3 */}
               <div className="form-group">
-                <label className="form-label">{t('vacancies.labelSeniority')}</label>
-                <div className="form-select-wrapper">
-                  <Select value={seniority} onValueChange={setSeniority}>
-                    <SelectTrigger className="form-control-select">
-                      <SelectValue placeholder="Middle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Junior">Junior</SelectItem>
-                      <SelectItem value="Middle">Middle</SelectItem>
-                      <SelectItem value="Senior">Senior</SelectItem>
-                      <SelectItem value="Lead">Lead</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <label className="form-label" htmlFor="field-seniority">{t('vacancies.labelSeniority')}</label>
+                <select id="field-seniority" className="form-control-select" value={seniority} onChange={(e) => setSeniority(e.target.value)}>
+                  <option value="">{t('vacancies.notSpecified')}</option>
+                  <option value="Junior">Junior</option>
+                  <option value="Middle">Middle</option>
+                  <option value="Senior">Senior</option>
+                  <option value="Lead">Lead</option>
+                </select>
               </div>
 
               <div className="form-group">
@@ -354,6 +309,16 @@ export function VacancyForm({
             </div>
 
             {/* Description */}
+            {value?.metadataReviewRequired && (
+              <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-amber-900" role="status">
+                <strong>{t('vacancies.reviewRequired')}</strong>
+                <p className="text-sm mt-1">{t('vacancies.reviewExplanation')}</p>
+                <label className="mt-2 flex items-center gap-2 text-sm cursor-pointer">
+                  <input type="checkbox" checked={confirmMetadataReview} onChange={(event) => setConfirmMetadataReview(event.target.checked)} />
+                  {t('vacancies.confirmMetadata')}
+                </label>
+              </div>
+            )}
             <div className="form-group" style={{ marginTop: '16px' }}>
               <label className="form-label" htmlFor="field-desc">
                 {t('vacancies.labelDescription')}
@@ -479,13 +444,14 @@ export function VacancyForm({
               disabled={busy}
               apply={(draft) => {
                 setTitle(draft.title);
-                setDescription(draft.description);
                 setRequirements(draft.requirements);
-                const parsed = parseDescriptionMeta(draft.description, draft.title);
-                setDepartment(parsed.department);
-                setLocation(parsed.location);
-                setEmploymentType(parsed.employmentType);
-                setSeniority(parsed.seniority);
+                const parsed = parseDescriptionMeta(draft.description);
+                setDescription(parsed.description);
+                if (parsed.department) setDepartment(parsed.department);
+                if (parsed.location) setLocation(parsed.location);
+                if (parsed.workModel) setWorkModel(parsed.workModel);
+                if (parsed.employmentType) setEmploymentType(parsed.employmentType);
+                if (parsed.seniority) setSeniority(parsed.seniority);
                 setTab('details');
                 toast.success(t('vacancyGenerator.draftApplied'));
               }}
@@ -495,17 +461,17 @@ export function VacancyForm({
 
         {/* Modal Footer Actions */}
         <div className="modal-footer-actions">
-          <button type="button" className="btn-modal-cancel" onClick={close}>
+          <Button type="button" variant="outline" className="btn-modal-cancel" onClick={close}>
             {t('common.cancel')}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             className="btn-modal-submit"
             aria-label={value ? t('vacancies.saveVacancy') : t('vacancies.createVacancy')}
             disabled={busy}
           >
             {busy ? t('vacancies.saving') : value ? t('vacancies.saveVacancy') : t('vacancies.createVacancy')}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -523,37 +489,16 @@ interface VacancyMeta {
 }
 
 function getVacancyMeta(v: Vacancy): VacancyMeta {
-  const parsed = parseDescriptionMeta(v.description || '', v.title || '');
-  const department = parsed.department;
+  const parsed = parseDescriptionMeta(v.description || '');
 
-  const loc = parsed.location;
-  let location = 'Tashkent';
-  let workModel = 'Hybrid';
-
-  if (loc.includes('·')) {
-    const parts = loc.split('·').map((s) => s.trim());
-    location = parts[0] || 'Tashkent';
-    workModel = parts[1] || 'Hybrid';
-  } else if (loc.toLowerCase().includes('remote')) {
-    location = 'Remote';
-    workModel = 'CET ±3';
-  } else {
-    location = loc;
-    workModel = /on-site|onsite/i.test(v.title) ? 'On-site' : 'Hybrid';
-  }
-
-  const openedDate = `Opened ${new Date(v.createdAt).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  })}`;
+  const openedDate = new Date(v.createdAt).toLocaleDateString();
 
   return {
-    department,
-    location,
-    workModel,
-    seniority: parsed.seniority,
-    employmentType: parsed.employmentType,
+    department: v.department ?? parsed.department,
+    location: v.location ?? parsed.location,
+    workModel: v.workModel ?? parsed.workModel,
+    seniority: v.seniority ?? parsed.seniority,
+    employmentType: v.employmentType ?? parsed.employmentType,
     openedDate,
     cleanDescription: parsed.description,
   };
@@ -567,12 +512,26 @@ export function Vacancies() {
   const [topModalVacancyId, setTopModalVacancyId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState<Vacancy | null>(null);
   const [open, setOpen] = useState(params.has('new'));
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const search = params.get('search') ?? '';
+  const statusFilter = params.get('status') ?? 'ALL';
+  const sort = params.get('sort') ?? 'newest';
   const [openStatusAccordion, setOpenStatusAccordion] = useState<string>('');
   const statusAccordionRef = useRef<HTMLDivElement>(null);
-  const [page, setPage] = useState(1);
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
   const [actionError, setActionError] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+  const updateParams = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    setParams(next);
+  };
 
   const statusOptions = [
     { label: t('vacancies.statusAll'), value: 'ALL' },
@@ -595,31 +554,15 @@ export function Vacancies() {
     }
   }, [openStatusAccordion]);
   const { data, error, reload } = useData<Page<Vacancy>>(
-    `/vacancies?page=${page}&search=${encodeURIComponent(search)}`,
+    `/vacancies?page=${page}&search=${encodeURIComponent(debouncedSearch)}${statusFilter !== 'ALL' ? `&status=${encodeURIComponent(statusFilter)}` : ''}&sort=${sort}`,
   );
 
-  const rawList = data?.items ?? [];
-
-  const filteredItems = rawList.filter((vacancy) => {
-    const matchesStatus = statusFilter === 'ALL' || vacancy.status === statusFilter;
-    if (!matchesStatus) return false;
-    if (!search.trim()) return true;
-    const q = search.trim().toLowerCase();
-    const meta = getVacancyMeta(vacancy);
-    return (
-      vacancy.title.toLowerCase().includes(q) ||
-      vacancy.description.toLowerCase().includes(q) ||
-      meta.department.toLowerCase().includes(q) ||
-      meta.location.toLowerCase().includes(q) ||
-      meta.workModel.toLowerCase().includes(q) ||
-      meta.seniority.toLowerCase().includes(q)
-    );
-  });
+  const filteredItems = data?.items ?? [];
 
   const close = () => {
     setOpen(false);
     setEditing(null);
-    setParams({});
+    updateParams({ new: null });
   };
 
   async function confirmDelete(v: Vacancy) {
@@ -658,15 +601,14 @@ export function Vacancies() {
       <div className="vacancies-toolbar">
         <div className="vacancies-search-box">
           <Search className="vacancies-search-icon" size={17} />
-          <input
+          <Input
             type="text"
             aria-label={t('vacancies.searchPlaceholder')}
             placeholder={t('vacancies.searchToolbarPlaceholder')}
             value={search}
             className="vacancies-search-input"
             onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
+              updateParams({ search: e.target.value, page: null });
             }}
           />
         </div>
@@ -696,7 +638,7 @@ export function Vacancies() {
                       type="button"
                       key={opt.value}
                       onClick={() => {
-                        setStatusFilter(opt.value);
+                        updateParams({ status: opt.value === 'ALL' ? null : opt.value, page: null });
                         setOpenStatusAccordion('');
                       }}
                       className={cn(
@@ -717,6 +659,11 @@ export function Vacancies() {
             </AccordionItem>
           </Accordion>
         </div>
+        <select aria-label={t('vacancies.sortLabel')} className="form-control-select max-w-[190px]" value={sort} onChange={(event) => updateParams({ sort: event.target.value === 'newest' ? null : event.target.value, page: null })}>
+          <option value="newest">{t('vacancies.sortNewest')}</option>
+          <option value="oldest">{t('vacancies.sortOldest')}</option>
+          <option value="title">{t('vacancies.sortTitle')}</option>
+        </select>
       </div>
 
       <Alert message={error || actionError} />
@@ -729,9 +676,9 @@ export function Vacancies() {
             <div className="vacancies-cards-grid">
               {filteredItems.map((v) => {
                 const meta = getVacancyMeta(v);
-                const appCount = v._count?.applications ?? (v.status === 'DRAFT' ? 1 : 1);
+                const appCount = v._count?.applications ?? 0;
                 return (
-                  <div className="vacancy-clean-card group" key={v.id}>
+                  <Card className="vacancy-clean-card group" key={v.id}>
                     <div className="vacancy-card-top">
                       <h2 className="vacancy-card-heading">{v.title}</h2>
                       <span className={`vacancy-pill-badge status-${v.status.toLowerCase()}`}>
@@ -741,20 +688,21 @@ export function Vacancies() {
                             ? t('vacancies.statusDraft')
                             : t('vacancies.statusClosed')}
                       </span>
+                      {v.metadataReviewRequired && <Badge className="border-amber-300 bg-amber-50 text-amber-900">{t('vacancies.reviewRequired')}</Badge>}
                     </div>
 
                     <div className="vacancy-card-meta-line">
-                      {meta.department} · {meta.location} · {meta.workModel}
+                      {[meta.department, meta.location, meta.workModel].map((item) => item || t('vacancies.notSpecified')).join(' · ')}
                     </div>
 
                     <p className="vacancy-card-blurb">{meta.cleanDescription || v.description}</p>
 
                     <div className="vacancy-card-bottom">
                       <div className="vacancy-footer-meta-tags">
-                        <span className="tag-item">{meta.seniority}</span>
-                        <span className="tag-item">{meta.employmentType}</span>
+                        <span className="tag-item">{meta.seniority || t('vacancies.notSpecified')}</span>
+                        <span className="tag-item">{meta.employmentType || t('vacancies.notSpecified')}</span>
                         <span className="tag-item">{t('vacancies.applicationsCount', { count: appCount })}</span>
-                        <span className="tag-item">{meta.openedDate}</span>
+                        <span className="tag-item">{t('vacancies.openedDate', { date: meta.openedDate })}</span>
                       </div>
 
                       <div className="vacancy-quick-actions">
@@ -812,7 +760,7 @@ export function Vacancies() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>
@@ -839,8 +787,8 @@ export function Vacancies() {
           {data && (
             <Pagination
               page={page}
-              total={statusFilter === 'ALL' && !search ? data.total : filteredItems.length}
-              setPage={setPage}
+              total={data.total}
+              setPage={(nextPage) => updateParams({ page: nextPage === 1 ? null : String(nextPage) })}
             />
           )}
         </>

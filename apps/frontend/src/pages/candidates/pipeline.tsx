@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft,
   ArrowRight,
   CalendarDays,
   Clock3,
-  Download,
   FileCheck2,
   FileText,
   GripVertical,
@@ -31,12 +30,7 @@ import {
 import { toast } from 'sonner';
 import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
-import {
-  getEvidenceSummary,
-  sortApplications,
-  type PipelineSortOption,
-} from '../../lib/match-score';
-import { exportApplicationsToCsv } from '../../lib/export';
+import { getEvidenceSummary } from '../../lib/match-score';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import {
@@ -80,7 +74,9 @@ import {
   SelectTrigger,
   SelectValue,
   useData,
+  getStageLabel,
 } from '../../components/ui';
+import { getSystemLabel } from '../../i18n/utils';
 import { stages, nextStage } from '../../types';
 import type { Application, Candidate, Page, Stage, Vacancy } from '../../types';
 
@@ -93,10 +89,16 @@ function RecordSelect({
 }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<Candidate | Vacancy | null>(null);
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query), 250);
+    return () => clearTimeout(timer);
+  }, [query]);
   const endpoint =
     kind === 'vacancies'
-      ? `/vacancies?excludeClosed=true&pageSize=100`
-      : `/candidates?pageSize=100`;
+      ? `/vacancies?search=${encodeURIComponent(debouncedQuery)}`
+      : `/candidates?search=${encodeURIComponent(debouncedQuery)}`;
   const { data, error } = useData<Page<Candidate | Vacancy>>(endpoint);
 
   const rawItems = useMemo(() => {
@@ -137,6 +139,7 @@ function RecordSelect({
 
   const handleSelect = (item: Candidate | Vacancy | null) => {
     setSelected(item);
+    if (!item) setQuery('');
     onSelect(item ? item.id : 0);
   };
 
@@ -160,6 +163,7 @@ function RecordSelect({
 
       <Combobox items={groupedData} value={selected} onValueChange={handleSelect}>
         <ComboboxInput
+          onChange={(event) => setQuery(event.target.value)}
           aria-label={kind === 'candidates' ? t('pipeline.searchCandidate', 'Search candidate') : t('pipeline.searchVacancy', 'Search vacancy')}
           placeholder={
             kind === 'candidates' ? t('pipeline.selectOrSearchCandidate', 'Select or search a candidate…') : t('pipeline.selectOrSearchVacancy', 'Select or search a vacancy…')
@@ -310,8 +314,8 @@ function nextActionFor(application: Application, t?: (key: string, def: string) 
 }
 
 function sourceLabel(candidate: Candidate) {
-  if (!candidate.source) return 'Website';
-  return candidate.source.charAt(0) + candidate.source.slice(1).toLowerCase();
+  if (!candidate.source) return getSystemLabel('WEBSITE');
+  return getSystemLabel(candidate.source);
 }
 
 function initials(name: string) {
@@ -323,15 +327,17 @@ type PipelineViewMode = 'board' | 'list';
 
 export function Pipeline() {
   const { t } = useTranslation();
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [page, setPage] = useState(1);
+  const [params, setParams] = useSearchParams();
+  const search = params.get('search') ?? '';
+  const selectedVacancy = params.get('vacancyId') ?? 'all';
+  const selectedStage = (params.get('stage') ?? 'all') as 'all' | Stage;
+  const page = Math.max(1, Number(params.get('page')) || 1);
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [vacancySearch, setVacancySearch] = useState('');
+  const [debouncedVacancySearch, setDebouncedVacancySearch] = useState('');
   const [open, setOpen] = useState(false);
   const [dossierApp, setDossierApp] = useState<Application | null>(null);
-  const sortBy: PipelineSortOption = 'created_desc';
-  const [selectedVacancy, setSelectedVacancy] = useState('all');
   const [topCandidatesVacancyId, setTopCandidatesVacancyId] = useState<number | null>(null);
-  const [selectedStage, setSelectedStage] = useState<'all' | Stage>('all');
   const [mobileStage, setMobileStage] = useState<Stage>('NEW');
   const [viewMode, setViewMode] = useState<PipelineViewMode>('board');
   const [draggingId, setDraggingId] = useState<number | null>(null);
@@ -343,17 +349,36 @@ export function Pipeline() {
     const timer = setTimeout(() => setDebouncedSearch(search), 300);
     return () => clearTimeout(timer);
   }, [search]);
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedVacancySearch(vacancySearch), 250);
+    return () => clearTimeout(timer);
+  }, [vacancySearch]);
+  const updateParams = (changes: Record<string, string | null>) => {
+    const next = new URLSearchParams(params);
+    for (const [key, value] of Object.entries(changes)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    setParams(next);
+  };
 
-  const { data, error, reload } = useData<Page<Application>>(
-    `/applications?page=${page}&search=${encodeURIComponent(debouncedSearch)}`,
+  const { data, error, reload } = useData<Page<Application> & { stageCounts: Partial<Record<Stage, number>> }>(
+    `/applications?page=${page}&search=${encodeURIComponent(debouncedSearch)}${selectedStage !== 'all' ? `&stage=${selectedStage}` : ''}${selectedVacancy !== 'all' ? `&vacancyId=${selectedVacancy}` : ''}&sort=newest`,
   );
   const { data: vacanciesData } = useData<Page<Vacancy>>(
-    '/vacancies?excludeClosed=true&pageSize=100',
+    `/vacancies?search=${encodeURIComponent(debouncedVacancySearch)}`,
   );
+  const [selectedVacancyData, setSelectedVacancyData] = useState<Vacancy | null>(null);
+  useEffect(() => {
+    if (selectedVacancy === 'all') { setSelectedVacancyData(null); return; }
+    let active = true;
+    void api<Vacancy>(`/vacancies/${selectedVacancy}`).then((item) => { if (active) setSelectedVacancyData(item); }).catch(() => { if (active) setSelectedVacancyData(null); });
+    return () => { active = false; };
+  }, [selectedVacancy]);
   const [localItems, setLocalItems] = useState<Application[]>([]);
 
   useEffect(() => {
-    if (data?.items) setLocalItems(data.items);
+    setLocalItems(data?.items ?? []);
   }, [data?.items]);
 
   const vacanciesList = useMemo(() => {
@@ -361,79 +386,42 @@ export function Pipeline() {
     for (const vacancy of vacanciesData?.items ?? []) {
       if (vacancy.status !== 'CLOSED') vacancyMap.set(vacancy.id, vacancy.title);
     }
+    if (selectedVacancyData) vacancyMap.set(selectedVacancyData.id, selectedVacancyData.title);
     for (const application of localItems) {
       if (application.vacancy?.status !== 'CLOSED') {
         vacancyMap.set(application.vacancy.id, application.vacancy.title);
       }
     }
     return Array.from(vacancyMap, ([id, title]) => ({ id, title }));
-  }, [localItems, vacanciesData?.items]);
+  }, [localItems, vacanciesData?.items, selectedVacancyData]);
 
-  const filteredItems = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    const filtered = localItems.filter((application) => {
-      if (selectedVacancy !== 'all' && String(application.vacancyId) !== selectedVacancy) {
-        return false;
-      }
-      if (selectedStage !== 'all' && application.status !== selectedStage) return false;
-      if (!normalizedSearch) return true;
-      return [
-        application.candidate.fullName,
-        application.candidate.email,
-        application.candidate.phone,
-        application.vacancy.title,
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedSearch));
-    });
-    return sortApplications(filtered, sortBy);
-  }, [localItems, search, selectedStage, selectedVacancy, sortBy]);
-
-  const activeApplications = filteredItems.filter(
-    (application) => application.status !== 'HIRED' && application.status !== 'REJECTED',
-  );
-  const interviewCutoff = Date.now() - 7 * 86_400_000;
-  const interviewsThisWeek = filteredItems.filter((application) =>
-    (application.stageHistory ?? []).some(
-      (entry) =>
-        entry.toStatus === 'INTERVIEW' && new Date(entry.createdAt).getTime() >= interviewCutoff,
-    ),
-  ).length;
-  const offersPending = filteredItems.filter(
-    (application) => application.status === 'OFFER',
-  ).length;
-  const averageDays = activeApplications.length
-    ? Math.round(
-        activeApplications.reduce(
-          (sum, application) => sum + daysBetween(application.createdAt),
-          0,
-        ) / activeApplications.length,
-      )
-    : 0;
+  const filteredItems = localItems;
+  const stageCounts = data?.stageCounts ?? {};
+  const activeCount = (stageCounts.NEW ?? 0) + (stageCounts.REVIEWING ?? 0) + (stageCounts.INTERVIEW ?? 0) + (stageCounts.OFFER ?? 0);
 
   const summaryCards = [
     {
       label: t('pipeline.activeCandidates', 'Active candidates'),
-      value: activeApplications.length,
+      value: activeCount,
       detail: t('pipeline.inOpenStage', 'In an open stage'),
       icon: Users,
     },
     {
-      label: t('pipeline.interviewsThisWeek', 'Interviews this week'),
-      value: interviewsThisWeek,
-      detail: t('pipeline.movedToInterview7d', 'Moved to Interview in 7 days'),
+      label: t('pipeline.interviewStage', 'Interview stage'),
+      value: stageCounts.INTERVIEW ?? 0,
+      detail: t('pipeline.allMatchingApps', 'All matching applications'),
       icon: CalendarDays,
     },
     {
       label: t('pipeline.offersPending', 'Offers pending'),
-      value: offersPending,
+      value: stageCounts.OFFER ?? 0,
       detail: t('pipeline.awaitingReply', 'Awaiting a reply'),
       icon: FileCheck2,
     },
     {
-      label: t('pipeline.avgTime', 'Avg. time in process'),
-      value: `${averageDays}d`,
-      detail: t('pipeline.fromAppToToday', 'From application to today'),
+      label: t('pipeline.newStage', 'New applications'),
+      value: stageCounts.NEW ?? 0,
+      detail: t('pipeline.allMatchingApps', 'All matching applications'),
       icon: Clock3,
     },
   ];
@@ -451,7 +439,12 @@ export function Pipeline() {
         { status: newStage, expectedStatus: originalStatus },
         'PUT',
       );
-      toast.success(`${application.candidate.fullName} moved to ${label(newStage)}`);
+      toast.success(
+        t('applications.movedSuccess', {
+          stage: getStageLabel(newStage, t),
+          defaultValue: `${application.candidate.fullName} moved to ${getStageLabel(newStage, t)}`,
+        }),
+      );
       setPendingMove(null);
       reload();
     } catch (moveError) {
@@ -531,7 +524,7 @@ export function Pipeline() {
                   disabled={stage === application.status}
                   onClick={() => requestMove(application, stage)}
                 >
-                  {label(stage)}
+                  {getStageLabel(stage, t)}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -637,7 +630,7 @@ export function Pipeline() {
       </section>
 
       <section className="pipeline-filterbar" aria-label="Pipeline filters">
-        <Select value={selectedVacancy} onValueChange={setSelectedVacancy}>
+        <Select value={selectedVacancy} onValueChange={(value) => updateParams({ vacancyId: value === 'all' ? null : value, page: null })}>
           <SelectTrigger
             value={selectedVacancy}
             className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
@@ -646,6 +639,9 @@ export function Pipeline() {
             <SelectValue placeholder={t('pipeline.allVacancies', 'All vacancies')} />
           </SelectTrigger>
           <SelectContent className="max-h-72">
+            <div className="p-2">
+              <input aria-label={t('pipeline.searchVacancy')} className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus-visible:outline-[#1a5d4c]" placeholder={t('pipeline.searchVacancy')} value={vacancySearch} onChange={(event) => setVacancySearch(event.target.value)} onKeyDown={(event) => event.stopPropagation()} />
+            </div>
             <SelectItem value="all">{t('pipeline.allVacancies', 'All vacancies')}</SelectItem>
             {vacanciesList.map((vacancy) => (
               <SelectItem key={vacancy.id} value={String(vacancy.id)}>
@@ -663,8 +659,7 @@ export function Pipeline() {
             placeholder={t('pipeline.searchPlaceholder', 'Search candidates…')}
             value={search}
             onChange={(event) => {
-              setSearch(event.target.value);
-              setPage(1);
+              updateParams({ search: event.target.value, page: null });
             }}
             className="h-10 w-full pl-9 pr-8 rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] placeholder:text-[#94a3b8] shadow-none hover:border-[#cbd5e1] focus-visible:border-[#1a5d4c] focus-visible:ring-2 focus-visible:ring-[#1a5d4c]/15"
           />
@@ -674,8 +669,7 @@ export function Pipeline() {
               className="absolute right-2.5 flex items-center justify-center w-5 h-5 rounded-full text-[#64748b] hover:text-[#0f172a] hover:bg-[#e2e8f0] transition-colors"
               aria-label="Clear search"
               onClick={() => {
-                setSearch('');
-                setPage(1);
+                updateParams({ search: null, page: null });
               }}
             >
               <X size={13} />
@@ -683,7 +677,7 @@ export function Pipeline() {
           )}
         </div>
 
-        <Select value={selectedStage} onValueChange={(val) => setSelectedStage(val as 'all' | Stage)}>
+        <Select value={selectedStage} onValueChange={(val) => updateParams({ stage: val === 'all' ? null : val, page: null })}>
           <SelectTrigger
             value={selectedStage}
             className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
@@ -695,12 +689,11 @@ export function Pipeline() {
             <SelectItem value="all">{t('pipeline.allStages', 'All stages')}</SelectItem>
             {stages.map((stage) => (
               <SelectItem key={stage} value={stage}>
-                {label(stage)}
+                {getStageLabel(stage, t)}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
-
         <div className="pipeline-view-toggle" role="group" aria-label="View mode">
           <button
             type="button"
@@ -724,29 +717,12 @@ export function Pipeline() {
           type="button"
           variant="outline"
           onClick={() => {
-            if (!filteredItems.length) {
-              toast.error(t('pipeline.noAppsToExport', 'Eksport qilish uchun arizalar mavjud emas'));
-              return;
-            }
-            exportApplicationsToCsv(filteredItems);
-            toast.success(t('pipeline.exportedApps', { count: filteredItems.length, defaultValue: `${filteredItems.length} ta ariza CSV/Excel faylga yuklandi` }));
-          }}
-          className="h-10 px-3.5 rounded-xl border border-[#e2e8f0] bg-white text-sm font-semibold text-[#0f172a] hover:bg-slate-50 hover:border-[#cbd5e1] flex items-center gap-1.5 shadow-none shrink-0"
-          title="Arizalarni Excel/CSV fayl sifatida yuklab olish"
-        >
-          <Download size={15} /> {t('pipeline.exportCsv', 'Eksport (CSV)')}
-        </Button>
-
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
             if (selectedVacancy === 'all') {
               if (vacanciesList.length === 1) {
                 setTopCandidatesVacancyId(vacanciesList[0].id);
               } else if (vacanciesList.length > 1) {
                 setTopCandidatesVacancyId(vacanciesList[0].id);
-                setSelectedVacancy(String(vacanciesList[0].id));
+                updateParams({ vacancyId: String(vacanciesList[0].id), page: null });
               } else {
                 toast.info(t('pipeline.selectVacancyFirst', "Tahlil qilish uchun avval biror vakansiyani tanlang"));
               }
@@ -754,7 +730,7 @@ export function Pipeline() {
               setTopCandidatesVacancyId(Number(selectedVacancy));
             }
           }}
-          className="h-10 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-sm font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 shadow-none shrink-0"
+          className="pipeline-top-candidates-button h-10 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-sm font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 shadow-none shrink-0"
           title="Vakansiya bo'yicha eng yaxshi 3 ta nomzodni AI tahlili orqali ko'rish"
         >
           <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400" /> {t('pipeline.topCandidatesBtn', 'Top 3 Nomzodlar (AI)')}
@@ -794,7 +770,7 @@ export function Pipeline() {
                   <SelectContent className="max-h-72">
                     {stages.map((stage) => (
                       <SelectItem key={stage} value={stage}>
-                        {label(stage)} ·{' '}
+                        {getStageLabel(stage, t)} ·{' '}
                         {filteredItems.filter((item) => item.status === stage).length}
                       </SelectItem>
                     ))}
@@ -825,11 +801,11 @@ export function Pipeline() {
                         <div className="pipeline-stage-heading">
                           <span className="pipeline-stage-dot" />
                           <div>
-                            <strong>{label(stage)}</strong>
+                            <strong>{getStageLabel(stage, t)}</strong>
                             <small>{getStageDescription(stage, t)}</small>
                           </div>
                         </div>
-                        <span className="stage-count">{applications.length}</span>
+                        <span className="stage-count" title={t('pipeline.allMatchingApps')}>{stageCounts[stage] ?? 0}</span>
                       </header>
                       <div className="kanban-card-list">
                         {applications.map(renderCard)}
@@ -907,7 +883,7 @@ export function Pipeline() {
               ))}
             </section>
           )}
-          <Pagination page={page} total={data?.total ?? filteredItems.length} setPage={setPage} />
+          <Pagination page={page} total={data?.total ?? 0} setPage={(nextPage) => updateParams({ page: nextPage === 1 ? null : String(nextPage) })} />
         </>
       ) : (
         <section className="panel">
@@ -949,13 +925,13 @@ export function Pipeline() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {t('pipeline.confirmMoveTitle', { stage: pendingMove ? label(pendingMove.stage) : '' })}
+              {t('pipeline.confirmMoveTitle', { stage: pendingMove ? getStageLabel(pendingMove.stage, t) : '' })}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {t('pipeline.confirmMoveDesc', {
                 name: pendingMove?.app.candidate.fullName,
-                from: pendingMove ? label(pendingMove.app.status) : '',
-                to: pendingMove ? label(pendingMove.stage) : '',
+                from: pendingMove ? getStageLabel(pendingMove.app.status, t) : '',
+                to: pendingMove ? getStageLabel(pendingMove.stage, t) : '',
               })}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1011,7 +987,7 @@ export function ApplicationDetail() {
       } else if (status === 'REJECTED') {
         toast.success(t('applications.rejectionMessageSent', 'Moved application to Rejected · Rejection message sent'));
       } else {
-        toast.success(t('applications.movedSuccess', { stage: label(status), defaultValue: `Moved application to ${label(status)}` }));
+        toast.success(t('applications.movedSuccess', { stage: getStageLabel(status, t), defaultValue: `Moved application to ${getStageLabel(status, t)}` }));
       }
       reload();
     } catch (e) {
@@ -1062,7 +1038,7 @@ export function ApplicationDetail() {
                     disabled={Boolean(busy)}
                     onClick={() => void changeStatus(nextStage[a.status]!)}
                   >
-                    {busy === 'status' ? t('pipeline.moving', 'Moving…') : `${t('pipeline.moveToStage', 'Move to')} ` + label(nextStage[a.status]!)}{' '}
+                    {busy === 'status' ? t('pipeline.moving', 'Moving…') : `${t('pipeline.moveToStage', 'Move to')} ` + getStageLabel(nextStage[a.status]!, t)}{' '}
                     <ArrowRight size={16} />
                   </button>
                 )}
@@ -1074,7 +1050,7 @@ export function ApplicationDetail() {
                       aria-label="Pipeline stage"
                       disabled={Boolean(busy)}
                     >
-                      <span>{label(a.status)}</span>
+                      <span>{getStageLabel(a.status, t)}</span>
                       <ChevronDown size={15} className="filter-chevron" />
                     </button>
                   </DropdownMenuTrigger>
@@ -1087,7 +1063,7 @@ export function ApplicationDetail() {
                           onClick={() => void changeStatus(s)}
                           className={`vacancies-filter-item ${isSelected ? 'active-filter' : ''}`}
                         >
-                          <span>{label(s)}</span>
+                          <span>{getStageLabel(s, t)}</span>
                           {isSelected && <Check size={15} className="filter-check-icon" />}
                         </DropdownMenuItem>
                       );
@@ -1110,7 +1086,7 @@ export function ApplicationDetail() {
               {nextStage[a.status] ? (
                 <>
                   <ArrowRight size={16} />
-                  <span>{t('applications.nextStage', { stage: label(nextStage[a.status]!), defaultValue: `Next: ${label(nextStage[a.status]!)}` })}</span>
+                  <span>{t('applications.nextStage', { stage: getStageLabel(nextStage[a.status]!, t), defaultValue: `Next: ${getStageLabel(nextStage[a.status]!, t)}` })}</span>
                 </>
               ) : (
                 <span>{t('applications.finalStage', 'Final stage')}</span>
@@ -1317,8 +1293,8 @@ export function ApplicationDetail() {
                       <div className="row wrap">
                         <strong>
                           {entry.fromStatus
-                            ? label(entry.fromStatus) + ' → ' + label(entry.toStatus)
-                            : 'Application created · ' + label(entry.toStatus)}
+                            ? getStageLabel(entry.fromStatus, t) + ' → ' + getStageLabel(entry.toStatus, t)
+                            : t('applications.appCreated', 'Application created') + ' · ' + getStageLabel(entry.toStatus, t)}
                         </strong>
                       </div>
                       <span className="muted small">

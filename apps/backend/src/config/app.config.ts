@@ -1,5 +1,5 @@
 import { config as dotenv } from 'dotenv';
-import { resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { z } from 'zod';
 
@@ -39,6 +39,9 @@ export const envSchema = z.object({
   TELEGRAM_BOT_TOKEN: z.string().default(''),
   TELEGRAM_WEBHOOK_SECRET: z.string().default(''),
   TELEGRAM_WEBHOOK_URL: z.string().default(''),
+  TELEGRAM_API_ID: z.coerce.number().int().nonnegative().default(0),
+  TELEGRAM_API_HASH: z.string().default(''),
+  TELEGRAM_USER_SESSION_FILE: z.string().default(''),
   HH_CLIENT_ID: z.string().default(''),
   HH_CLIENT_SECRET: z.string().default(''),
   HH_CALLBACK_URL: z.string().default(''),
@@ -47,6 +50,10 @@ export const envSchema = z.object({
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
+
+export function telegramSessionPath(value: string): string {
+  return isAbsolute(value) ? value : resolve(__dirname, '../../../../', value);
+}
 
 // Modul darajasida cache — getConfig() faqat bir marta parse qiladi.
 let _config: AppConfig | undefined;
@@ -84,6 +91,10 @@ export function getConfig(): AppConfig {
       throw new Error('HeadHunter callback URL must use HTTPS in production');
     if (Buffer.from(result.data.HH_TOKEN_ENCRYPTION_KEY, 'base64').length !== 32)
       throw new Error('HH_TOKEN_ENCRYPTION_KEY must be a base64 encoded 32-byte key');
+  }
+  const discoveryValues = [result.data.TELEGRAM_API_ID, result.data.TELEGRAM_API_HASH, result.data.TELEGRAM_USER_SESSION_FILE];
+  if (discoveryValues.slice(0, 2).some(Boolean) && !discoveryValues.every(Boolean)) {
+    throw new Error('Telegram discovery configuration is incomplete. Set API ID, API hash and session file path.');
   }
   return (_config = result.data);
 }
