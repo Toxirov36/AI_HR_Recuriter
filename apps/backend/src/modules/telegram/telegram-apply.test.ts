@@ -39,7 +39,7 @@ describe('Telegram vacancy screening', () => {
     const db = { telegramApplySession: {
       findUnique: vi.fn().mockResolvedValue({ vacancyId: 5, step: 'ASSESSMENT', currentQuestionIndex: 9, answers: answers(correct).slice(0, 9), assessmentQuestions: assessment, assessmentRevision: 1, expiresAt: new Date(Date.now() + 60_000), vacancy: { ...vacancy, revision: 2 } }),
       updateMany: vi.fn().mockResolvedValue({ count: 1 }), delete: vi.fn(),
-    } };
+    }, candidate: { upsert: vi.fn().mockResolvedValue({}) } };
     const telegram = bot();
     const service = new TelegramApplyService(db as never, security as never, telegram as never, {} as never);
     await service.handleCallback(callback(`apply:5:quiz:10:${answers(correct)[9].selectedIndex}`));
