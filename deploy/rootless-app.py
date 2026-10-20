@@ -33,6 +33,10 @@ http {{
   uwsgi_temp_path {nginx_dir / 'uwsgi'};
   scgi_temp_path {nginx_dir / 'scgi'};
   client_max_body_size 6m;
+  gzip on;
+  gzip_vary on;
+  gzip_min_length 1024;
+  gzip_types text/css application/javascript application/json image/svg+xml text/plain application/xml;
   server {{
     listen 127.0.0.1:8081;
     server_name _;
@@ -54,7 +58,7 @@ http {{
     }}
     location /assets/ {{ try_files $uri =404; expires 1y; access_log off; }}
     location = / {{ try_files /index.html =404; }}
-    location ~ ^/(login|register|dashboard|vacancies|candidates|pipeline|applications|admin|profile|team|platform-admin)/?$ {{
+    location ~ ^/(login|register|privacy|dashboard|vacancies|candidates|pipeline|applications|admin|profile|team|platform-admin)/?$ {{
       try_files /index.html =404;
     }}
     location ~ ^/(candidates|applications)/[^/]+/?$ {{
