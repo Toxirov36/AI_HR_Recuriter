@@ -10,6 +10,9 @@ import sys
 import time
 import urllib.request
 
+# Public address that is checked; override with MONITOR_SITE_URL if the domain changes.
+SITE_URL = os.environ.get('MONITOR_SITE_URL', 'https://hrdai.uz').rstrip('/')
+
 def should_notify(previous, issues, now):
     return (previous.get('issues', []) != issues or
             (bool(issues) and now - previous.get('sentAt', 0) >= 21600))
@@ -44,7 +47,7 @@ def main():
     for path in ['/', '/api/health']:
         for attempt in range(2):
             try:
-                with urllib.request.urlopen('https://hr-recruiter.ddns.net' + path, timeout=20) as response:
+                with urllib.request.urlopen(SITE_URL + path, timeout=20) as response:
                     if response.status != 200:
                         raise ValueError('Unexpected HTTP status')
                     if path == '/api/health' and json.load(response).get('status') != 'ok':
@@ -74,7 +77,7 @@ def main():
     if should_notify(previous, issues, now):
         subject = 'HR Recruiter: muammo aniqlandi' if issues else 'HR Recruiter: xizmat tiklandi'
         body = '\n'.join(issues) if issues else 'Sayt, server va backup tekshiruvlari yana muvaffaqiyatli.'
-        send_email(subject, body + '\n\nhttps://hr-recruiter.ddns.net')
+        send_email(subject, body + '\n\n' + SITE_URL)
         statefile.write_text(json.dumps({'issues': issues, 'sentAt': now}))
     print(json.dumps({'issues': issues, 'healthy': not issues}))
     return 1 if issues else 0
