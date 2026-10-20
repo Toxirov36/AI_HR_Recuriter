@@ -16,6 +16,7 @@ import { ApiError, send } from '../../lib/api';
 import { Alert, Button, Input, LanguageSwitcher } from '../../components/ui';
 import { GoogleSignInButton } from './google-sign-in';
 import './auth.css';
+import './auth.dark.css';
 
 export const AuthContext = createContext<{ user: User; refresh: () => Promise<void> }>(
   {} as { user: User; refresh: () => Promise<void> },

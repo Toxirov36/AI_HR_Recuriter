@@ -10,6 +10,7 @@
   "scripts": {
     "doctor": "node scripts/check-services.mjs",
     "setup": "node scripts/setup.mjs",
+    "theme:generate": "node scripts/gen-dark-styles.cjs",
     "format": "prettier --write \"apps/**/*.{ts,tsx,css,json,html}\" \"scripts/*.mjs\" \"*.{json,yaml,md}\"",
     "dev": "concurrently -n api,web -c cyan,green \"npm run dev -w apps/backend\" \"node scripts/wait-for-backend.mjs && npm run dev -w apps/frontend\"",
     "build": "npm run build --workspaces",

@@ -160,7 +160,7 @@ export function NotificationCenter() {
               <button
                 type="button"
                 onClick={markAllAsRead}
-                className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-[#1a5d4c] transition-colors"
+                className="flex items-center gap-1 text-xs font-medium text-slate-500 hover:text-[#1a5d4c] dark:hover:text-[#58c0a0] transition-colors"
                 title={t('notifications.markAllAsRead')}
               >
                 <CheckCheck size={14} />
@@ -276,7 +276,7 @@ export function NotificationCenter() {
               setOpen(false);
               navigate('/pipeline');
             }}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1a5d4c] hover:underline cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1a5d4c] dark:text-[#58c0a0] hover:underline cursor-pointer"
           >
             {t('notifications.viewAllCandidates')}
             <ArrowRight size={13} />

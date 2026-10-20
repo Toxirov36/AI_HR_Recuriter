@@ -1,3 +1,5 @@
+import { statusTheme, statusVariables } from './tailwind.status-palette.js';
+
 /** @type {import('tailwindcss').Config} */
 export default {
   darkMode: ['class'],
@@ -21,6 +23,37 @@ export default {
       boxShadow: {
         soft: 'var(--shadow-soft)',
         lifted: 'var(--shadow-lifted)'
+      },
+      // Light-surface utilities follow the theme; dark shades (700+) stay fixed for overlays and dark panels.
+      backgroundColor: {
+        ...statusTheme.backgroundColor,
+        white: 'rgb(var(--white-rgb) / <alpha-value>)',
+        slate: {
+          50: 'rgb(var(--slate-bg-50) / <alpha-value>)',
+          100: 'rgb(var(--slate-bg-100) / <alpha-value>)',
+          200: 'rgb(var(--slate-bg-200) / <alpha-value>)'
+        }
+      },
+      borderColor: {
+        ...statusTheme.borderColor,
+        white: 'rgb(var(--white-rgb) / <alpha-value>)',
+        slate: {
+          100: 'rgb(var(--slate-line-100) / <alpha-value>)',
+          200: 'rgb(var(--slate-line-200) / <alpha-value>)',
+          300: 'rgb(var(--slate-line-300) / <alpha-value>)'
+        }
+      },
+      textColor: {
+        ...statusTheme.textColor,
+        slate: {
+          400: 'rgb(var(--slate-text-400) / <alpha-value>)',
+          500: 'rgb(var(--slate-text-500) / <alpha-value>)',
+          600: 'rgb(var(--slate-text-600) / <alpha-value>)',
+          700: 'rgb(var(--slate-text-700) / <alpha-value>)',
+          800: 'rgb(var(--slate-text-800) / <alpha-value>)',
+          900: 'rgb(var(--slate-text-900) / <alpha-value>)',
+          950: 'rgb(var(--slate-text-950) / <alpha-value>)'
+        }
       },
       colors: {
         border: 'var(--border)',
@@ -119,5 +152,5 @@ export default {
       }
     }
   },
-  plugins: [],
+  plugins: [statusVariables],
 };

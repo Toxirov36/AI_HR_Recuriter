@@ -514,7 +514,6 @@ export function Vacancies() {
   const [open, setOpen] = useState(params.has('new'));
   const search = params.get('search') ?? '';
   const statusFilter = params.get('status') ?? 'ALL';
-  const sort = params.get('sort') ?? 'newest';
   const [openStatusAccordion, setOpenStatusAccordion] = useState<string>('');
   const statusAccordionRef = useRef<HTMLDivElement>(null);
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -554,7 +553,7 @@ export function Vacancies() {
     }
   }, [openStatusAccordion]);
   const { data, error, reload } = useData<Page<Vacancy>>(
-    `/vacancies?page=${page}&search=${encodeURIComponent(debouncedSearch)}${statusFilter !== 'ALL' ? `&status=${encodeURIComponent(statusFilter)}` : ''}&sort=${sort}`,
+    `/vacancies?page=${page}&search=${encodeURIComponent(debouncedSearch)}${statusFilter !== 'ALL' ? `&status=${encodeURIComponent(statusFilter)}` : ''}`,
   );
 
   const filteredItems = data?.items ?? [];
@@ -644,13 +643,13 @@ export function Vacancies() {
                       className={cn(
                         'w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer',
                         isSelected
-                          ? 'bg-[#eaf5ef] text-[#165b4c] font-medium active-filter'
+                          ? 'bg-[#eaf5ef] dark:bg-[#17302a] text-[#165b4c] dark:text-[#58c0a0] font-medium active-filter'
                           : 'text-slate-700 hover:bg-slate-50',
                       )}
                     >
                       <span>{opt.label}</span>
                       {isSelected && (
-                        <Check size={14} className="text-[#1a5d4c] filter-check-icon shrink-0 ml-2" />
+                        <Check size={14} className="text-[#1a5d4c] dark:text-[#58c0a0] filter-check-icon shrink-0 ml-2" />
                       )}
                     </button>
                   );
@@ -659,11 +658,6 @@ export function Vacancies() {
             </AccordionItem>
           </Accordion>
         </div>
-        <select aria-label={t('vacancies.sortLabel')} className="form-control-select max-w-[190px]" value={sort} onChange={(event) => updateParams({ sort: event.target.value === 'newest' ? null : event.target.value, page: null })}>
-          <option value="newest">{t('vacancies.sortNewest')}</option>
-          <option value="oldest">{t('vacancies.sortOldest')}</option>
-          <option value="title">{t('vacancies.sortTitle')}</option>
-        </select>
       </div>
 
       <Alert message={error || actionError} />

@@ -77,6 +77,21 @@
   --ink: #1a332a;
   --line: #e2ede8;
   --soft: #f2f7f4;
+  --white-rgb: 255 255 255;
+  --slate-bg-50: 248 250 252;
+  --slate-bg-100: 241 245 249;
+  --slate-bg-200: 226 232 240;
+  --slate-line-100: 241 245 249;
+  --slate-line-200: 226 232 240;
+  --slate-line-300: 203 213 225;
+  --slate-text-400: 148 163 184;
+  --slate-text-500: 100 116 139;
+  --slate-text-600: 71 85 105;
+  --slate-text-700: 51 65 85;
+  --slate-text-800: 30 41 59;
+  --slate-text-900: 15 23 42;
+  --slate-text-950: 2 6 23;
+  color-scheme: light;
 }
 
 /* Hiring pipeline — Lovable redesign adapted to the live API */
@@ -757,49 +772,6 @@
   .pipeline-redesign .pipeline-candidate-card {
     padding: 14px;
   }
-}
-
-.dark {
-  --background: oklch(0.19 0.02 165);
-  --foreground: oklch(0.96 0.008 150);
-  --surface: oklch(0.24 0.025 165);
-  --surface-muted: oklch(0.27 0.026 165);
-  --card: oklch(0.24 0.025 165);
-  --card-foreground: oklch(0.96 0.008 150);
-  --popover: oklch(0.24 0.025 165);
-  --popover-foreground: oklch(0.96 0.008 150);
-  --primary: oklch(0.68 0.11 162);
-  --primary-foreground: oklch(0.17 0.02 165);
-  --primary-soft: oklch(0.3 0.045 162);
-  --secondary: oklch(0.29 0.028 165);
-  --secondary-foreground: oklch(0.96 0.008 150);
-  --muted: oklch(0.29 0.028 165);
-  --muted-foreground: oklch(0.72 0.02 150);
-  --accent: oklch(0.31 0.035 165);
-  --accent-foreground: oklch(0.96 0.008 150);
-  --amber: oklch(0.78 0.12 74);
-  --amber-foreground: oklch(0.2 0.04 70);
-  --amber-soft: oklch(0.33 0.05 74);
-  --destructive: oklch(0.65 0.17 25);
-  --destructive-foreground: oklch(0.15 0.02 25);
-  --destructive-soft: oklch(0.32 0.06 25);
-  --success: oklch(0.7 0.12 155);
-  --success-soft: oklch(0.3 0.05 155);
-  --info: oklch(0.7 0.09 235);
-  --info-soft: oklch(0.3 0.04 235);
-  --border: oklch(1 0 0 / 12%);
-  --border-strong: oklch(1 0 0 / 20%);
-  --input: oklch(1 0 0 / 16%);
-  --ring: oklch(0.68 0.11 162);
-  --sidebar: rgb(20, 42, 35);
-  --sidebar-bg: rgb(20, 42, 35);
-  --sidebar-foreground: oklch(0.93 0.012 150);
-  --sidebar-primary: oklch(0.68 0.11 162);
-  --sidebar-primary-foreground: oklch(0.15 0.02 165);
-  --sidebar-accent: oklch(0.28 0.03 165);
-  --sidebar-accent-foreground: oklch(0.97 0.008 150);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.68 0.11 162);
 }
 
 @layer base {
@@ -5622,3 +5594,87 @@ input.combobox-input-field:focus {
   transform: rotate(-45deg) translate(1px, -1px);
 }
 
+
+/* Dark theme: token overrides. Applied when <html class="dark"> (see src/lib/theme.ts). */
+.dark {
+  color-scheme: dark;
+  --background: #0c1613;
+  --foreground: #e6efea;
+  --surface: #131e1a;
+  --surface-muted: #17261f;
+  --white-rgb: 19 30 26;
+  --slate-bg-50: 21 33 28;
+  --slate-bg-100: 27 42 36;
+  --slate-bg-200: 36 54 47;
+  --slate-line-100: 30 46 40;
+  --slate-line-200: 40 58 51;
+  --slate-line-300: 58 78 70;
+  --slate-text-400: 120 140 132;
+  --slate-text-500: 148 168 160;
+  --slate-text-600: 176 193 186;
+  --slate-text-700: 203 216 210;
+  --slate-text-800: 226 235 231;
+  --slate-text-900: 241 246 243;
+  --slate-text-950: 248 251 249;
+
+  --card: #131e1a;
+  --card-foreground: #e6efea;
+  --popover: #162320;
+  --popover-foreground: #e6efea;
+
+  --primary: #34a585;
+  --primary-foreground: #04130e;
+  --primary-soft: #17302a;
+
+  --secondary: #1a2a24;
+  --secondary-foreground: #d5e3dc;
+  --muted: #1a2a24;
+  --muted-foreground: #93a8a0;
+  --accent: #1c3029;
+  --accent-foreground: #d5e3dc;
+
+  --amber: #e0b04a;
+  --amber-foreground: #1f1604;
+  --amber-soft: #2b2412;
+  --destructive: #e0625a;
+  --destructive-foreground: #1a0707;
+  --destructive-soft: #2e1818;
+  --success: #4fbf8f;
+  --success-soft: #14291f;
+  --info: #6aa8e0;
+  --info-soft: #14222f;
+
+  --border: #24352e;
+  --border-strong: #30463d;
+  --input: #2a3d35;
+  --ring: #3fb08e;
+
+  --chart-1: #3fb08e;
+  --chart-2: #6cc8aa;
+  --chart-3: #e0b04a;
+  --chart-4: #6aa8e0;
+  --chart-5: #e0805a;
+
+  --sidebar: #0a1210;
+  --sidebar-bg: #0a1210;
+  --sidebar-foreground: #dbe7e1;
+  --sidebar-primary: #34a585;
+  --sidebar-primary-foreground: #04130e;
+  --sidebar-accent: #15251f;
+  --sidebar-accent-foreground: #f1f6f3;
+  --sidebar-border: #1a2c25;
+  --sidebar-ring: #3fb08e;
+
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -16px rgb(0 0 0 / 0.6);
+  --shadow-lifted: 0 1px 2px rgb(0 0 0 / 0.5), 0 18px 40px -24px rgb(0 0 0 / 0.7);
+
+  --green: #3fae8e;
+  --ink: #e6efea;
+  --line: #24352e;
+  --soft: #17261f;
+  --canvas: #0c1613;
+  --emerald-soft: #17302a;
+  --sidebar-soft: #15251f;
+  --sidebar-line: #1a2c25;
+  --sidebar-text: #dbe7e1;
+}

@@ -131,7 +131,7 @@ export function CompanyOverviewPanel({
         ].map(([label, value, note]) => (
           <section key={label} className="panel padded">
             <p className="text-xs font-medium text-slate-500">{label}</p>
-            <p className="text-3xl font-semibold tracking-tight text-[#245e4f] my-2">{value}</p>
+            <p className="text-3xl font-semibold tracking-tight text-[#245e4f] dark:text-[#58c0a0] my-2">{value}</p>
             <p className="text-xs text-slate-500">{note}</p>
           </section>
         ))}

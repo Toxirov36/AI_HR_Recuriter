@@ -24,8 +24,10 @@ import { AppRouter, preloadRoute } from './app/router';
 import { useAuth } from './features/auth';
 import { NotificationCenter } from './components/notification-center';
 import { LanguageSwitcher } from './components/language-switcher';
+import { ThemeMenuGroup } from './components/theme-menu';
 import { useTranslation } from 'react-i18next';
 import './i18n';
+import { initTheme } from './lib/theme';
 import {
   Alert,
   Avatar,
@@ -49,6 +51,9 @@ import {
   Input,
 } from './components/ui';
 import './styles.css';
+import './styles.dark.css';
+
+initTheme();
 
 function SidebarNav({
   links,
@@ -298,6 +303,8 @@ function AppShell() {
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuGroup>
+                <DropdownMenuSeparator />
+                <ThemeMenuGroup />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer flex items-center"
