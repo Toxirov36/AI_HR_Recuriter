@@ -291,6 +291,7 @@ export function LandingPage() {
             shortlist<span className="landing-brand-dot">.</span>
           </span>
           <p>{t('landing.footer')}</p>
+          <Link to="/privacy">{t('privacy.title')}</Link>
           <Link to="/login">{t('landing.signIn')}</Link>
         </div>
       </footer>

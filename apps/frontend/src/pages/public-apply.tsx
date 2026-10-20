@@ -127,7 +127,10 @@ export function PublicApplyPage() {
                   <div className="space-y-3 border-t border-[#e5ece7] dark:border-[#24352e] pt-5 text-sm leading-6 text-[#4b6159] dark:text-[#93a8a0]">
                     <p>
                       <ShieldCheck size={16} className="mr-1.5 inline text-[#245e4f] dark:text-[#58c0a0]" />
-                      {t('publicApply.privacyPrefix', { company: vacancy.company.name, days: vacancy.company.retentionDays })}
+                      {t('publicApply.privacyPrefix', { company: vacancy.company.name, days: vacancy.company.retentionDays })}{' '}
+                      <a href="/privacy" target="_blank" rel="noreferrer" className="font-medium underline">
+                        {t('privacy.title')}
+                      </a>
                     </p>
                     <label className="flex items-start gap-2">
                       <input type="checkbox" name="privacyAccepted" required className="mt-1" />

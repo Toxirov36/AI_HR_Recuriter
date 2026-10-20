@@ -55,6 +55,30 @@
     "ctaText": "Kompaniyangiz ish maydonini yarating va jarayonni bir joyda boshqaring.",
     "footer": "Dalillarga asoslangan, inson boshqaradigan yollash."
   },
+  "privacy": {
+    "back": "Bosh sahifa",
+    "title": "Maxfiylik siyosati",
+    "updated": "Oxirgi yangilanish: 2026-yil oktabr",
+    "intro": "Shortlist — jamoalar uchun nomzodlarni saralash va yollash jarayonini yuritish vositasi. Ushbu sahifada nomzod ma’lumotlari qanday yig‘ilishi, ishlatilishi va saqlanishi tushuntiriladi.",
+    "controllerTitle": "Ma’lumotlar uchun kim javobgar",
+    "controllerText": "Vakansiyaga ariza topshirsangiz, ma’lumotlaringizni o‘sha vakansiyani e’lon qilgan kompaniyaning HR jamoasi ko‘rib chiqadi va uning ishchi hududida saqlanadi. Shortlist shu jamoaga vosita taqdim etadi.",
+    "dataTitle": "Qanday ma’lumotlar yig‘iladi",
+    "dataText": "Ism, telefon raqami, e-pochta, Telegram foydalanuvchi nomi va identifikatori, yuklangan CV fayli va undan ajratilgan matn, test javoblari va natijalari, ariza holati hamda HR xodimlarining izohlari.",
+    "purposeTitle": "Nima uchun ishlatiladi",
+    "purposeText": "Faqat shu vakansiya bo‘yicha arizani ko‘rib chiqish va siz bilan bog‘lanish (Telegram yoki e-pochta orqali) uchun. Ma’lumotlar reklama maqsadida ishlatilmaydi.",
+    "aiTitle": "Sun’iy intellekt",
+    "aiText": "Roziligingiz bo‘lsa, CV matni va vakansiya talablari qisqa xulosa, moslik bahosi va test savollarini tayyorlash uchun Google Gemini xizmatiga yuboriladi. Sun’iy intellekt faqat yordamchi; yakuniy qarorni HR xodimi qabul qiladi. Rozilikni istalgan vaqtda qaytarib olishingiz mumkin.",
+    "storageTitle": "Saqlash va muddat",
+    "storageText": "Ma’lumotlar kompaniyaning ishchi hududida ma’lumotlar bazasida, CV fayllari esa bulut xotirasida (Cloudflare R2) saqlanadi. Saqlash muddatini kompaniya belgilaydi (ariza shaklida ko‘rsatiladi); muddat tugagach rad etilgan va eskirgan arizalar anonimlashtiriladi.",
+    "rightsTitle": "Sizning huquqlaringiz",
+    "rightsText": "Ma’lumotlaringizga kirish, ularni tuzatish yoki o‘chirishni so‘rash va rozilikni qaytarib olish huquqiga egasiz. So‘rovni arizangizni qabul qilgan kompaniyaning HR jamoasiga yuboring."
+  },
+  "errorBoundary": {
+    "title": "Nimadir noto‘g‘ri ketdi",
+    "description": "Sahifani ko‘rsatishda kutilmagan xato yuz berdi. Qayta urinib ko‘ring yoki sahifani yangilang.",
+    "retry": "Qayta urinish",
+    "reload": "Sahifani yangilash"
+  },
   "common": {
     "save": "Saqlash",
     "cancel": "Bekor qilish",
@@ -697,7 +721,7 @@
     "errorFile": "PDF yoki DOCX CV tanlang (maksimal 5 MB)."
   },
   "resumeDropzone": {
-    "idleInstruction": "Drag & drop your CV or browse",
+    "idleInstruction": "CV’ni shu yerga tashlang yoki fayl tanlang",
     "fileRequirements": "PDF or DOCX · up to 5 MB · text-based documents",
     "browseButton": "Browse file",
     "replaceText": "Replace CV",
@@ -1001,7 +1025,7 @@
     "permReadLabel": "O'qilgan deb belgilash (Read messages):",
     "permReadActive": "Faol",
     "permReadInactive": "O‘chiq — CV qabul qilishga to‘sqinlik qilmaydi",
-    "permReplyLabel": "Javob berish (Reply to messages):",
+    "permReplyLabel": "Javob berish (xabarlarga javob yozish):",
     "permReplyActive": "Faol — ruxsat berilgan chatlarga javob yuboradi",
     "permReplyInactive": "O‘chiq — avtomatik xabar yuborilmaydi",
     "telegramRule": "Telegram qoidasi: Rasmiy Telegram API chekloviga binoan, bitta shaxsiy Telegram profiliga bir vaqtning o'zida faqat bitta faol Business bot ulanishi mumkin.",

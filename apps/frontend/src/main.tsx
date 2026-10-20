@@ -25,8 +25,9 @@ import { useAuth } from './features/auth';
 import { NotificationCenter } from './components/notification-center';
 import { LanguageSwitcher } from './components/language-switcher';
 import { ThemeToggle } from './components/ui/theme-toggle';
+import { ErrorBoundary } from './components/error-boundary';
 import { useTranslation } from 'react-i18next';
-import './i18n';
+import { localeReady } from './i18n';
 import { initTheme } from './lib/theme';
 import {
   Alert,
@@ -318,7 +319,9 @@ function AppShell() {
         </header>
         <main className="main-content">
           <Alert message={error} />
-          <AppRouter />
+          <ErrorBoundary resetKey={location.pathname}>
+            <AppRouter />
+          </ErrorBoundary>
           <footer className="page-footer">
             <span>{t('navigation.brandTagline')}</span>
             <span>{t('navigation.evidenceLedRecruiting')}</span>
@@ -365,12 +368,16 @@ function AppShell() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <BrowserRouter>
-      <AppProviders>
-        <AppShell />
-      </AppProviders>
-    </BrowserRouter>
-  </React.StrictMode>,
-);
+void localeReady.then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <BrowserRouter>
+        <ErrorBoundary variant="page">
+          <AppProviders>
+            <AppShell />
+          </AppProviders>
+        </ErrorBoundary>
+      </BrowserRouter>
+    </React.StrictMode>,
+  );
+});

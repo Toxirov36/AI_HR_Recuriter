@@ -1,17 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from '../lib/api';
 import { AuthContext, AuthPage } from '../features/auth';
 import { Alert, Loading, Toaster } from '../components/ui';
 import type { User } from '../types';
-import { PublicApplyPage } from '../pages/public-apply';
-import { LandingPage } from '../pages/landing';
+const PublicApplyPage = lazy(() => import('../pages/public-apply').then((m) => ({ default: m.PublicApplyPage })));
+const LandingPage = lazy(() => import('../pages/landing').then((m) => ({ default: m.LandingPage })));
+const PrivacyPage = lazy(() => import('../pages/privacy').then((m) => ({ default: m.PrivacyPage })));
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const isPublicApply = location.pathname.startsWith('/apply/');
+  const isPrivacy = location.pathname === '/privacy';
   const isInvitation =
     location.pathname === '/' && new URLSearchParams(location.search).has('invite');
   const isLanding = location.pathname === '/' && !isInvitation;
@@ -48,18 +50,19 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   useEffect(() => {
-    if (isPublicApply) return;
+    if (isPublicApply || isPrivacy) return;
     void refresh();
     const expired = () => setUser(undefined);
     window.addEventListener('session-expired', expired);
     return () => window.removeEventListener('session-expired', expired);
-  }, [refresh, isPublicApply]);
+  }, [refresh, isPublicApply, isPrivacy]);
 
-  if (isPublicApply) return <PublicApplyPage />;
+  if (isPublicApply) return <Suspense fallback={<Loading />}><PublicApplyPage /></Suspense>;
+  if (isPrivacy) return <Suspense fallback={<Loading />}><PrivacyPage /></Suspense>;
 
   if (isLanding) {
     if (ready && user) return <Navigate to="/dashboard" replace />;
-    return <LandingPage />;
+    return <Suspense fallback={<Loading />}><LandingPage /></Suspense>;
   }
 
   if (!ready) return <Loading />;

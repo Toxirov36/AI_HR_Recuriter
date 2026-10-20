@@ -352,7 +352,9 @@ export function TopCandidatesModal({
               {analyzing ? t('topCandidates.analyzing') : t('topCandidates.runAnalysis')}
             </Button>
             <button
+              type="button"
               onClick={onClose}
+              aria-label={t('common.close')}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors"
             >
               <X className="h-5 w-5" />

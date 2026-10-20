@@ -14,4 +14,4 @@ Disallow: /team
 Disallow: /login
 Disallow: /register
 
-Sitemap: https://hr-recruiter.ddns.net/sitemap.xml
+Sitemap: https://hrdai.uz/sitemap.xml

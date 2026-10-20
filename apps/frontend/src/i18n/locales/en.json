@@ -55,6 +55,30 @@
     "ctaText": "Create your company workspace and manage the process in one place.",
     "footer": "Evidence-led hiring, guided by people."
   },
+  "privacy": {
+    "back": "Home",
+    "title": "Privacy policy",
+    "updated": "Last updated: October 2026",
+    "intro": "Shortlist is a tool that helps teams screen candidates and run their hiring process. This page explains how candidate data is collected, used and stored.",
+    "controllerTitle": "Who is responsible for the data",
+    "controllerText": "When you apply for a vacancy, your data is reviewed by the HR team of the company that posted it and is kept in that company’s workspace. Shortlist provides the tool to that team.",
+    "dataTitle": "What data is collected",
+    "dataText": "Name, phone number, email, Telegram username and ID, the CV file you upload and the text extracted from it, assessment answers and results, application status, and notes written by HR staff.",
+    "purposeTitle": "Why it is used",
+    "purposeText": "Only to review your application for that vacancy and to contact you (by Telegram or email). Your data is not used for advertising.",
+    "aiTitle": "Artificial intelligence",
+    "aiText": "If you consent, CV text and the vacancy requirements are sent to Google Gemini to prepare short summaries, match estimates and assessment questions. AI only assists; the final decision is made by an HR person. You can withdraw your consent at any time.",
+    "storageTitle": "Storage and retention",
+    "storageText": "Data is stored in the company’s workspace database, and CV files are kept in cloud storage (Cloudflare R2). The company sets the retention period (shown on the application form); after it ends, rejected and expired applications are anonymised.",
+    "rightsTitle": "Your rights",
+    "rightsText": "You may ask to access, correct or delete your data and may withdraw your consent. Send your request to the HR team of the company that received your application."
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "description": "An unexpected error occurred while showing this page. Try again or reload the page.",
+    "retry": "Try again",
+    "reload": "Reload page"
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
