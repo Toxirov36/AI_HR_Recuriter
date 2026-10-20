@@ -83,4 +83,30 @@ describe('VacancyGenerator feature', () => {
     await screen.findByRole('alert');
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
+
+  it('correctly translates form labels into Uzbek, Russian and Tajik', async () => {
+    await changeLanguage('uz');
+    const { unmount: unmountUz } = render(
+      <VacancyGenerator configured={true} disabled={false} apply={vi.fn()} />,
+    );
+    expect(screen.getByLabelText('Kimni ishga qidiryapsiz?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Vakansiya tavsifini yaratish' })).toBeInTheDocument();
+    unmountUz();
+
+    await changeLanguage('ru');
+    const { unmount: unmountRu } = render(
+      <VacancyGenerator configured={true} disabled={false} apply={vi.fn()} />,
+    );
+    expect(screen.getByLabelText('Кого вы ищете?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Сгенерировать описание вакансии' })).toBeInTheDocument();
+    unmountRu();
+
+    await changeLanguage('tg');
+    const { unmount: unmountTg } = render(
+      <VacancyGenerator configured={true} disabled={false} apply={vi.fn()} />,
+    );
+    expect(screen.getByLabelText('Шумо киро ба кор меҷӯед?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Эҷоди тавсифи вакансия' })).toBeInTheDocument();
+    unmountTg();
+  });
 });

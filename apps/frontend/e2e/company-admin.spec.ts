@@ -37,7 +37,7 @@ test('company admin settings, tenant isolation, roles and session blocking', asy
     await page.getByLabel('Work email').fill(`admin-${suffix}@example.com`);
     await page.getByLabel('Password', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await page.getByRole('link', { name: 'Admin panel', exact: true }).first().click();
+    await page.getByRole('link', { name: 'Company settings', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Kompaniya admin paneli' })).toBeVisible();
     await expect(page.getByLabel('Kompaniya nomi', { exact: true })).toHaveValue('Admin Panel QA');
     await page.getByLabel('Kompaniya nomi', { exact: true }).fill('Admin Panel QA Updated');

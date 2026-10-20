@@ -274,9 +274,12 @@ function AppShell() {
                       <p className="text-sm font-semibold text-slate-900 leading-none">
                         {user.fullName}
                       </p>
-                      <p className="text-xs text-slate-500 leading-none mt-1">
-                        {user.email || user.phone || user.role}
+                      <p className="text-xs text-slate-600 leading-none mt-1 truncate">
+                        {user.email || user.phone}
                       </p>
+                      <span className="mt-1.5 inline-flex w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                        {t(`settings.role${user.role.charAt(0)}${user.role.slice(1).toLowerCase()}`, user.role)}
+                      </span>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />

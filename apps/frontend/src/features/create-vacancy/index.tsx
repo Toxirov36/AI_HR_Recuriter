@@ -62,7 +62,7 @@ export function VacancyGenerator({
           setTranscribedNotice(true);
         }
       } catch (err: any) {
-        setError(err?.message || 'Audio transcription failed');
+        setError(err?.message || t('vacancyGenerator.transcriptionFailed', 'Audio transcription failed'));
       }
     },
     onError: (errKey) => {
@@ -117,7 +117,7 @@ export function VacancyGenerator({
             </div>
           ) : (
             <span className="text-xs text-slate-500 dark:text-zinc-400">
-              {t('vacancyGenerator.recordVoice', 'Record voice')} (max 90s)
+              {t('vacancyGenerator.recordVoiceLimit', 'Record voice (max 90s)')}
             </span>
           )}
         </div>
