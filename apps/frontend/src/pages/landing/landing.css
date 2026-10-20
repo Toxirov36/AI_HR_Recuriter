@@ -139,7 +139,7 @@
   align-items: center;
   gap: 7px;
   color: #277455;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -225,7 +225,7 @@
   padding: 0 15px;
   border-bottom: 1px solid #e9eee9;
   background: #fff;
-  color: #99a9a0;
+  color: #677a6f;
   font-size: 9px;
 }
 .landing-preview-dots {
@@ -293,7 +293,7 @@
 .landing-preview-heading small,
 .landing-preview-stats small,
 .landing-preview-row small {
-  color: #8a9c8e;
+  color: #657769;
   font-size: 9px;
 }
 .landing-preview-heading strong {
@@ -416,7 +416,7 @@
 }
 .landing-preview-note small {
   font-size: 9px;
-  color: #879a8d;
+  color: #657769;
 }
 .landing-section {
   padding-block: 100px;
