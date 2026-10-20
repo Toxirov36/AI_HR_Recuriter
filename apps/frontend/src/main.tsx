@@ -24,7 +24,7 @@ import { AppRouter, preloadRoute } from './app/router';
 import { useAuth } from './features/auth';
 import { NotificationCenter } from './components/notification-center';
 import { LanguageSwitcher } from './components/language-switcher';
-import { ThemeMenuGroup } from './components/theme-menu';
+import { ThemeToggle } from './components/ui/theme-toggle';
 import { useTranslation } from 'react-i18next';
 import './i18n';
 import { initTheme } from './lib/theme';
@@ -259,6 +259,7 @@ function AppShell() {
             <kbd className="search-pill-kbd">⌘K</kbd>
           </button>
           <div className="topbar-actions">
+            <ThemeToggle />
             <LanguageSwitcher />
             <NotificationCenter />
             <DropdownMenu>
@@ -303,8 +304,6 @@ function AppShell() {
                     </DropdownMenuItem>
                   )}
                 </DropdownMenuGroup>
-                <DropdownMenuSeparator />
-                <ThemeMenuGroup />
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer flex items-center"
