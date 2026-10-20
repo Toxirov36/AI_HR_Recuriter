@@ -51,6 +51,14 @@ import {
   DialogTitle,
   Input,
 } from './components/ui';
+// Self-hosted fonts (no third-party requests, so the CSP needs no Google font hosts).
+import '@fontsource/inter/400.css';
+import '@fontsource/inter/500.css';
+import '@fontsource/inter/600.css';
+import '@fontsource/inter/700.css';
+import '@fontsource/plus-jakarta-sans/600.css';
+import '@fontsource/plus-jakarta-sans/700.css';
+import '@fontsource/plus-jakarta-sans/800.css';
 import './styles.css';
 import './styles.dark.css';
 
