@@ -612,7 +612,7 @@ export function Vacancies() {
           />
         </div>
 
-        <div className="relative w-[170px]" ref={statusAccordionRef}>
+        <div className="relative h-[44px] w-[170px]" ref={statusAccordionRef}>
           <Accordion
             type="single"
             collapsible
