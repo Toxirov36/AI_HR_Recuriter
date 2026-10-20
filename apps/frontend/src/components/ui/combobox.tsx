@@ -221,7 +221,7 @@ export const ComboboxInput = React.forwardRef<HTMLInputElement, ComboboxInputPro
           size={16}
           className={cn(
             'text-slate-400 shrink-0 ml-2 transition-transform duration-200 pointer-events-none',
-            isOpen && 'rotate-180 text-[#1a5d4c]',
+            isOpen && 'rotate-180 text-[#1a5d4c] dark:text-[#58c0a0]',
           )}
         />
       </div>
@@ -387,13 +387,13 @@ export function ComboboxItem<T = any>({ value: itemValue, children, className }:
       className={cn(
         'flex items-center justify-between px-3 py-2 rounded-lg cursor-pointer text-sm transition-colors',
         isSelected
-          ? 'bg-[#eaf5ef] text-[#165b4c] font-medium'
+          ? 'bg-[#eaf5ef] dark:bg-[#17302a] text-[#165b4c] dark:text-[#58c0a0] font-medium'
           : 'text-slate-700 hover:bg-slate-50',
         className,
       )}
     >
       <div className="flex-1 min-w-0">{children ?? getItemText(itemValue)}</div>
-      {isSelected && <Check size={16} className="text-[#1a5d4c] shrink-0 ml-2" />}
+      {isSelected && <Check size={16} className="text-[#1a5d4c] dark:text-[#58c0a0] shrink-0 ml-2" />}
     </div>
   );
 }

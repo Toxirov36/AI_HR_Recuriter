@@ -619,17 +619,17 @@ export function CandidateDetail() {
               </section>
             )}
             {!c.mergedIntoId && Boolean(duplicates?.length) && (
-              <section className="mb-5 rounded-xl border border-[#cce3d7] bg-[#f4faf6] p-5" aria-label={t('candidates.duplicatesTitle')}>
-                <h2 className="text-base font-semibold text-[#183d30]">{t('candidates.duplicatesTitle')}</h2>
-                <p className="mt-1 text-sm text-[#60736b]">{t('candidates.duplicatesDesc')}</p>
+              <section className="mb-5 rounded-xl border border-[#cce3d7] dark:border-[#24352e] bg-[#f4faf6] dark:bg-[#17302a] p-5" aria-label={t('candidates.duplicatesTitle')}>
+                <h2 className="text-base font-semibold text-[#183d30] dark:text-[#e6efea]">{t('candidates.duplicatesTitle')}</h2>
+                <p className="mt-1 text-sm text-[#60736b] dark:text-[#93a8a0]">{t('candidates.duplicatesDesc')}</p>
                 <div className="mt-3 space-y-2">
                   {duplicates?.map((match) => (
-                    <div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#dce7e0] bg-white p-3 text-sm">
+                    <div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#dce7e0] dark:border-[#24352e] bg-white p-3 text-sm">
                       <div>
-                        <Link className="font-semibold text-[#245e4f] underline" to={`/candidates/${match.id}`}>
+                        <Link className="font-semibold text-[#245e4f] dark:text-[#58c0a0] underline" to={`/candidates/${match.id}`}>
                           {match.fullName}
                         </Link>
-                        <p className="text-xs text-[#60736b]">
+                        <p className="text-xs text-[#60736b] dark:text-[#93a8a0]">
                           {match.source === 'TELEGRAM' ? t('candidates.sourceTelegram') : t('candidates.sourceWebsite')} · {match.email || match.phone} {match.resumeName ? `· ${t('candidates.hasCv')}` : ''}
                         </p>
                       </div>
@@ -642,12 +642,12 @@ export function CandidateDetail() {
               </section>
             )}
             {Boolean(c.mergedCandidates?.length) && (
-              <section className="mb-5 rounded-xl border border-[#dce7e0] bg-white p-4 text-sm">
+              <section className="mb-5 rounded-xl border border-[#dce7e0] dark:border-[#24352e] bg-white p-4 text-sm">
                 <strong>{t('candidates.mergedHistoryTitle')}</strong>
-                <p className="mt-1 text-[#60736b]">{t('candidates.mergedHistoryDesc')}</p>
+                <p className="mt-1 text-[#60736b] dark:text-[#93a8a0]">{t('candidates.mergedHistoryDesc')}</p>
                 <div className="mt-2 flex flex-wrap gap-3">
                   {c.mergedCandidates?.map((source) => (
-                    <Link key={source.id} className="text-[#245e4f] underline" to={`/candidates/${source.id}`}>
+                    <Link key={source.id} className="text-[#245e4f] dark:text-[#58c0a0] underline" to={`/candidates/${source.id}`}>
                       {source.fullName} #{source.id}
                     </Link>
                   ))}
@@ -701,7 +701,7 @@ export function CandidateDetail() {
                 {c.resumeName && (
                   <div className="flex items-center justify-between p-3.5 mt-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-[#1a5d4c]/10 text-[#1a5d4c] flex items-center justify-center shrink-0">
+                      <div className="h-8 w-8 rounded-lg bg-[#1a5d4c]/10 text-[#1a5d4c] dark:text-[#58c0a0] flex items-center justify-center shrink-0">
                         <FileText size={18} />
                       </div>
                       <span className="text-xs font-semibold truncate text-slate-700">{c.resumeName}</span>

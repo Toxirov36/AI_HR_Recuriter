@@ -111,7 +111,7 @@ export function ScorecardSection({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Scale className="text-[#245e4f] dark:text-emerald-400" size={18} />
+              <Scale className="text-[#245e4f] dark:text-[#58c0a0] dark:text-emerald-400" size={18} />
               <h3 className="font-semibold text-slate-900 dark:text-slate-100">
                 Strukturaviy baholash mezonlari (Scorecard)
               </h3>
@@ -322,7 +322,7 @@ export function ScorecardSection({
         <div className="flex items-start justify-between gap-2 border-b pb-3 dark:border-slate-800">
           <div>
             <div className="flex items-center gap-2">
-              <UserCheck size={20} className="text-[#245e4f] dark:text-emerald-400" />
+              <UserCheck size={20} className="text-[#245e4f] dark:text-[#58c0a0] dark:text-emerald-400" />
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Yakuniy insoniy qaror (Human Accountability)
               </h3>

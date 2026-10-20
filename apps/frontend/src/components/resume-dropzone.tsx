@@ -54,8 +54,8 @@ export function ResumeDropzone({
             : isDragReject
               ? 'border-red-400 bg-red-50/50 ring-2 ring-red-200'
               : isDragActive
-                ? 'border-[#1a5d4c] bg-[#eaf5ef]/60 ring-4 ring-[#1a5d4c]/10 scale-[1.01]'
-                : 'border-slate-200 hover:border-[#1a5d4c] hover:bg-[#f8fafc] bg-white'
+                ? 'border-[#1a5d4c] bg-[#eaf5ef] dark:bg-[#17302a]/60 ring-4 ring-[#1a5d4c]/10 scale-[1.01]'
+                : 'border-slate-200 hover:border-[#1a5d4c] hover:bg-slate-50 bg-white'
         }`}
       >
         <input {...getInputProps()} aria-label={t('resumeDropzone.uploadLabel')} />
@@ -66,7 +66,7 @@ export function ResumeDropzone({
               ? 'bg-[#1a5d4c] text-white scale-110 shadow-lg shadow-[#1a5d4c]/20'
               : isDragReject
                 ? 'bg-red-100 text-red-600'
-                : 'bg-[#eaf5ef] text-[#1a5d4c] group-hover:scale-105 group-hover:bg-[#1a5d4c] group-hover:text-white'
+                : 'bg-[#eaf5ef] dark:bg-[#17302a] text-[#1a5d4c] dark:text-[#58c0a0] group-hover:scale-105 group-hover:bg-[#1a5d4c] group-hover:text-white'
           }`}
         >
           {isDragReject ? (
@@ -98,7 +98,7 @@ export function ResumeDropzone({
             type="button"
             variant="outline"
             size="sm"
-            className="mt-4 h-9 px-4 rounded-xl border-slate-200 bg-white font-medium text-slate-700 shadow-sm transition-all group-hover:border-[#1a5d4c] group-hover:text-[#1a5d4c]"
+            className="mt-4 h-9 px-4 rounded-xl border-slate-200 bg-white font-medium text-slate-700 shadow-sm transition-all group-hover:border-[#1a5d4c] group-hover:text-[#1a5d4c] dark:group-hover:text-[#58c0a0]"
           >
             {t('resumeDropzone.browseButton')}
           </Button>

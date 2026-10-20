@@ -55,8 +55,8 @@ export function PublicApplyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f8f6] text-[#18352e]">
-      <header className="border-b border-[#dfe8e3] bg-white px-5 py-4 sm:px-10">
+    <div className="min-h-screen bg-[#f5f8f6] dark:bg-[#17302a] text-[#18352e] dark:text-[#e6efea]">
+      <header className="border-b border-[#dfe8e3] dark:border-[#24352e] bg-white px-5 py-4 sm:px-10">
         <div className="mx-auto flex max-w-5xl items-center justify-between">
           <div className="flex items-center gap-3 text-xl font-bold">
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#245e4f] text-white">
@@ -73,25 +73,25 @@ export function PublicApplyPage() {
         ) : vacancy ? (
           <>
             <section className="space-y-5">
-              <div className="inline-flex items-center gap-2 rounded-full bg-[#e5f3ec] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#245e4f]">
+              <div className="inline-flex items-center gap-2 rounded-full bg-[#e5f3ec] dark:bg-[#17302a] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[#245e4f] dark:text-[#58c0a0]">
                 <BriefcaseBusiness size={14} /> {t('publicApply.openVacancy')}
               </div>
-              <p className="text-sm font-medium text-[#688078]">{vacancy.company.name}</p>
+              <p className="text-sm font-medium text-[#688078] dark:text-[#93a8a0]">{vacancy.company.name}</p>
               <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{vacancy.title}</h1>
-              <p className="whitespace-pre-wrap text-[15px] leading-7 text-[#4b6159]">{vacancy.description}</p>
+              <p className="whitespace-pre-wrap text-[15px] leading-7 text-[#4b6159] dark:text-[#93a8a0]">{vacancy.description}</p>
             </section>
-            <section className="rounded-2xl border border-[#dce7e0] bg-white p-6 shadow-sm sm:p-8">
+            <section className="rounded-2xl border border-[#dce7e0] dark:border-[#24352e] bg-white p-6 shadow-sm sm:p-8">
               {done ? (
                 <div role="status" className="space-y-3 py-10 text-center">
-                  <CheckCircle2 size={44} className="mx-auto text-[#245e4f]" />
+                  <CheckCircle2 size={44} className="mx-auto text-[#245e4f] dark:text-[#58c0a0]" />
                   <h2 className="text-2xl font-semibold">{t('publicApply.successTitle')}</h2>
-                  <p className="text-sm text-[#60736b]">{t('publicApply.successSubtitle')}</p>
+                  <p className="text-sm text-[#60736b] dark:text-[#93a8a0]">{t('publicApply.successSubtitle')}</p>
                 </div>
               ) : (
                 <form onSubmit={submit} className="space-y-5">
                   <div>
                     <h2 className="text-2xl font-semibold">{t('publicApply.applyTitle')}</h2>
-                    <p className="mt-1 text-sm text-[#60736b]">{t('publicApply.applySubtitle')}</p>
+                    <p className="mt-1 text-sm text-[#60736b] dark:text-[#93a8a0]">{t('publicApply.applySubtitle')}</p>
                   </div>
                   <Alert message={error} />
                   <label className="block text-sm font-medium">
@@ -106,11 +106,11 @@ export function PublicApplyPage() {
                     {t('publicApply.phone')}{' '}
                     <Input name="phone" type="tel" autoComplete="tel" placeholder="+998 90 123 45 67" className="mt-1.5" />
                   </label>
-                  <p className="text-xs text-[#60736b]">{t('publicApply.contactRequirement')}</p>
-                  <label className="block cursor-pointer rounded-xl border border-dashed border-[#a9c5b5] bg-[#f8fbf9] p-5 text-center text-sm hover:border-[#245e4f]">
-                    <FileText size={22} className="mx-auto mb-2 text-[#245e4f]" />
+                  <p className="text-xs text-[#60736b] dark:text-[#93a8a0]">{t('publicApply.contactRequirement')}</p>
+                  <label className="block cursor-pointer rounded-xl border border-dashed border-[#a9c5b5] dark:border-[#24352e] bg-[#f8fbf9] dark:bg-[#17302a] p-5 text-center text-sm hover:border-[#245e4f]">
+                    <FileText size={22} className="mx-auto mb-2 text-[#245e4f] dark:text-[#58c0a0]" />
                     <span className="font-semibold">{fileName || t('publicApply.uploadCv')}</span>
-                    <span className="mt-1 block text-xs text-[#60736b]">{t('publicApply.maxSize')}</span>
+                    <span className="mt-1 block text-xs text-[#60736b] dark:text-[#93a8a0]">{t('publicApply.maxSize')}</span>
                     <input
                       name="file"
                       type="file"
@@ -124,9 +124,9 @@ export function PublicApplyPage() {
                       }}
                     />
                   </label>
-                  <div className="space-y-3 border-t border-[#e5ece7] pt-5 text-sm leading-6 text-[#4b6159]">
+                  <div className="space-y-3 border-t border-[#e5ece7] dark:border-[#24352e] pt-5 text-sm leading-6 text-[#4b6159] dark:text-[#93a8a0]">
                     <p>
-                      <ShieldCheck size={16} className="mr-1.5 inline text-[#245e4f]" />
+                      <ShieldCheck size={16} className="mr-1.5 inline text-[#245e4f] dark:text-[#58c0a0]" />
                       {t('publicApply.privacyPrefix', { company: vacancy.company.name, days: vacancy.company.retentionDays })}
                     </p>
                     <label className="flex items-start gap-2">

@@ -109,7 +109,7 @@ export function Profile() {
           <p className="text-sm text-slate-500 mt-1">{t('profile.description')}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge className="bg-[#1a5d4c]/10 text-[#1a5d4c] font-medium border-0 px-3 py-1">
+          <Badge className="bg-[#1a5d4c]/10 text-[#1a5d4c] dark:text-[#58c0a0] font-medium border-0 px-3 py-1">
             {user?.role || 'HR'}
           </Badge>
           {user?.platformRole === 'SUPER_ADMIN' && (
@@ -130,7 +130,7 @@ export function Profile() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-base font-semibold text-slate-900 flex items-center gap-2">
-                  <UserIcon size={18} className="text-[#1a5d4c]" />
+                  <UserIcon size={18} className="text-[#1a5d4c] dark:text-[#58c0a0]" />
                   {t('profile.personalAndCompany')}
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">{t('profile.personalAndCompanyDesc')}</p>

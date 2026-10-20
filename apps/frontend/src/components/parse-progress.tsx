@@ -61,7 +61,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
                 ? 'bg-red-50 text-red-600'
                 : isCompleted
                   ? 'bg-emerald-50 text-emerald-600'
-                  : 'bg-[#245e4f]/10 text-[#245e4f]'
+                  : 'bg-[#245e4f]/10 text-[#245e4f] dark:text-[#58c0a0]'
             }`}
           >
             {isFailed ? (
@@ -76,7 +76,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
             <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-1.5">
               <span>{t('parseProgress.title')}</span>
               {!isCompleted && !isFailed && (
-                <span className="inline-flex items-center gap-1 text-[11px] font-normal text-[#245e4f] bg-[#245e4f]/10 px-1.5 py-0.5 rounded-md">
+                <span className="inline-flex items-center gap-1 text-[11px] font-normal text-[#245e4f] dark:text-[#58c0a0] bg-[#245e4f]/10 px-1.5 py-0.5 rounded-md">
                   <Loader2 size={11} className="animate-spin" /> {t('parseProgress.backgrounded')}
                 </span>
               )}
@@ -97,7 +97,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
               100%
             </span>
           ) : (
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#245e4f]/10 text-[#245e4f]">
+            <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-[#245e4f]/10 text-[#245e4f] dark:text-[#58c0a0]">
               {t('parseProgress.stepLabel', { step: currentStep, total: totalSteps })}
             </span>
           )}
@@ -157,7 +157,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
                   isStepDone
                     ? 'text-slate-700'
                     : isStepActive
-                      ? 'text-[#245e4f] font-medium'
+                      ? 'text-[#245e4f] dark:text-[#58c0a0] font-medium'
                       : 'text-slate-400'
                 }`}
               >
@@ -183,7 +183,7 @@ export function ParseProgress({ progress, onRetry, className = '' }: ParseProgre
                   {isStepDone ? (
                     <span className="text-emerald-600">{t('parseProgress.done')}</span>
                   ) : isStepActive ? (
-                    <span className="text-[#245e4f] flex items-center gap-1">
+                    <span className="text-[#245e4f] dark:text-[#58c0a0] flex items-center gap-1">
                       <Loader2 size={10} className="animate-spin" /> {t('parseProgress.inProgress')}
                     </span>
                   ) : (

@@ -587,7 +587,7 @@ export function Pipeline() {
           </Link>
           <button
             type="button"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] hover:bg-[#1a5d4c]/10 transition-colors border border-transparent hover:border-[#1a5d4c]/20"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] dark:hover:text-[#58c0a0] hover:bg-[#1a5d4c]/10 transition-colors border border-transparent hover:border-[#1a5d4c]/20"
             title={t('pipeline.dossierTooltip', 'Nomzod A4 dosyesini ko‘rish va chop etish')}
             onClick={(e) => {
               e.preventDefault();
@@ -633,7 +633,7 @@ export function Pipeline() {
         <Select value={selectedVacancy} onValueChange={(value) => updateParams({ vacancyId: value === 'all' ? null : value, page: null })}>
           <SelectTrigger
             value={selectedVacancy}
-            className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-none hover:border-slate-300 focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
             aria-label={t('pipeline.filterVacancy', 'Filter by vacancy')}
           >
             <SelectValue placeholder={t('pipeline.allVacancies', 'All vacancies')} />
@@ -652,7 +652,7 @@ export function Pipeline() {
         </Select>
 
         <div className="relative flex items-center w-full">
-          <Search size={16} className="absolute left-3 text-[#94a3b8] pointer-events-none" aria-hidden="true" />
+          <Search size={16} className="absolute left-3 text-slate-400 pointer-events-none" aria-hidden="true" />
           <Input
             id="pipeline-search-input"
             aria-label={t('pipeline.searchCandidates', 'Search the pipeline')}
@@ -661,12 +661,12 @@ export function Pipeline() {
             onChange={(event) => {
               updateParams({ search: event.target.value, page: null });
             }}
-            className="h-10 w-full pl-9 pr-8 rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] placeholder:text-[#94a3b8] shadow-none hover:border-[#cbd5e1] focus-visible:border-[#1a5d4c] focus-visible:ring-2 focus-visible:ring-[#1a5d4c]/15"
+            className="h-10 w-full pl-9 pr-8 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 shadow-none hover:border-slate-300 focus-visible:border-[#1a5d4c] focus-visible:ring-2 focus-visible:ring-[#1a5d4c]/15"
           />
           {search && (
             <button
               type="button"
-              className="absolute right-2.5 flex items-center justify-center w-5 h-5 rounded-full text-[#64748b] hover:text-[#0f172a] hover:bg-[#e2e8f0] transition-colors"
+              className="absolute right-2.5 flex items-center justify-center w-5 h-5 rounded-full text-slate-500 hover:text-slate-900 hover:bg-slate-200 transition-colors"
               aria-label="Clear search"
               onClick={() => {
                 updateParams({ search: null, page: null });
@@ -680,7 +680,7 @@ export function Pipeline() {
         <Select value={selectedStage} onValueChange={(val) => updateParams({ stage: val === 'all' ? null : val, page: null })}>
           <SelectTrigger
             value={selectedStage}
-            className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-none hover:border-slate-300 focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
             aria-label={t('pipeline.filterStage', 'Filter by stage')}
           >
             <SelectValue placeholder={t('pipeline.allStages', 'All stages')} />
@@ -762,7 +762,7 @@ export function Pipeline() {
                 >
                   <SelectTrigger
                     value={mobileStage}
-                    className="h-10 w-full rounded-xl border border-[#e2e8f0] bg-white text-sm text-[#0f172a] shadow-none hover:border-[#cbd5e1] focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-none hover:border-slate-300 focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
                     aria-label="Select stage view"
                   >
                     <SelectValue />
@@ -865,7 +865,7 @@ export function Pipeline() {
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] hover:bg-[#1a5d4c]/10 transition-colors"
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-[#1a5d4c] dark:hover:text-[#58c0a0] hover:bg-[#1a5d4c]/10 transition-colors"
                       title={t('pipeline.dossierTooltip', 'Nomzod A4 dosyesini ko‘rish va chop etish')}
                       onClick={() => setDossierApp(application)}
                     >

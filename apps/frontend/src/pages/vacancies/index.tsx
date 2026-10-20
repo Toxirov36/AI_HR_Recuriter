@@ -259,9 +259,9 @@ export function VacancyForm({
                 <label className="form-label" htmlFor="field-work-model">{t('vacancies.labelWorkModel')}</label>
                 <select id="field-work-model" className="form-control-select" value={workModel} onChange={(e) => setWorkModel(e.target.value)}>
                   <option value="">{t('vacancies.notSpecified')}</option>
-                  <option value="On-site">On-site</option>
-                  <option value="Hybrid">Hybrid</option>
-                  <option value="Remote">Remote</option>
+                  <option value="On-site">{t('vacancies.workModelOnSite', 'On-site')}</option>
+                  <option value="Hybrid">{t('vacancies.workModelHybrid', 'Hybrid')}</option>
+                  <option value="Remote">{t('vacancies.workModelRemote', 'Remote')}</option>
                 </select>
               </div>
 
@@ -269,10 +269,10 @@ export function VacancyForm({
                 <label className="form-label" htmlFor="field-employment">{t('vacancies.labelEmploymentType')}</label>
                 <select id="field-employment" className="form-control-select" value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
                   <option value="">{t('vacancies.notSpecified')}</option>
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Internship">Internship</option>
+                  <option value="Full-time">{t('vacancies.empFullTime', 'Full-time')}</option>
+                  <option value="Part-time">{t('vacancies.empPartTime', 'Part-time')}</option>
+                  <option value="Contract">{t('vacancies.empContract', 'Contract')}</option>
+                  <option value="Internship">{t('vacancies.empInternship', 'Internship')}</option>
                 </select>
               </div>
 
@@ -281,10 +281,10 @@ export function VacancyForm({
                 <label className="form-label" htmlFor="field-seniority">{t('vacancies.labelSeniority')}</label>
                 <select id="field-seniority" className="form-control-select" value={seniority} onChange={(e) => setSeniority(e.target.value)}>
                   <option value="">{t('vacancies.notSpecified')}</option>
-                  <option value="Junior">Junior</option>
-                  <option value="Middle">Middle</option>
-                  <option value="Senior">Senior</option>
-                  <option value="Lead">Lead</option>
+                  <option value="Junior">{t('vacancies.seniorityJunior', 'Junior')}</option>
+                  <option value="Middle">{t('vacancies.seniorityMiddle', 'Middle')}</option>
+                  <option value="Senior">{t('vacancies.senioritySenior', 'Senior')}</option>
+                  <option value="Lead">{t('vacancies.seniorityLead', 'Lead')}</option>
                 </select>
               </div>
 
@@ -332,7 +332,7 @@ export function VacancyForm({
                 required
                 maxLength={14000}
                 rows={4}
-                placeholder="What the role owns, what the team does, what you offer..."
+                placeholder={t('vacancies.descPlaceholder', 'What the role owns, what the team does, what you offer...')}
                 className="form-control-textarea"
               />
             </div>
@@ -418,16 +418,16 @@ export function VacancyForm({
               </div>
             </div>
             {hhFields && <div className="mt-5 rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold text-slate-900">hh.uz maydonlari</h3>
-              <p className="mt-1 text-sm text-slate-500">HeadHunter’da e’lon qilish uchun to‘ldiring. Telegram e’loni uchun talab qilinmaydi.</p>
+              <h3 className="font-semibold text-slate-900">{t('vacancies.hhFieldsTitle', 'hh.uz maydonlari')}</h3>
+              <p className="mt-1 text-sm text-slate-500">{t('vacancies.hhFieldsDesc', 'HeadHunter’da e’lon qilish uchun to‘ldiring. Telegram e’loni uchun talab qilinmaydi.')}</p>
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {[
-                  { label: 'Hudud', value: hhAreaId, set: setHhAreaId, options: hhFields.areas },
-                  { label: 'Kasb yo‘nalishi', value: hhProfessionalRoleId, set: setHhProfessionalRoleId, options: hhFields.roles },
-                  { label: 'Tajriba', value: hhExperienceId, set: setHhExperienceId, options: hhFields.experiences },
-                  { label: 'Bandlik', value: hhEmploymentId, set: setHhEmploymentId, options: hhFields.employments },
-                  { label: 'Ish jadvali', value: hhScheduleId, set: setHhScheduleId, options: hhFields.schedules },
-                ].map(field => <label key={field.label} className="text-sm text-slate-700">{field.label}<select className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2" value={field.value} onChange={event => field.set(event.target.value)}><option value="">Tanlang</option>{field.options.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>)}
+                  { label: t('vacancies.hhArea', 'Hudud'), value: hhAreaId, set: setHhAreaId, options: hhFields.areas },
+                  { label: t('vacancies.hhRole', 'Kasb yo‘nalishi'), value: hhProfessionalRoleId, set: setHhProfessionalRoleId, options: hhFields.roles },
+                  { label: t('vacancies.hhExperience', 'Tajriba'), value: hhExperienceId, set: setHhExperienceId, options: hhFields.experiences },
+                  { label: t('vacancies.hhEmployment', 'Bandlik'), value: hhEmploymentId, set: setHhEmploymentId, options: hhFields.employments },
+                  { label: t('vacancies.hhSchedule', 'Ish jadvali'), value: hhScheduleId, set: setHhScheduleId, options: hhFields.schedules },
+                ].map(field => <label key={field.label} className="text-sm text-slate-700">{field.label}<select className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2" value={field.value} onChange={event => field.set(event.target.value)}><option value="">{t('common.select', 'Tanlang')}</option>{field.options.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>)}
               </div>
             </div>}
           </div>
@@ -514,7 +514,6 @@ export function Vacancies() {
   const [open, setOpen] = useState(params.has('new'));
   const search = params.get('search') ?? '';
   const statusFilter = params.get('status') ?? 'ALL';
-  const sort = params.get('sort') ?? 'newest';
   const [openStatusAccordion, setOpenStatusAccordion] = useState<string>('');
   const statusAccordionRef = useRef<HTMLDivElement>(null);
   const page = Math.max(1, Number(params.get('page')) || 1);
@@ -554,7 +553,7 @@ export function Vacancies() {
     }
   }, [openStatusAccordion]);
   const { data, error, reload } = useData<Page<Vacancy>>(
-    `/vacancies?page=${page}&search=${encodeURIComponent(debouncedSearch)}${statusFilter !== 'ALL' ? `&status=${encodeURIComponent(statusFilter)}` : ''}&sort=${sort}`,
+    `/vacancies?page=${page}&search=${encodeURIComponent(debouncedSearch)}${statusFilter !== 'ALL' ? `&status=${encodeURIComponent(statusFilter)}` : ''}`,
   );
 
   const filteredItems = data?.items ?? [];
@@ -644,13 +643,13 @@ export function Vacancies() {
                       className={cn(
                         'w-full flex items-center justify-between px-3 py-2 text-xs rounded-lg text-left transition-colors cursor-pointer',
                         isSelected
-                          ? 'bg-[#eaf5ef] text-[#165b4c] font-medium active-filter'
+                          ? 'bg-[#eaf5ef] dark:bg-[#17302a] text-[#165b4c] dark:text-[#58c0a0] font-medium active-filter'
                           : 'text-slate-700 hover:bg-slate-50',
                       )}
                     >
                       <span>{opt.label}</span>
                       {isSelected && (
-                        <Check size={14} className="text-[#1a5d4c] filter-check-icon shrink-0 ml-2" />
+                        <Check size={14} className="text-[#1a5d4c] dark:text-[#58c0a0] filter-check-icon shrink-0 ml-2" />
                       )}
                     </button>
                   );
@@ -659,11 +658,6 @@ export function Vacancies() {
             </AccordionItem>
           </Accordion>
         </div>
-        <select aria-label={t('vacancies.sortLabel')} className="form-control-select max-w-[190px]" value={sort} onChange={(event) => updateParams({ sort: event.target.value === 'newest' ? null : event.target.value, page: null })}>
-          <option value="newest">{t('vacancies.sortNewest')}</option>
-          <option value="oldest">{t('vacancies.sortOldest')}</option>
-          <option value="title">{t('vacancies.sortTitle')}</option>
-        </select>
       </div>
 
       <Alert message={error || actionError} />

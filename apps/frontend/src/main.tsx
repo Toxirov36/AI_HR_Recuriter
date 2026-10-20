@@ -4,7 +4,6 @@ import { BrowserRouter, Link, NavLink, useLocation, useNavigate } from 'react-ro
 import {
   BriefcaseBusiness,
   ChevronRight,
-  CircleHelp,
   GitBranch,
   Layers3,
   LayoutDashboard,
@@ -25,8 +24,10 @@ import { AppRouter, preloadRoute } from './app/router';
 import { useAuth } from './features/auth';
 import { NotificationCenter } from './components/notification-center';
 import { LanguageSwitcher } from './components/language-switcher';
+import { ThemeToggle } from './components/ui/theme-toggle';
 import { useTranslation } from 'react-i18next';
 import './i18n';
+import { initTheme } from './lib/theme';
 import {
   Alert,
   Avatar,
@@ -50,6 +51,9 @@ import {
   Input,
 } from './components/ui';
 import './styles.css';
+import './styles.dark.css';
+
+initTheme();
 
 function SidebarNav({
   links,
@@ -255,6 +259,7 @@ function AppShell() {
             <kbd className="search-pill-kbd">⌘K</kbd>
           </button>
           <div className="topbar-actions">
+            <ThemeToggle />
             <LanguageSwitcher />
             <NotificationCenter />
             <DropdownMenu>
@@ -275,9 +280,12 @@ function AppShell() {
                       <p className="text-sm font-semibold text-slate-900 leading-none">
                         {user.fullName}
                       </p>
-                      <p className="text-xs text-slate-500 leading-none mt-1">
-                        {user.email || user.phone || user.role}
+                      <p className="text-xs text-slate-600 leading-none mt-1 truncate">
+                        {user.email || user.phone}
                       </p>
+                      <span className="mt-1.5 inline-flex w-fit rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800">
+                        {t(`settings.role${user.role.charAt(0)}${user.role.slice(1).toLowerCase()}`, user.role)}
+                      </span>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
@@ -295,17 +303,6 @@ function AppShell() {
                       </NavLink>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="cursor-pointer flex items-center"
-                    >
-                      <CircleHelp className="mr-2.5 h-4 w-4 text-slate-500" />
-                      <span>{t('navigation.geminiApiKey')}</span>
-                    </a>
-                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem

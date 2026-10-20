@@ -194,7 +194,7 @@ export function InterviewReviewEditor({
         <div className="space-y-3 pt-4 border-t dark:border-slate-800">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <MessageSquare size={18} className="text-[#245e4f] dark:text-emerald-400" />
+              <MessageSquare size={18} className="text-[#245e4f] dark:text-[#58c0a0] dark:text-emerald-400" />
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
                 Savollar va Javoblar (Interview Guide Q&A)
               </h3>

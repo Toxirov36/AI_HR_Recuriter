@@ -186,13 +186,13 @@ export function Modal({
     <Dialog open onOpenChange={(open) => !open && close()}>
       <DialogContent
         className={cn(
-          'z-[100] max-h-[90vh] w-full max-w-[680px] flex flex-col overflow-hidden p-6 sm:p-7 rounded-[20px] bg-white border border-[#e2e8f0] text-[#0f172a] shadow-2xl',
+          'z-[100] max-h-[90vh] w-full max-w-[680px] flex flex-col overflow-hidden p-6 sm:p-7 rounded-[20px] bg-white border border-slate-200 text-slate-900 shadow-2xl',
           className,
         )}
       >
         <DialogHeader className="text-left shrink-0 mb-3">
-          <DialogTitle className="text-xl font-bold tracking-tight text-[#0f172a]">{title}</DialogTitle>
-          {subtitle && <p className="modal-subtitle text-sm text-[#64748b] mt-1 leading-relaxed">{subtitle}</p>}
+          <DialogTitle className="text-xl font-bold tracking-tight text-slate-900">{title}</DialogTitle>
+          {subtitle && <p className="modal-subtitle text-sm text-slate-500 mt-1 leading-relaxed">{subtitle}</p>}
         </DialogHeader>
         {children}
       </DialogContent>

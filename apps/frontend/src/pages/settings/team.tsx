@@ -893,7 +893,7 @@ export function Team() {
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageCircle size={20} className="text-[#245e4f]" /> {t('admin.modalConnectTitle')}
+              <MessageCircle size={20} className="text-[#245e4f] dark:text-[#58c0a0]" /> {t('admin.modalConnectTitle')}
             </DialogTitle>
             <DialogDescription>{t('admin.modalConnectDesc')}</DialogDescription>
           </DialogHeader>

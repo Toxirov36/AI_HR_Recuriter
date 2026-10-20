@@ -78,8 +78,8 @@ export function TelegramRecommendations({ vacancyId }: { vacancyId: number }) {
         <div className="flex flex-wrap items-center gap-2.5">
           <span className="text-sm font-medium text-slate-700">Saralash</span>
           <div role="group" aria-label="Kanallarni saralash" className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-sm">
-            <button type="button" aria-pressed={sort === 'fit'} onClick={() => setSort('fit')} className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a5d4c] ${sort === 'fit' ? 'bg-[#e7f3ee] text-[#175445]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>Moslik</button>
-            <button type="button" aria-pressed={sort === 'subscribers'} onClick={() => setSort('subscribers')} className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a5d4c] ${sort === 'subscribers' ? 'bg-[#e7f3ee] text-[#175445]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>Obunachilar</button>
+            <button type="button" aria-pressed={sort === 'fit'} onClick={() => setSort('fit')} className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a5d4c] ${sort === 'fit' ? 'bg-[#e7f3ee] dark:bg-[#17302a] text-[#175445] dark:text-[#58c0a0]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>Moslik</button>
+            <button type="button" aria-pressed={sort === 'subscribers'} onClick={() => setSort('subscribers')} className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a5d4c] ${sort === 'subscribers' ? 'bg-[#e7f3ee] dark:bg-[#17302a] text-[#175445] dark:text-[#58c0a0]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'}`}>Obunachilar</button>
           </div>
         </div>
         {run.finishedAt && <span className="text-xs text-slate-500">Tahlil: {new Date(run.finishedAt).toLocaleString()}</span>}

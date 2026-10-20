@@ -48,7 +48,7 @@ export function CandidateDossierModal({
         {/* Modal Top Control Bar (Hidden during printing) */}
         <div className="px-6 py-4 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 no-print">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-[#1a5d4c]/10 text-[#1a5d4c] flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-[#1a5d4c]/10 text-[#1a5d4c] dark:text-[#58c0a0] flex items-center justify-center">
               <Sparkles size={18} />
             </div>
             <div>
@@ -88,7 +88,7 @@ export function CandidateDossierModal({
             {/* Header Document Brand */}
             <div className="border-b-2 border-[#1a5d4c] pb-4 mb-6 flex items-start justify-between">
               <div>
-                <div className="flex items-center gap-2 text-[#1a5d4c] font-black tracking-wider text-xs uppercase mb-1">
+                <div className="flex items-center gap-2 text-[#1a5d4c] dark:text-[#58c0a0] font-black tracking-wider text-xs uppercase mb-1">
                   <Building2 size={15} /> {t('candidateDossier.brand')}
                 </div>
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
@@ -97,7 +97,7 @@ export function CandidateDossierModal({
                 {application?.vacancy?.title ? (
                   <p className="text-sm font-semibold text-slate-600 mt-0.5">
                     {t('candidateDossier.vacancyLabel')}:{' '}
-                    <span className="text-[#1a5d4c] font-bold">
+                    <span className="text-[#1a5d4c] dark:text-[#58c0a0] font-bold">
                       {application.vacancy.title}
                     </span>
                   </p>
@@ -160,7 +160,7 @@ export function CandidateDossierModal({
             {(application?.assessmentScore != null || application?.assessmentResult != null) && (
               <div className="mb-6 dossier-section">
                 <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-1.5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] flex items-center gap-1.5">
                     <Sparkles size={14} /> {t('candidateDossier.prescreeningTitle')}
                   </h3>
                   <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
@@ -241,7 +241,7 @@ export function CandidateDossierModal({
             {application?.analysis && (
               <div className="mb-6 dossier-section">
                 <div className="flex items-center justify-between mb-3 border-b border-slate-200 pb-1.5">
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] flex items-center gap-1.5">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] flex items-center gap-1.5">
                     <Sparkles size={14} /> {t('candidateDossier.aiEvaluation')}
                   </h3>
                   {evidence && (
@@ -399,7 +399,7 @@ export function CandidateDossierModal({
                 {/* Executive Summary */}
                 {parsed.summary && (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] mb-1.5 border-b border-slate-200 pb-1">
                       {t('candidateDossier.aiSummaryTitle')}
                     </h3>
                     <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200">
@@ -411,7 +411,7 @@ export function CandidateDossierModal({
                 {/* Skills */}
                 {parsed.skills?.length ? (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] mb-1.5 border-b border-slate-200 pb-1">
                       {t('candidateDossier.keySkillsTitle')}
                     </h3>
                     <div className="flex flex-wrap gap-1.5">
@@ -430,7 +430,7 @@ export function CandidateDossierModal({
                 {/* Experience History */}
                 {parsed.experience?.length ? (
                   <div>
-                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-2 border-b border-slate-200 pb-1">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] mb-2 border-b border-slate-200 pb-1">
                       {t('candidateDossier.experienceTitle')}
                     </h3>
                     <div className="space-y-2.5">
@@ -465,7 +465,7 @@ export function CandidateDossierModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                   {parsed.education?.length ? (
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] mb-1.5 border-b border-slate-200 pb-1">
                         {t('candidateDossier.educationTitle')}
                       </h4>
                       <div className="space-y-1.5 text-xs text-slate-700">
@@ -485,7 +485,7 @@ export function CandidateDossierModal({
 
                   {parsed.languages?.length ? (
                     <div>
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-1.5 border-b border-slate-200 pb-1">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] mb-1.5 border-b border-slate-200 pb-1">
                         {t('candidateDossier.languagesTitle')}
                       </h4>
                       <p className="text-xs text-slate-700 font-medium">
@@ -500,7 +500,7 @@ export function CandidateDossierModal({
             {/* Interview Guide / Questions Section (If generated) */}
             {application?.interviewQuestions?.questions?.length ? (
               <div className="mb-6 dossier-section">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] mb-2 border-b border-slate-200 pb-1">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-[#1a5d4c] dark:text-[#58c0a0] mb-2 border-b border-slate-200 pb-1">
                   {t('candidateDossier.interviewQuestionsTitle')}
                 </h3>
                 <div className="space-y-2 text-xs">
