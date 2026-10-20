@@ -33,10 +33,6 @@ http {{
   uwsgi_temp_path {nginx_dir / 'uwsgi'};
   scgi_temp_path {nginx_dir / 'scgi'};
   client_max_body_size 6m;
-  map $http_x_forwarded_proto $hsts_header {{
-    default "";
-    https "max-age=300";
-  }}
   server {{
     listen 127.0.0.1:8081;
     server_name _;
@@ -46,7 +42,6 @@ http {{
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), microphone=(self), geolocation=()" always;
     add_header Cross-Origin-Opener-Policy same-origin-allow-popups always;
-    add_header Strict-Transport-Security $hsts_header always;
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://accounts.google.com/gsi/style; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
     location /api/ {{
       proxy_pass http://127.0.0.1:3000;
