@@ -4,7 +4,6 @@ import { BrowserRouter, Link, NavLink, useLocation, useNavigate } from 'react-ro
 import {
   BriefcaseBusiness,
   ChevronRight,
-  CircleHelp,
   GitBranch,
   Layers3,
   LayoutDashboard,
@@ -295,17 +294,6 @@ function AppShell() {
                       </NavLink>
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem asChild>
-                    <a
-                      href="https://aistudio.google.com/apikey"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="cursor-pointer flex items-center"
-                    >
-                      <CircleHelp className="mr-2.5 h-4 w-4 text-slate-500" />
-                      <span>{t('navigation.geminiApiKey')}</span>
-                    </a>
-                  </DropdownMenuItem>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
