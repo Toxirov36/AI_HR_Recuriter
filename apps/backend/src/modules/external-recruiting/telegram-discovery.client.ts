@@ -14,6 +14,8 @@ export type DiscoveredChannel = {
   checkedAt: string;
 };
 
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 @Injectable()
 export class TelegramDiscoveryClient implements OnModuleDestroy {
   private readonly config = getConfig();
@@ -39,22 +41,30 @@ export class TelegramDiscoveryClient implements OnModuleDestroy {
     } catch {
       throw new ServiceUnavailableException('Telegram discovery session file is unavailable');
     }
-    const client = new TelegramClient(new StringSession(session), this.config.TELEGRAM_API_ID, this.config.TELEGRAM_API_HASH, {
-      connectionRetries: 2,
-      requestRetries: 1,
-      floodSleepThreshold: 0,
-    });
-    try {
-      await client.connect();
-      if (!(await client.isUserAuthorized()) || await client.isBot()) {
-        throw new Error('Telegram user session is expired or invalid');
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const client = new TelegramClient(new StringSession(session), this.config.TELEGRAM_API_ID, this.config.TELEGRAM_API_HASH, {
+        connectionRetries: 2,
+        requestRetries: 1,
+        floodSleepThreshold: 0,
+      });
+      try {
+        await client.connect();
+        const account = await client.getMe();
+        if (!account || account.bot) {
+          throw new Error('Telegram user session is expired or invalid');
+        }
+        this.client = client;
+        return client;
+      } catch (error) {
+        await client.disconnect().catch(() => undefined);
+        const message = error instanceof Error ? error.message : String(error);
+        if (/AUTH_KEY_UNREGISTERED|AUTH_KEY_INVALID|SESSION_REVOKED|SESSION_EXPIRED|USER_DEACTIVATED|PHONE_NUMBER_BANNED|session is expired or invalid/i.test(message)) {
+          throw new ServiceUnavailableException('Telegram discovery account is disconnected; reconnect its session');
+        }
+        if (attempt < 2) await sleep(500 * (attempt + 1));
       }
-      this.client = client;
-      return client;
-    } catch {
-      await client.disconnect().catch(() => undefined);
-      throw new ServiceUnavailableException('Telegram discovery account is disconnected; reconnect its session');
     }
+    throw new ServiceUnavailableException('Telegram discovery is temporarily unavailable; try again shortly');
   }
 
   async search(query: string): Promise<Array<{ id: string; title: string; username: string }>> {
