@@ -80,12 +80,19 @@ export class TelegramService {
     if (!message?.text) return;
     const text = message.text.trim();
     if (await this.adminService?.handleText(message)) return;
+    const joinMatch = text.match(/^\/start\s+join_([0-9a-f-]{36})$/i);
+    if (joinMatch) {
+      await this.joinService?.start(message, joinMatch[1]);
+      return;
+    }
     const applyMatch = text.match(/^\/start\s+apply_([0-9a-f-]{36})$/i);
     if (applyMatch) {
+      if (message.from) await this.joinService?.cancel(String(message.from.id));
       await this.applyService?.start(message, applyMatch[1]);
       return;
     }
 
+    if (!text.startsWith('/start') && (await this.joinService?.handleText(message))) return;
     const applyHandled = await this.applyService?.handleText(message);
     if (applyHandled) return;
 

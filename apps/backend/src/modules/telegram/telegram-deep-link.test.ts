@@ -278,3 +278,46 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
     );
   });
 });
+
+describe('Telegram candidate intake routing', () => {
+  const chat = { id: 7, type: 'private' as const };
+  const from = { id: 7, first_name: 'Aziz' };
+  const token = '11111111-2222-3333-4444-555555555555';
+  const make = () => {
+    const joinService = { start: vi.fn(), handleText: vi.fn().mockResolvedValue(false), cancel: vi.fn() };
+    const applyService = { start: vi.fn(), handleText: vi.fn().mockResolvedValue(false) };
+    const sendMessage = vi.fn();
+    const service = new TelegramService(
+      {} as never, {} as never, {} as never,
+      { getMe: vi.fn().mockResolvedValue({ id: 1, username: 'hr_bot' }), sendMessage } as never,
+      {} as never,
+      applyService as never,
+      { handleText: vi.fn().mockResolvedValue(false) } as never,
+      joinService as never,
+    );
+    return { service, joinService, applyService, sendMessage };
+  };
+  const msg = (text: string) => ({ message_id: 1, from, chat, date: 0, text });
+
+  it('starts the field intake from /start join_<companyToken>', async () => {
+    const { service, joinService, sendMessage } = make();
+    await service.handleMessage(msg(`/start join_${token}`));
+    expect(joinService.start).toHaveBeenCalledWith(expect.objectContaining({ text: `/start join_${token}` }), token);
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('routes free text (name, phone) to the join session before anything else', async () => {
+    const { service, joinService, applyService } = make();
+    joinService.handleText.mockResolvedValue(true);
+    await service.handleMessage(msg('Aziz Karimov'));
+    expect(joinService.handleText).toHaveBeenCalled();
+    expect(applyService.handleText).not.toHaveBeenCalled();
+  });
+
+  it('drops an unfinished join session when a vacancy link is opened', async () => {
+    const { service, joinService, applyService } = make();
+    await service.handleMessage(msg(`/start apply_${token}`));
+    expect(joinService.cancel).toHaveBeenCalledWith('7');
+    expect(applyService.start).toHaveBeenCalled();
+  });
+});
