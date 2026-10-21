@@ -37,6 +37,7 @@ import {
   Select,
   SelectContent,
   SelectGroup,
+  FormSelect,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -249,10 +250,13 @@ export function VacancyForm({
 
               <div className="form-group">
                 <label className="form-label" htmlFor="field-bot-field">{t('vacancies.labelField')}</label>
-                <select id="field-bot-field" className="form-control-select" value={fieldId} onChange={(e) => setFieldId(e.target.value)}>
-                  <option value="">{t('vacancies.fieldOther')}</option>
-                  {fieldOptions.filter((f) => f.isActive || String(f.id) === fieldId).map((f) => (<option key={f.id} value={String(f.id)}>{f.name}</option>))}
-                </select>
+                <FormSelect
+                  id="field-bot-field"
+                  value={fieldId}
+                  onChange={setFieldId}
+                  emptyLabel={t('vacancies.fieldOther')}
+                  options={fieldOptions.filter((f) => f.isActive || String(f.id) === fieldId).map((f) => ({ value: String(f.id), label: f.name }))}
+                />
               </div>
 
               {/* Row 2 */}
@@ -274,35 +278,50 @@ export function VacancyForm({
 
               <div className="form-group">
                 <label className="form-label" htmlFor="field-work-model">{t('vacancies.labelWorkModel')}</label>
-                <select id="field-work-model" className="form-control-select" value={workModel} onChange={(e) => setWorkModel(e.target.value)}>
-                  <option value="">{t('vacancies.notSpecified')}</option>
-                  <option value="On-site">{t('vacancies.workModelOnSite', 'On-site')}</option>
-                  <option value="Hybrid">{t('vacancies.workModelHybrid', 'Hybrid')}</option>
-                  <option value="Remote">{t('vacancies.workModelRemote', 'Remote')}</option>
-                </select>
+                <FormSelect
+                  id="field-work-model"
+                  value={workModel}
+                  onChange={setWorkModel}
+                  emptyLabel={t('vacancies.notSpecified')}
+                  options={[
+                    { value: 'On-site', label: t('vacancies.workModelOnSite', 'On-site') },
+                    { value: 'Hybrid', label: t('vacancies.workModelHybrid', 'Hybrid') },
+                    { value: 'Remote', label: t('vacancies.workModelRemote', 'Remote') },
+                  ]}
+                />
               </div>
 
               <div className="form-group">
                 <label className="form-label" htmlFor="field-employment">{t('vacancies.labelEmploymentType')}</label>
-                <select id="field-employment" className="form-control-select" value={employmentType} onChange={(e) => setEmploymentType(e.target.value)}>
-                  <option value="">{t('vacancies.notSpecified')}</option>
-                  <option value="Full-time">{t('vacancies.empFullTime', 'Full-time')}</option>
-                  <option value="Part-time">{t('vacancies.empPartTime', 'Part-time')}</option>
-                  <option value="Contract">{t('vacancies.empContract', 'Contract')}</option>
-                  <option value="Internship">{t('vacancies.empInternship', 'Internship')}</option>
-                </select>
+                <FormSelect
+                  id="field-employment"
+                  value={employmentType}
+                  onChange={setEmploymentType}
+                  emptyLabel={t('vacancies.notSpecified')}
+                  options={[
+                    { value: 'Full-time', label: t('vacancies.empFullTime', 'Full-time') },
+                    { value: 'Part-time', label: t('vacancies.empPartTime', 'Part-time') },
+                    { value: 'Contract', label: t('vacancies.empContract', 'Contract') },
+                    { value: 'Internship', label: t('vacancies.empInternship', 'Internship') },
+                  ]}
+                />
               </div>
 
               {/* Row 3 */}
               <div className="form-group">
                 <label className="form-label" htmlFor="field-seniority">{t('vacancies.labelSeniority')}</label>
-                <select id="field-seniority" className="form-control-select" value={seniority} onChange={(e) => setSeniority(e.target.value)}>
-                  <option value="">{t('vacancies.notSpecified')}</option>
-                  <option value="Junior">{t('vacancies.seniorityJunior', 'Junior')}</option>
-                  <option value="Middle">{t('vacancies.seniorityMiddle', 'Middle')}</option>
-                  <option value="Senior">{t('vacancies.senioritySenior', 'Senior')}</option>
-                  <option value="Lead">{t('vacancies.seniorityLead', 'Lead')}</option>
-                </select>
+                <FormSelect
+                  id="field-seniority"
+                  value={seniority}
+                  onChange={setSeniority}
+                  emptyLabel={t('vacancies.notSpecified')}
+                  options={[
+                    { value: 'Junior', label: t('vacancies.seniorityJunior', 'Junior') },
+                    { value: 'Middle', label: t('vacancies.seniorityMiddle', 'Middle') },
+                    { value: 'Senior', label: t('vacancies.senioritySenior', 'Senior') },
+                    { value: 'Lead', label: t('vacancies.seniorityLead', 'Lead') },
+                  ]}
+                />
               </div>
 
               <div className="form-group">
@@ -445,7 +464,18 @@ export function VacancyForm({
                   { label: t('vacancies.hhExperience', 'Tajriba'), value: hhExperienceId, set: setHhExperienceId, options: hhFields.experiences },
                   { label: t('vacancies.hhEmployment', 'Bandlik'), value: hhEmploymentId, set: setHhEmploymentId, options: hhFields.employments },
                   { label: t('vacancies.hhSchedule', 'Ish jadvali'), value: hhScheduleId, set: setHhScheduleId, options: hhFields.schedules },
-                ].map(field => <label key={field.label} className="text-sm text-slate-700">{field.label}<select className="mt-1 w-full rounded-lg border border-slate-300 bg-white p-2" value={field.value} onChange={event => field.set(event.target.value)}><option value="">{t('common.select', 'Tanlang')}</option>{field.options.map(option => <option key={option.id} value={option.id}>{option.name}</option>)}</select></label>)}
+                ].map(field => (
+                  <div key={field.label} className="text-sm text-slate-700">
+                    <span className="mb-1 block">{field.label}</span>
+                    <FormSelect
+                      ariaLabel={field.label}
+                      value={field.value}
+                      onChange={field.set}
+                      emptyLabel={t('common.select', 'Tanlang')}
+                      options={field.options.map(option => ({ value: String(option.id), label: option.name }))}
+                    />
+                  </div>
+                ))}
               </div>
             </div>}
           </div>

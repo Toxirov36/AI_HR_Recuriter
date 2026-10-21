@@ -28,6 +28,7 @@ export * from './avatar';
 export * from './separator';
 export * from './skeleton';
 export * from './select';
+export * from './form-select';
 export * from './checkbox';
 export * from './tooltip';
 export * from './sonner';

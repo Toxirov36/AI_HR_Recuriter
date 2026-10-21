@@ -1324,3 +1324,8 @@
   border-left: 2px solid #24352e;
   border-bottom: 2px solid #24352e;
 }
+
+.dark .vacancy-modal-custom .form-control-input:hover,
+.dark .vacancy-modal-custom .form-control-textarea:hover {
+  border-color: #24352e;
+}
