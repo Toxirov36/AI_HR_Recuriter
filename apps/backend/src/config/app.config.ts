@@ -36,6 +36,10 @@ export const envSchema = z.object({
   R2_SECRET_ACCESS_KEY: z.string().default(''),
   R2_BUCKET_NAME: z.string().default(''),
   R2_ENDPOINT: z.string().default(''),
+  // auto: Cloudflare R2 when fully configured, otherwise files stay in the database.
+  // local: files on the server disk (LOCAL_STORAGE_DIR, a Docker volume in production).
+  STORAGE_DRIVER: z.enum(['auto', 'local', 'r2']).default('auto'),
+  LOCAL_STORAGE_DIR: z.string().default(''),
   TELEGRAM_BOT_TOKEN: z.string().default(''),
   TELEGRAM_WEBHOOK_SECRET: z.string().default(''),
   TELEGRAM_WEBHOOK_URL: z.string().default(''),
@@ -50,6 +54,16 @@ export const envSchema = z.object({
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
+
+export function isR2Configured(config: AppConfig): boolean {
+  return Boolean(
+    config.R2_ACCOUNT_ID &&
+      config.R2_ACCESS_KEY_ID &&
+      config.R2_SECRET_ACCESS_KEY &&
+      config.R2_BUCKET_NAME &&
+      config.R2_ENDPOINT,
+  );
+}
 
 export function telegramSessionPath(value: string): string {
   return isAbsolute(value) ? value : resolve(__dirname, '../../../../', value);
@@ -81,6 +95,9 @@ export function getConfig(): AppConfig {
   ];
   if (r2Values.some(Boolean) && !r2Values.every(Boolean)) {
     throw new Error('R2 configuration is incomplete. Set all five R2 environment variables.');
+  }
+  if (result.data.STORAGE_DRIVER === 'r2' && !isR2Configured(result.data)) {
+    throw new Error('STORAGE_DRIVER=r2 requires all five R2 environment variables.');
   }
   const hhValues = [result.data.HH_CLIENT_ID, result.data.HH_CLIENT_SECRET, result.data.HH_CALLBACK_URL, result.data.HH_TOKEN_ENCRYPTION_KEY, result.data.HH_USER_AGENT];
   if (hhValues.some(Boolean) && !hhValues.every(Boolean)) {

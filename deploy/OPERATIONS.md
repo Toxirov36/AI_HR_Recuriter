@@ -88,3 +88,35 @@ Verify Telegram from inside `ai-hr-recruiter-backend-1`, not just on the host.
 A working host `getMe` does not prove Docker DNS/HTTPS access. Telegram identity
 is verified using the protected TELEGRAM_BOT_TOKEN in production `.env`;
 the bot must resolve to `my_Ai_hr_recruiter_bot` for this installation.
+
+## CV storage on the server
+
+`STORAGE_DRIVER=local` keeps uploaded CVs on the server instead of Cloudflare R2.
+Files live in the Docker volume `uploads_data` (container path `/app/uploads`, mode 600,
+served only through the authenticated download API). Object keys are the same as in R2
+(`companies/<id>/candidates/<id>/resumes/<uuid>.<ext>`), so the database needs no change.
+
+- `auto` (default) uses R2 when all five `R2_*` variables are set, otherwise CVs stay in the database.
+- `r2` forces R2 and fails at startup if it is not configured.
+
+Move existing CVs from R2 to the server (safe to repeat; existing files are skipped):
+
+```sh
+cd ~/hr-recruiter/current
+export DEPLOY_SHA=$(cat ~/hr-recruiter/deployed-sha)
+compose="docker compose -p ai-hr-recruiter -f compose.yaml -f deploy/compose.production.yaml -f deploy/compose.ci.yaml --profile app"
+$compose run --rm backend npm run storage:copy-from-r2 -w apps/backend -- --dry-run   # count first
+$compose run --rm backend npm run storage:copy-from-r2 -w apps/backend               # copy
+```
+
+The `R2_*` variables must still be in `.env` for the copy. Afterwards set `STORAGE_DRIVER=local`
+and redeploy; R2 can be left unused.
+
+The daily backup job covers the database only. Back up the CV volume too (it is not in R2 any more):
+
+```sh
+docker run --rm -v ai-hr-recruiter_uploads_data:/data:ro -v ~/hr-recruiter/backups:/out alpine \
+  tar czf /out/uploads-$(date -u +%F).tgz -C /data .
+```
+
+Keep at least one copy off the server. Disk usage: `docker system df -v | grep uploads_data`.

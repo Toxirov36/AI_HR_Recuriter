@@ -27,6 +27,8 @@ COPY apps/backend/prisma.config.ts apps/backend/prisma.config.ts
 COPY apps/backend/prisma apps/backend/prisma
 COPY --from=build /app/apps/backend/dist apps/backend/dist
 ENV NODE_ENV=production
+# Uploaded CVs live here; a named volume mounted at this path inherits the owner.
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
 EXPOSE 3000
 CMD ["sh", "-c", "npm run db:migrate && npm run start -w apps/backend"]

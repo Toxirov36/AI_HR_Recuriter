@@ -97,8 +97,9 @@ POSTGRES_DB=recruiter
 POSTGRES_PASSWORD=$(openssl rand -hex 24)
 REDIS_PASSWORD=$(openssl rand -hex 24)
 JWT_SECRET=$(openssl rand -hex 32)
-HH_TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 32)
-# Fill these in by hand (never commit them): AI, storage, Telegram, SMTP, Google sign-in.
+STORAGE_DRIVER=local
+# CVs are stored on this server (Docker volume uploads_data). R2_* below are only needed to copy old files.
+# Fill these in by hand (never commit them): AI, Telegram, SMTP, Google sign-in.
 GOOGLE_CLIENT_ID=
 GEMINI_API_KEY=
 R2_ACCOUNT_ID=
