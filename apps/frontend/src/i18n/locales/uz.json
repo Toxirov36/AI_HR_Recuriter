@@ -255,6 +255,7 @@
     "addFirstCandidate": "Birinchi nomzodni qo‘shish"
   },
   "vacancies": {
+    "botHint": "Faol vakansiya nomzodlar Telegram botida avtomatik ko‘rinadi.",
     "labelField": "Soha (nomzodlar boti uchun)",
     "fieldOther": "Boshqa (soha tanlanmagan)",
     "optionalPlaceholder": "Ixtiyoriy",
@@ -892,6 +893,8 @@
     "selectVacancyPrompt": "Tahlil qilish uchun avval biror vakansiyani tanlang."
   },
   "admin": {
+    "autoPublishLabel": "Faol vakansiyalarni Telegram kanalga avtomatik joylash",
+    "autoPublishHint": "Webda vakansiya faol bo‘lishi bilan bot uni ulangan Telegram kanallarga e’lon qiladi. Kanal ulanmagan bo‘lsa, hech narsa yuborilmaydi. Faqat administrator o‘zgartira oladi.",
     "candidateIntakeTitle": "Nomzodlar uchun Telegram bot",
     "candidateIntakeDescription": "Nomzodlar bot orqali sohani tanlaydi, ism, telefon va CVni yuboradi, so‘ng AI testidan o‘tadi. HR profilingizga CV yuborganlar ham shu botga yo‘naltiriladi.",
     "candidateLinkLabel": "Nomzodlar uchun bot havolasi",

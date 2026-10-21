@@ -81,6 +81,8 @@ model Company {
   id Int @id @default(autoincrement())
   // Public identifier used in the candidate bot link (t.me/<bot>?start=join_<publicToken>).
   publicToken String @unique @default(uuid())
+  // When on, a vacancy that becomes ACTIVE is posted to the connected Telegram channels automatically.
+  telegramAutoPublish Boolean @default(false)
   name String
   isActive Boolean @default(true)
   users User[]

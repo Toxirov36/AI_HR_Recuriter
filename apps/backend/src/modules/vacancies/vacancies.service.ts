@@ -7,6 +7,7 @@ import { vacancy } from '../../common/pipes/validation';
 import { RecruitingService } from '../recruiting/recruiting.service';
 import { ExternalRecruitingService } from '../external-recruiting/external-recruiting.service';
 import { AiService } from '../ai/ai.service';
+import type { Identity } from '../../common/utils/security';
 import { QueryVacancyDto } from './dto/query-vacancy.dto';
 
 @Injectable()
@@ -54,12 +55,20 @@ export class VacanciesService {
     return this.recruiting.vacancy(companyId, id);
   }
 
-  async saveVacancy(companyId: number, id: number | null, data: z.infer<typeof vacancy>) {
+  async saveVacancy(companyId: number, id: number | null, data: z.infer<typeof vacancy>, actor?: Identity) {
+    const previous = id === null ? null : await this.db.vacancy.findUnique({ where: { id_companyId: { id, companyId } }, select: { status: true } });
     const saved = await this.recruiting.saveVacancy(companyId, id, data);
     if (id !== null) await this.external.vacancyChanged(companyId, id, saved.status);
     if (this.ai && saved?.id) {
       setImmediate(() => {
         void this.ai?.evaluateCompanyCandidatesForVacancy(companyId, saved.id);
+      });
+    }
+    // A vacancy that just became ACTIVE is already visible in the candidate bot (it reads the database);
+    // with the company opt-in it is also posted to the connected Telegram channels.
+    if (actor && saved?.status === 'ACTIVE' && previous?.status !== 'ACTIVE') {
+      setImmediate(() => {
+        void this.external.autoPublishToTelegram(actor, saved.id);
       });
     }
     return saved;

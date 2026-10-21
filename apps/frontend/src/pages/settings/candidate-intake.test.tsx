@@ -38,6 +38,15 @@ describe('CandidateIntakePanel', () => {
     await waitFor(() => expect(screen.getByLabelText('Bot link for candidates')).toHaveValue('https://t.me/hr_bot?start=join_abc'));
   });
 
+  it('turns automatic channel posting on and off', async () => {
+    render(<CandidateIntakePanel />);
+    const toggle = await screen.findByRole('checkbox', { name: /Post active vacancies to Telegram channels automatically/ });
+    expect(toggle).not.toBeChecked();
+    fireEvent.click(toggle);
+    await waitFor(() => expect(toggle).toBeChecked());
+    expect(calls.find((call) => call.method === 'PUT')).toMatchObject({ url: '/api/v1/integrations/telegram/auto-publish', body: { enabled: true } });
+  });
+
   it('adds a field', async () => {
     render(<CandidateIntakePanel />);
     await screen.findByText('SMM');

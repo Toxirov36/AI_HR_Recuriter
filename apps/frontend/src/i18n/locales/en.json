@@ -255,6 +255,7 @@
     "addFirstCandidate": "Add your first candidate"
   },
   "vacancies": {
+    "botHint": "An active vacancy appears in the candidate Telegram bot automatically.",
     "labelField": "Field (for the candidate bot)",
     "fieldOther": "Other (no field)",
     "optionalPlaceholder": "Optional",
@@ -892,6 +893,8 @@
     "selectVacancyPrompt": "Please select a vacancy first to analyze candidates."
   },
   "admin": {
+    "autoPublishLabel": "Post active vacancies to Telegram channels automatically",
+    "autoPublishHint": "As soon as a vacancy becomes active on the web, the bot posts it to the connected Telegram channels. Nothing is sent when no channel is connected. Only an administrator can change this.",
     "candidateIntakeTitle": "Candidate Telegram bot",
     "candidateIntakeDescription": "Candidates pick a field in the bot, send their name, phone and CV, then take the AI test. People who send a CV to your HR profile are redirected to this bot.",
     "candidateLinkLabel": "Bot link for candidates",

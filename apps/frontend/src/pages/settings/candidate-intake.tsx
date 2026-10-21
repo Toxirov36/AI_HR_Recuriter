@@ -13,6 +13,7 @@ export function CandidateIntakePanel() {
   const [fields, setFields] = useState<VacancyField[]>([]);
   const [link, setLink] = useState<string>('');
   const [linkError, setLinkError] = useState(false);
+  const [autoPublish, setAutoPublish] = useState(false);
   const [name, setName] = useState('');
   const [editing, setEditing] = useState<{ id: number; name: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -27,8 +28,11 @@ export function CandidateIntakePanel() {
 
   useEffect(() => {
     void load();
-    api<{ url: string }>('/v1/integrations/telegram/candidate-link')
-      .then((result) => setLink(result.url))
+    api<{ url: string; autoPublish?: boolean }>('/v1/integrations/telegram/candidate-link')
+      .then((result) => {
+        setLink(result.url);
+        setAutoPublish(Boolean(result.autoPublish));
+      })
       .catch(() => setLinkError(true));
   }, [load]);
 
@@ -82,6 +86,27 @@ export function CandidateIntakePanel() {
         </div>
         <p className="text-xs text-slate-500">{t('admin.candidateLinkHint')}</p>
       </div>
+
+      <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={autoPublish}
+          disabled={busy}
+          onChange={(event) => {
+            const enabled = event.target.checked;
+            setBusy(true);
+            send('/v1/integrations/telegram/auto-publish', { enabled }, 'PUT')
+              .then(() => setAutoPublish(enabled))
+              .catch((error: Error) => toast.error(error.message))
+              .finally(() => setBusy(false));
+          }}
+        />
+        <span>
+          <strong className="block text-slate-900">{t('admin.autoPublishLabel')}</strong>
+          <span className="text-xs text-slate-500">{t('admin.autoPublishHint')}</span>
+        </span>
+      </label>
 
       <div className="space-y-3">
         <h4 className="text-sm font-semibold text-slate-900">{t('admin.fieldsTitle')}</h4>

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -6,6 +7,7 @@ import {
   Inject,
   Param,
   Post,
+  Put,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -16,11 +18,19 @@ import type { AuthRequest } from '../../common/utils/security';
 import { TelegramService } from './telegram.service';
 import { TelegramAdminService } from './telegram-admin.service';
 import { TelegramJoinService } from './telegram-join.service';
+import { ExternalRecruitingService } from '../external-recruiting/external-recruiting.service';
 import type { TelegramUpdate } from './types/telegram.types';
 
 @Controller('v1/integrations/telegram')
 export class TelegramController {
-  constructor(@Inject(TelegramService) private telegramService: TelegramService, @Inject(TelegramAdminService) private adminService: TelegramAdminService, @Inject(TelegramJoinService) private joinService: TelegramJoinService) {}
+  constructor(@Inject(TelegramService) private telegramService: TelegramService, @Inject(TelegramAdminService) private adminService: TelegramAdminService, @Inject(TelegramJoinService) private joinService: TelegramJoinService, @Inject(ExternalRecruitingService) private external: ExternalRecruitingService) {}
+
+  @Put('auto-publish')
+  @UseGuards(AuthGuard)
+  setAutoPublish(@Req() req: AuthRequest, @Body() body: { enabled?: unknown }) {
+    if (typeof body?.enabled !== 'boolean') throw new BadRequestException('enabled must be true or false');
+    return this.external.setTelegramAutoPublish(req.user, body.enabled);
+  }
 
   @Get('candidate-link')
   @UseGuards(AuthGuard)

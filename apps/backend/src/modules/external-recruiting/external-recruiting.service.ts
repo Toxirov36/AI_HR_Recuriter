@@ -190,6 +190,30 @@ export class ExternalRecruitingService implements OnModuleInit, OnModuleDestroy 
     return publication;
   }
 
+  /**
+   * Opt-in (Company.telegramAutoPublish): when a vacancy becomes ACTIVE it is posted to every connected
+   * Telegram channel, approved by the user who saved it. Failures are logged and never break the save.
+   */
+  async autoPublishToTelegram(user: Identity, vacancyId: number) {
+    try {
+      const company = await this.db.company.findUnique({ where: { id: user.companyId }, select: { telegramAutoPublish: true } });
+      if (!company?.telegramAutoPublish || !this.security.config.TELEGRAM_BOT_TOKEN) return;
+      for (const channel of await this.channels(user.companyId)) {
+        await this.approve(user, vacancyId, { platform: 'TELEGRAM', channelId: channel.id }).catch((error) =>
+          this.logger.warn(`Automatic Telegram post skipped for channel ${channel.id}: ${(error as Error).message}`),
+        );
+      }
+    } catch (error) {
+      this.logger.warn(`Automatic Telegram posting failed: ${(error as Error).message}`);
+    }
+  }
+
+  async setTelegramAutoPublish(user: Identity, enabled: boolean) {
+    if (user.role !== 'ADMIN') throw new ForbiddenException('Company administrator access required');
+    await this.db.company.update({ where: { id: user.companyId }, data: { telegramAutoPublish: enabled } });
+    return { telegramAutoPublish: enabled };
+  }
+
   async vacancyChanged(companyId: number, vacancyId: number, status: string) {
     if (status === 'CLOSED') {
       const rows = await this.db.vacancyPublication.findMany({ where: { companyId, vacancyId, externalId: { not: null }, status: { not: 'CLOSED' } }, select: { id: true } });

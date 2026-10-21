@@ -322,6 +322,7 @@ export function VacancyForm({
                     </SelectContent>
                   </Select>
                 </div>
+                {status === 'ACTIVE' && <p className="mt-1 text-xs text-slate-500">{t('vacancies.botHint')}</p>}
               </div>
             </div>
 

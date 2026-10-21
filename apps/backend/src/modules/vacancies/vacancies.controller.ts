@@ -48,7 +48,7 @@ export class VacanciesController {
     @Req() req: AuthRequest,
     @Body(new ZodValidationPipe(vacancySchema)) dto: CreateVacancyDto,
   ) {
-    return this.service.saveVacancy(req.user.companyId, null, dto);
+    return this.service.saveVacancy(req.user.companyId, null, dto, req.user);
   }
 
   @Put(':id')
@@ -57,7 +57,7 @@ export class VacanciesController {
     @Param('id', ParseIntPipe) id: number,
     @Body(new ZodValidationPipe(vacancySchema)) dto: UpdateVacancyDto,
   ) {
-    return this.service.saveVacancy(req.user.companyId, id, dto);
+    return this.service.saveVacancy(req.user.companyId, id, dto, req.user);
   }
 
   @Delete(':id')

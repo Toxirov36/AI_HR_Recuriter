@@ -58,9 +58,9 @@ export class TelegramJoinService {
 
   /** The link HR shares with candidates (and the Business redirect message uses the same one). */
   async candidateLink(companyId: number) {
-    const company = await this.db.company.findUniqueOrThrow({ where: { id: companyId }, select: { publicToken: true } });
+    const company = await this.db.company.findUniqueOrThrow({ where: { id: companyId }, select: { publicToken: true, telegramAutoPublish: true } });
     const bot = await this.telegram.getMe();
-    return { url: `https://t.me/${bot.username}?start=join_${company.publicToken}`, botUsername: bot.username };
+    return { url: `https://t.me/${bot.username}?start=join_${company.publicToken}`, botUsername: bot.username, autoPublish: company.telegramAutoPublish };
   }
 
   /** Drops an unfinished join session, e.g. when the same user opens a vacancy link instead. */
