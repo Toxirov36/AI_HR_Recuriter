@@ -591,3 +591,14 @@
 .landing-nav a:hover {
   background: transparent;
 }
+
+/* The final CTA keeps its dark green panel in both themes, so its light text must not be remapped by the dark rules. */
+.dark .landing-final-cta .landing-kicker {
+  color: #a4d5ae;
+}
+.dark .landing-final-cta h2 {
+  color: #fff;
+}
+.dark .landing-final-cta p {
+  color: #c8ddd0;
+}
