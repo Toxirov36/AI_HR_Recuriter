@@ -60,8 +60,9 @@ import {
 import './styles.css';
 import './styles.dark.css';
 
-// Support contact shown in the profile menu; hidden until a URL (e.g. https://t.me/<username>) is configured at build time.
-const SUPPORT_URL = (import.meta.env.VITE_SUPPORT_TELEGRAM_URL as string | undefined)?.trim();
+// Support contact shown in the profile menu; VITE_SUPPORT_TELEGRAM_URL overrides the default at build time.
+const SUPPORT_URL =
+  (import.meta.env.VITE_SUPPORT_TELEGRAM_URL as string | undefined)?.trim() || 'https://t.me/Toxirov1505';
 
 function SidebarNav({
   links,
