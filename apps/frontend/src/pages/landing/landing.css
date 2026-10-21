@@ -187,11 +187,11 @@
   align-items: center;
   gap: 9px;
   margin-top: 32px;
-  color: #7a8b7e;
+  color: #5f7165;
   font-size: 12px;
 }
 .landing-trust svg {
-  color: #3b8966;
+  color: #2f7a57;
 }
 .landing-preview {
   position: relative;
@@ -226,7 +226,7 @@
   place-items: center;
   border-radius: 50%;
   background: #e7f6ea;
-  color: #268558;
+  color: #1f7a52;
 }
 .landing-preview-note > div {
   display: grid;
@@ -264,7 +264,7 @@
 .landing-how-intro > p,
 .landing-faq-layout > div:first-child > p,
 .landing-final-cta p {
-  color: #718477;
+  color: #5c6f62;
   font-size: 15px;
   line-height: 1.75;
 }
@@ -299,7 +299,7 @@
 .landing-feature-card p,
 .landing-step p {
   margin: 0;
-  color: #718477;
+  color: #5c6f62;
   font-size: 13px;
   line-height: 1.75;
 }
@@ -331,7 +331,7 @@
   background: #fff;
 }
 .landing-step > span {
-  color: #68a17b;
+  color: #4f8a66;
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 21px;
   font-weight: 800;
@@ -370,7 +370,7 @@
   content: '+';
   position: absolute;
   right: 3px;
-  color: #4b8c63;
+  color: #3f7a55;
   font-size: 20px;
   font-weight: 400;
 }
@@ -379,7 +379,7 @@
 }
 .landing-faq-list details p {
   margin: -5px 32px 22px 0;
-  color: #718477;
+  color: #5c6f62;
   font-size: 13px;
   line-height: 1.8;
 }
@@ -432,7 +432,7 @@
 }
 .landing-footer-inner p,
 .landing-footer-inner a {
-  color: #809185;
+  color: #5f7165;
   font-size: 12px;
 }
 .landing-page :focus-visible {
