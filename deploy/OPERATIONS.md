@@ -105,8 +105,8 @@ Move existing CVs from R2 to the server (safe to repeat; existing files are skip
 cd ~/hr-recruiter/current
 export DEPLOY_SHA=$(cat ~/hr-recruiter/deployed-sha)
 compose="docker compose -p ai-hr-recruiter -f compose.yaml -f deploy/compose.production.yaml -f deploy/compose.ci.yaml --profile app"
-$compose run --rm backend npm run storage:copy-from-r2 -w apps/backend -- --dry-run   # count first
-$compose run --rm backend npm run storage:copy-from-r2 -w apps/backend               # copy
+$compose run --rm --no-deps backend node apps/backend/dist/scripts/copy-resumes-from-r2-to-local.js --dry-run   # count first
+$compose run --rm --no-deps backend node apps/backend/dist/scripts/copy-resumes-from-r2-to-local.js               # copy
 ```
 
 The `R2_*` variables must still be in `.env` for the copy. Afterwards set `STORAGE_DRIVER=local`

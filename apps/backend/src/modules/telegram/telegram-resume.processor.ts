@@ -11,6 +11,15 @@ import { TELEGRAM_RESUME_QUEUE } from './telegram-queue.service';
 import type { TelegramResumeJob } from './types/telegram.types';
 import { AUTO_MATCH_QUEUE, type AutoMatchJob } from '../ai/auto-match.service';
 
+/** A short, secret-free description of a job error for the logs (bot tokens never reach the log). */
+export function describeError(error: unknown): string {
+  const text = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  return text
+    .replace(/bot\d+:[\w-]+/g, 'bot***')
+    .replace(/\s+/g, ' ')
+    .slice(0, 300);
+}
+
 @Injectable()
 export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(TelegramResumeProcessor.name);
@@ -37,8 +46,11 @@ export class TelegramResumeProcessor implements OnModuleInit, OnModuleDestroy {
     this.worker.on('error', (err) => {
       this.logger.warn(`Telegram worker connection error: ${err.message}`);
     });
-    this.worker.on('failed', (job) => {
-      if (job) this.logger.warn(`Telegram resume job failed resumeId=${job.data.resumeId}`);
+    this.worker.on('failed', (job, error) => {
+      if (!job) return;
+      this.logger.warn(
+        `Telegram resume job failed resumeId=${job.data.resumeId} attempt=${job.attemptsMade}/${job.opts.attempts ?? 1}: ${describeError(error)}`,
+      );
     });
   }
 
