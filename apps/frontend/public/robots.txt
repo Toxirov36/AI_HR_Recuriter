@@ -1,17 +1,8 @@
 User-agent: *
 Allow: /
+# Private pages are kept out of search results with a noindex meta tag (see src/lib/seo.ts),
+# so their paths are not listed here.
 Disallow: /api/
 Disallow: /apply/
-Disallow: /dashboard
-Disallow: /vacancies
-Disallow: /candidates
-Disallow: /pipeline
-Disallow: /applications
-Disallow: /admin
-Disallow: /platform-admin
-Disallow: /profile
-Disallow: /team
-Disallow: /login
-Disallow: /register
 
 Sitemap: https://hrdai.uz/sitemap.xml

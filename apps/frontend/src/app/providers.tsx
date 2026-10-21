@@ -5,6 +5,7 @@ import { api, ApiError } from '../lib/api';
 import { AuthContext, AuthPage } from '../features/auth';
 import { Alert, Loading, Toaster } from '../components/ui';
 import type { User } from '../types';
+import { applyRobotsMeta } from '../lib/seo';
 const PublicApplyPage = lazy(() => import('../pages/public-apply').then((m) => ({ default: m.PublicApplyPage })));
 const LandingPage = lazy(() => import('../pages/landing').then((m) => ({ default: m.LandingPage })));
 const PrivacyPage = lazy(() => import('../pages/privacy').then((m) => ({ default: m.PrivacyPage })));
@@ -12,6 +13,10 @@ const PrivacyPage = lazy(() => import('../pages/privacy').then((m) => ({ default
 export function AppProviders({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
+  useEffect(() => {
+    applyRobotsMeta(location.pathname, location.search);
+  }, [location.pathname, location.search]);
+
   const isPublicApply = location.pathname.startsWith('/apply/');
   const isPrivacy = location.pathname === '/privacy';
   const isInvitation =
