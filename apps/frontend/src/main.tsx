@@ -4,6 +4,7 @@ import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/error-boundary';
 import { localeReady } from './i18n';
 import { initTheme } from './lib/theme';
+import { applyRobotsMeta } from './lib/seo';
 // Self-hosted fonts (no third-party requests, so the CSP needs no Google font hosts).
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -24,6 +25,9 @@ const AppRoot = lazy(() => import('./app-root'));
 /** Shows the landing page at once and sends an already signed-in visitor to the dashboard. */
 function LandingEntry() {
   const navigate = useNavigate();
+  useEffect(() => {
+    applyRobotsMeta('/');
+  }, []);
   useEffect(() => {
     let active = true;
     fetch('/api/auth/session', { credentials: 'include' })
