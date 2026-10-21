@@ -146,26 +146,7 @@ export class TelegramJoinService {
     }
 
     if (data === 'join:privacy:yes') {
-      const claimed = await this.db.telegramJoinSession.updateMany({
-        where: { telegramUserId: userId, step: 'PRIVACY' },
-        data: { step: 'FIELD', privacyAcceptedAt: new Date(), aiConsentAt: new Date() },
-      });
-      if (!claimed.count) {
-        await stale();
-        return true;
-      }
-      await this.telegram.answerCallbackQuery(query.id);
-      await this.sendFieldChoices(chatId, session.companyId);
-      return true;
-    }
-
-    const fieldMatch = data.match(/^join:field:(\d+)$/);
-    if (fieldMatch) {
-      if (session.step !== 'FIELD') {
-        await stale();
-        return true;
-      }
-      await this.chooseField(query, session, Number(fieldMatch[1]));
+      await this.offerVacancies(query, session);
       return true;
     }
 
@@ -407,40 +388,16 @@ export class TelegramJoinService {
 
   // --- steps ---
 
-  private async sendFieldChoices(chatId: number, companyId: number) {
-    const fields = await this.db.vacancyField.findMany({
-      where: { companyId, isActive: true },
-      orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      select: { id: true, name: true },
-      take: 30,
-    });
-    const buttons = [...fields.map((field) => ({ text: field.name, callback_data: `join:field:${field.id}` })), { text: 'Boshqa', callback_data: 'join:field:0' }];
-    const rows: Array<typeof buttons> = [];
-    for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
-    await this.telegram.sendMessage(chatId, 'Qaysi sohada ish izlayapsiz?', { replyMarkup: { inline_keyboard: rows } });
+  private vacancyFilter(session: { companyId: number }) {
+    return { companyId: session.companyId, status: 'ACTIVE' as const, company: { isActive: true } };
   }
 
-  private vacancyFilter(session: { companyId: number }, fieldId: number) {
-    return {
-      companyId: session.companyId,
-      status: 'ACTIVE' as const,
-      company: { isActive: true },
-      ...(fieldId > 0 ? { fieldId } : { OR: [{ fieldId: null }, { field: { isActive: false } }] }),
-    };
-  }
-
-  private async chooseField(query: TelegramCallbackQuery, session: SessionRow, fieldId: number) {
+  /** After consent: list the company's open vacancies (one is picked automatically, none keeps the contact details). */
+  private async offerVacancies(query: TelegramCallbackQuery, session: SessionRow) {
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
-    if (fieldId > 0) {
-      const field = await this.db.vacancyField.findFirst({ where: { id: fieldId, companyId: session.companyId, isActive: true }, select: { id: true } });
-      if (!field) {
-        await this.telegram.answerCallbackQuery(query.id, 'Bu soha mavjud emas. Havolani qayta oching.', true);
-        return;
-      }
-    }
     const vacancies = await this.db.vacancy.findMany({
-      where: this.vacancyFilter(session, fieldId),
+      where: this.vacancyFilter(session),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: MAX_VACANCY_BUTTONS,
       select: { id: true, title: true },
@@ -453,10 +410,11 @@ export class TelegramJoinService {
       return;
     }
     const claimed = await this.db.telegramJoinSession.updateMany({
-      where: { telegramUserId: userId, step: 'FIELD' },
+      where: { telegramUserId: userId, step: 'PRIVACY' },
       data: {
         step: vacancies.length > 1 ? 'VACANCY' : 'NAME',
-        fieldId: fieldId > 0 ? fieldId : null,
+        privacyAcceptedAt: new Date(),
+        aiConsentAt: new Date(),
         vacancyId: single?.id ?? null,
       },
     });
@@ -476,7 +434,7 @@ export class TelegramJoinService {
       chatId,
       single
         ? `Vakansiya: «${single.title}».\n\nIsm va familiyangizni yozing (masalan: Aziz Karimov):`
-        : 'Hozircha bu sohada ochiq vakansiya yo‘q, lekin ma’lumotlaringizni qoldirishingiz mumkin: yangi vakansiya ochilsa HR siz bilan bog‘lanadi.\n\nIsm va familiyangizni yozing (masalan: Aziz Karimov):',
+        : 'Hozircha ochiq vakansiya yo‘q, lekin ma’lumotlaringizni qoldirishingiz mumkin: yangi vakansiya ochilsa HR siz bilan bog‘lanadi.\n\nIsm va familiyangizni yozing (masalan: Aziz Karimov):',
     );
   }
 
@@ -484,7 +442,7 @@ export class TelegramJoinService {
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
     const vacancy = await this.db.vacancy.findFirst({
-      where: { id: vacancyId, ...this.vacancyFilter(session, session.fieldId ?? 0) },
+      where: { id: vacancyId, ...this.vacancyFilter(session) },
       select: { id: true, title: true },
     });
     if (!vacancy) {

@@ -72,51 +72,45 @@ describe('Telegram join flow', () => {
     expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('yaroqsiz'));
   });
 
-  it('shows the company fields plus "Boshqa" after consent', async () => {
-    const { telegram, service } = setup({ step: 'PRIVACY' });
+  it('offers the open vacancies straight after consent', async () => {
+    const { db, telegram, service } = setup({ step: 'PRIVACY' });
+    db.vacancy.findMany.mockResolvedValue([{ id: 5, title: 'SMM Lead' }, { id: 6, title: 'Backend Developer' }]);
     expect(await service.handleCallback(callback('join:privacy:yes'))).toBe(true);
-    const [, , options] = telegram.sendMessage.mock.calls[0];
-    const buttons = options.replyMarkup.inline_keyboard.flat().map((b: any) => b.callback_data);
-    expect(buttons).toEqual(['join:field:1', 'join:field:2', 'join:field:0']);
-  });
-
-  it('offers the open vacancies of the chosen field', async () => {
-    const { db, telegram, service } = setup({ step: 'FIELD' });
-    db.vacancy.findMany.mockResolvedValue([{ id: 5, title: 'SMM Lead' }, { id: 6, title: 'SMM Junior' }]);
-    await service.handleCallback(callback('join:field:1'));
-    expect(db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { step: 'VACANCY', fieldId: 1, vacancyId: null } }));
+    expect(db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { telegramUserId: '42', step: 'PRIVACY' }, data: expect.objectContaining({ step: 'VACANCY', vacancyId: null }) }));
     const markup = telegram.sendMessage.mock.calls[0][2].replyMarkup.inline_keyboard.flat().map((b: any) => b.callback_data);
     expect(markup).toEqual(['join:vac:5', 'join:vac:6']);
+    expect(db.vacancyField.findMany).not.toHaveBeenCalled();
   });
 
   it('skips the vacancy step when there is exactly one, and warns when there is none', async () => {
-    const one = setup({ step: 'FIELD' });
+    const one = setup({ step: 'PRIVACY' });
     one.db.vacancy.findMany.mockResolvedValue([{ id: 5, title: 'SMM Lead' }]);
-    await one.service.handleCallback(callback('join:field:1'));
-    expect(one.db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { step: 'NAME', fieldId: 1, vacancyId: 5 } }));
+    await one.service.handleCallback(callback('join:privacy:yes'));
+    expect(one.db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'NAME', vacancyId: 5 }) }));
 
-    const none = setup({ step: 'FIELD' });
-    await none.service.handleCallback(callback('join:field:0'));
-    expect(none.db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: { step: 'NAME', fieldId: null, vacancyId: null } }));
+    const none = setup({ step: 'PRIVACY' });
+    await none.service.handleCallback(callback('join:privacy:yes'));
+    expect(none.db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'NAME', vacancyId: null }) }));
     expect(none.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('ochiq vakansiya yo‘q'));
   });
 
   it('refuses a vacancy the candidate already applied to', async () => {
-    const { db, telegram, service } = setup({ step: 'FIELD' });
+    const { db, telegram, service } = setup({ step: 'PRIVACY' });
     db.vacancy.findMany.mockResolvedValue([{ id: 5, title: 'SMM Lead' }]);
     db.candidate.findUnique.mockResolvedValue({ id: 7 });
     db.application.findUnique.mockResolvedValue({ id: 1 });
-    await service.handleCallback(callback('join:field:1'));
+    await service.handleCallback(callback('join:privacy:yes'));
     expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('allaqachon'));
     expect(db.telegramJoinSession.deleteMany).toHaveBeenCalled();
   });
 
   it('ignores buttons from a finished step and expired sessions', async () => {
     const stale = setup({ step: 'NAME' });
-    await stale.service.handleCallback(callback('join:field:1'));
+    stale.db.telegramJoinSession.updateMany.mockResolvedValue({ count: 0 });
+    await stale.service.handleCallback(callback('join:privacy:yes'));
     expect(stale.telegram.answerCallbackQuery).toHaveBeenCalledWith('cb', 'Bu bosqich allaqachon yakunlangan.');
 
-    const expired = setup({ step: 'FIELD', expiresAt: new Date(Date.now() - 1000) });
+    const expired = setup({ step: 'VACANCY', expiresAt: new Date(Date.now() - 1000) });
     expect(await expired.service.handleText({ message_id: 1, chat, from: user, text: 'hello' } as never)).toBe(false);
     expect(expired.db.telegramJoinSession.deleteMany).toHaveBeenCalled();
   });
