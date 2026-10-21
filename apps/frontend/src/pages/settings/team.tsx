@@ -45,6 +45,7 @@ import { useAuth } from '../../features/auth';
 import { toast } from 'sonner';
 import type { User } from '../../types';
 import { CompanyOverviewPanel, MemberAccessEditor, type CompanyOverview } from './company-admin';
+import { CandidateIntakePanel } from './candidate-intake';
 
 interface AuditLogItem {
   id: number;
@@ -695,6 +696,7 @@ export function Team() {
       {/* 5. TELEGRAM INTEGRATION TAB */}
       {activeTab === 'telegram' && (
         <div className="space-y-6">
+          <CandidateIntakePanel />
           <Card className="p-6 border border-slate-200 bg-white shadow-sm space-y-3">
             <h3 className="text-base font-bold text-slate-900">{t('admin.telegramAdminTitle')}</h3>
             <p className="text-sm text-slate-600">{t('admin.telegramAdminDescription')}</p>
