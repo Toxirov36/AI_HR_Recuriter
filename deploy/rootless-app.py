@@ -46,7 +46,7 @@ http {{
     add_header Referrer-Policy strict-origin-when-cross-origin always;
     add_header Permissions-Policy "camera=(), microphone=(self), geolocation=()" always;
     add_header Cross-Origin-Opener-Policy same-origin-allow-popups always;
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; font-src 'self'; img-src 'self' data:; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; font-src 'self' data:; img-src 'self' data:; connect-src 'self' https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
     location /api/ {{
       proxy_pass http://127.0.0.1:3000;
       proxy_http_version 1.1;
@@ -58,6 +58,7 @@ http {{
     }}
     location /assets/ {{ try_files $uri =404; expires 1y; access_log off; }}
     location = / {{ try_files /index.html =404; }}
+    location ~ ^/(ru|en|tg)/?$ {{ try_files /$1/index.html =404; }}
     location ~ ^/(login|register|privacy|dashboard|vacancies|candidates|pipeline|applications|admin|profile|team|platform-admin)/?$ {{
       try_files /index.html =404;
     }}

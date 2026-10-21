@@ -4,7 +4,7 @@ import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/error-boundary';
 import { localeReady } from './i18n';
 import { initTheme } from './lib/theme';
-import { applyRobotsMeta } from './lib/seo';
+import { applyRobotsMeta, isLandingPath } from './lib/seo';
 // Self-hosted fonts (no third-party requests, so the CSP needs no Google font hosts).
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
@@ -27,8 +27,7 @@ function LandingEntry() {
   const navigate = useNavigate();
   useEffect(() => {
     applyRobotsMeta('/');
-  }, []);
-  useEffect(() => {
+  }, []);  useEffect(() => {
     let active = true;
     fetch('/api/auth/session', { credentials: 'include' })
       .then((response) => (response.ok ? response.json() : null))
@@ -45,7 +44,7 @@ function LandingEntry() {
 
 function Root() {
   const { pathname, search } = useLocation();
-  const landing = pathname === '/' && !new URLSearchParams(search).has('invite');
+  const landing = isLandingPath(pathname) && !new URLSearchParams(search).has('invite');
   return (
     <Suspense fallback={<div role="status" aria-busy="true" style={{ minHeight: '100vh' }} />}>
       {landing ? <LandingEntry /> : <AppRoot />}

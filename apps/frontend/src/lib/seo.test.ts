@@ -9,6 +9,8 @@ describe('robots meta', () => {
   it('indexes only the landing page and the privacy policy', () => {
     expect(robotsContentFor('/')).toBe('index, follow');
     expect(robotsContentFor('/privacy')).toBe('index, follow');
+    for (const path of ['/ru', '/ru/', '/en/', '/tg']) expect(robotsContentFor(path)).toBe('index, follow');
+    expect(robotsContentFor('/ru/', '?invite=token')).toBe('noindex, nofollow');
     for (const path of ['/login', '/register', '/dashboard', '/admin', '/platform-admin', '/apply/abc', '/candidates/5']) {
       expect(robotsContentFor(path)).toBe('noindex, nofollow');
     }

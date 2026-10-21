@@ -102,6 +102,16 @@ export function saveLocale(locale: Locale, userId?: number | string): void {
  * 6. Default language: Uzbek (`uz`)
  */
 export function detectInitialLocale(userId?: number | string): Locale {
+  // 0. A localized landing URL (/ru/, /en/, /tg/) is the page the visitor asked for
+  try {
+    if (typeof window !== 'undefined' && window.location) {
+      const match = /^\/(ru|en|tg)\/?$/.exec(window.location.pathname);
+      if (match) return match[1] as Locale;
+    }
+  } catch {
+    // ignore
+  }
+
   // 1. Explicit query parameter in URL
   try {
     if (typeof window !== 'undefined' && window.location) {

@@ -1,7 +1,10 @@
+import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import { defineConfig } from 'vitest/config';
 import type { Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
+import { defaultLocale, locales, type Locale } from './src/i18n/config';
+import { applyLandingSeo } from './src/lib/landing-seo-html';
 
 // Fonts the landing page needs immediately (hero heading, body text, buttons). Fontsource hashes the
 // file names, so the preload tags are generated from the build output.
@@ -25,8 +28,41 @@ function preloadCriticalFonts(): Plugin {
   };
 }
 
+const LOCALES_DIR = path.resolve(__dirname, 'src/i18n/locales');
+
+function readLanding(locale: Locale): Record<string, string> {
+  const messages = JSON.parse(readFileSync(path.join(LOCALES_DIR, `${locale}.json`), 'utf8'));
+  return messages.landing;
+}
+
+// Crawlers and link previews read the static HTML only. The root page carries the Uzbek head, and
+// the build writes one page per other language (dist/ru/index.html, ...) from the same locale files.
+function landingSeoPages(): Plugin {
+  let outDir = 'dist';
+  return {
+    name: 'landing-seo-pages',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
+    transformIndexHtml(html) {
+      return applyLandingSeo(html, defaultLocale, readLanding(defaultLocale));
+    },
+    writeBundle() {
+      const built = readFileSync(path.join(outDir, 'index.html'), 'utf8');
+      for (const locale of locales.filter((code) => code !== defaultLocale)) {
+        const dir = path.join(outDir, locale);
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(
+          path.join(dir, 'index.html'),
+          applyLandingSeo(built, locale, readLanding(locale), { robots: true }),
+        );
+      }
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), preloadCriticalFonts()],
+  plugins: [react(), preloadCriticalFonts(), landingSeoPages()],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

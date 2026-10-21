@@ -20,6 +20,8 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LandingLanguageSelect } from '../../components/landing-language-select';
+import { normalizeLocale } from '../../i18n/utils';
+import { landingUrlFor } from '../../lib/landing-seo-html';
 import './landing.css';
 import './landing.dark.css';
 import './landing-sections.css';
@@ -34,7 +36,7 @@ const NAV = [
 ] as const;
 
 export function LandingPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -44,7 +46,10 @@ export function LandingPage() {
     document.querySelector('meta[name="description"]')?.setAttribute('content', description);
     document.querySelector('meta[property="og:title"]')?.setAttribute('content', title);
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
-  }, [t]);
+    const url = landingUrlFor(normalizeLocale(i18n.language));
+    document.querySelector('link[rel="canonical"]')?.setAttribute('href', url);
+    document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
+  }, [t, i18n.language]);
 
   const flow = [1, 2, 3, 4, 5].map((n) => ({
     number: n,
