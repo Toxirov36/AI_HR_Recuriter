@@ -40,7 +40,7 @@ export class VacanciesService {
     const [items, total] = await Promise.all([
       this.db.vacancy.findMany({
         where,
-        include: { requirements: true, _count: { select: { applications: true } } },
+        include: { requirements: true, field: { select: { id: true, name: true } }, _count: { select: { applications: true } } },
         orderBy: sort === 'title' ? [{ title: 'asc' }, { id: 'desc' }] : [{ createdAt: sort === 'oldest' ? 'asc' : 'desc' }, { id: 'desc' }],
         skip: (page - 1) * 20,
         take: 20,

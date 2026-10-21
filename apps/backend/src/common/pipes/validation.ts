@@ -77,6 +77,7 @@ export const vacancy = z
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
     department: z.string().trim().max(100).nullable().optional().transform((value) => value === '' ? null : value),
+    fieldId: z.number().int().positive().nullable().optional(),
     location: z.string().trim().max(100).nullable().optional().transform((value) => value === '' ? null : value),
     workModel: z.string().trim().max(50).nullable().optional().transform((value) => value === '' ? null : value),
     employmentType: z.string().trim().max(50).nullable().optional().transform((value) => value === '' ? null : value),

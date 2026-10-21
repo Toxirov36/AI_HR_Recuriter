@@ -629,7 +629,8 @@ export class TelegramApplyService {
     }
   }
 
-  private async getAssessment(vacancy: {
+  /** Reused by the join_ flow (TelegramJoinService). */
+  async getAssessment(vacancy: {
     id: number;
     companyId: number;
     title: string;

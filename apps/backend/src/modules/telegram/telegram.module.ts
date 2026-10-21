@@ -7,6 +7,7 @@ import { TelegramResumeProcessor } from './telegram-resume.processor';
 import { BusinessConnectionHandler } from './handlers/business-connection.handler';
 import { BusinessMessageHandler } from './handlers/business-message.handler';
 import { TelegramApplyService } from './telegram-apply.service';
+import { TelegramJoinService } from './telegram-join.service';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExternalRecruitingModule } from '../external-recruiting/external-recruiting.module';
@@ -24,6 +25,7 @@ import { TelegramAdminService } from './telegram-admin.service';
     BusinessConnectionHandler,
     BusinessMessageHandler,
     TelegramApplyService,
+    TelegramJoinService,
     TelegramScreeningAlertService,
     TelegramAdminService,
     GeminiProvider,

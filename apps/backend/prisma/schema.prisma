@@ -61,6 +61,15 @@ enum ChannelDiscoveryStatus {
   COMPLETED
   FAILED
 }
+enum TelegramJoinStep {
+  PRIVACY
+  FIELD
+  VACANCY
+  NAME
+  PHONE
+  DOCUMENT
+  ASSESSMENT
+}
 enum TelegramApplyStep {
   PRIVACY
   AI_CONSENT
@@ -70,6 +79,8 @@ enum TelegramApplyStep {
 }
 model Company {
   id Int @id @default(autoincrement())
+  // Public identifier used in the candidate bot link (t.me/<bot>?start=join_<publicToken>).
+  publicToken String @unique @default(uuid())
   name String
   isActive Boolean @default(true)
   users User[]
@@ -89,6 +100,8 @@ model Company {
   channelDiscoveryRuns TelegramChannelDiscovery[]
   telegramApplySessions TelegramApplySession[]
   recommendations VacancyRecommendation[]
+  vacancyFields VacancyField[]
+  telegramJoinSessions TelegramJoinSession[]
   createdAt DateTime @default(now())
 }
 model User {
@@ -150,6 +163,20 @@ model Invitation {
   usedAt DateTime?
   @@index([companyId])
 }
+/// A hiring field (SMM, IT, videographer...) that candidates pick in the Telegram bot. Managed by HR per company.
+model VacancyField {
+  id Int @id @default(autoincrement())
+  companyId Int
+  name String
+  sortOrder Int @default(0)
+  isActive Boolean @default(true)
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  vacancies Vacancy[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([id, companyId])
+  @@unique([companyId, name])
+}
 model Vacancy {
   id Int @id @default(autoincrement())
   publicToken String @unique @default(uuid())
@@ -157,6 +184,8 @@ model Vacancy {
   description String
   status VacancyStatus @default(ACTIVE)
   department String?
+  fieldId Int?
+  field VacancyField? @relation(fields: [fieldId, companyId], references: [id, companyId])
   location String?
   workModel String?
   employmentType String?
@@ -266,6 +295,29 @@ model TelegramApplySession {
   expiresAt DateTime
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   vacancy Vacancy @relation(fields: [vacancyId, companyId], references: [id, companyId], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  @@index([companyId, expiresAt])
+}
+/// State of the candidate bot flow that starts from t.me/<bot>?start=join_<companyToken>.
+/// Separate from TelegramApplySession (vacancy deep link flow), which is unchanged.
+/// fieldId and vacancyId are validated in code against the company (no FK: both start empty).
+model TelegramJoinSession {
+  telegramUserId String @id
+  companyId Int
+  step TelegramJoinStep
+  fieldId Int?
+  vacancyId Int?
+  fullName String?
+  phone String?
+  privacyAcceptedAt DateTime?
+  aiConsentAt DateTime?
+  applicationId Int?
+  currentQuestionIndex Int @default(0)
+  answers Json?
+  assessmentQuestions Json?
+  assessmentRevision Int?
+  expiresAt DateTime
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   updatedAt DateTime @updatedAt
   @@index([companyId, expiresAt])
 }

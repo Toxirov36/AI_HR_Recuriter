@@ -1,4 +1,4 @@
-import { ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, ConflictException, Inject, Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client';
 import { Database } from '../../database/prisma.service';
 import { z } from 'zod';
@@ -46,7 +46,7 @@ export class RecruitingService {
   async vacancy(companyId: number, id: number) {
     const found = await this.db.vacancy.findFirst({
       where: { id, companyId },
-      include: { requirements: { orderBy: { id: 'asc' } } },
+      include: { requirements: { orderBy: { id: 'asc' } }, field: { select: { id: true, name: true } } },
     });
     if (!found) throw new NotFoundException('Vacancy not found');
     return found;
@@ -201,6 +201,13 @@ export class RecruitingService {
 
   async saveVacancy(companyId: number, id: number | null, data: z.infer<typeof vacancy>) {
     const { requirements, confirmMetadataReview, ...fields } = data;
+    if (fields.fieldId) {
+      const field = await this.db.vacancyField.findUnique({
+        where: { id_companyId: { id: fields.fieldId, companyId } },
+        select: { id: true },
+      });
+      if (!field) throw new BadRequestException('Unknown vacancy field');
+    }
     if (id === null)
       return this.db.vacancy.create({
         data: { ...fields, companyId, requirements: { create: requirements } },

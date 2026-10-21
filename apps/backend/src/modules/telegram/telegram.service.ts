@@ -9,6 +9,7 @@ import { BusinessMessageHandler } from './handlers/business-message.handler';
 import { TelegramApiService } from './telegram-api.service';
 import { AuditService } from '../audit/audit.service';
 import { TelegramApplyService } from './telegram-apply.service';
+import { TelegramJoinService } from './telegram-join.service';
 import { TelegramAdminService } from './telegram-admin.service';
 import type {
   TelegramCallbackQuery,
@@ -28,6 +29,7 @@ export class TelegramService {
     @Inject(AuditService) private audit: AuditService,
     @Optional() @Inject(TelegramApplyService) private applyService?: TelegramApplyService,
     @Optional() @Inject(TelegramAdminService) private adminService?: TelegramAdminService,
+    @Optional() @Inject(TelegramJoinService) private joinService?: TelegramJoinService,
   ) {}
 
   verifySecret(value?: string) {
@@ -66,10 +68,12 @@ export class TelegramService {
 
   async handleMessage(message: TelegramDirectMessage) {
     if (message?.document) {
+      if (await this.joinService?.handleDocument(message)) return;
       await this.applyService?.handleDocument(message);
       return;
     }
     if (message?.contact) {
+      if (await this.joinService?.handleContact(message)) return;
       const contactHandled = await this.applyService?.handleContact(message);
       if (contactHandled) return;
     }
@@ -318,6 +322,10 @@ export class TelegramService {
     const data = query.data.trim();
     if (data.startsWith('adm:')) {
       await this.adminService?.handleCallback(query);
+      return;
+    }
+    if (data.startsWith('join:')) {
+      await this.joinService?.handleCallback(query);
       return;
     }
     if (data.startsWith('apply:') || data.startsWith('quiz:')) {

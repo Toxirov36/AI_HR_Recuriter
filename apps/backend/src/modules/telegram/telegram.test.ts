@@ -30,105 +30,65 @@ describe('Telegram integration', () => {
     expect(connectionHandler.handle).not.toHaveBeenCalled();
   });
 
-  it('deduplicates a Telegram sender and queues an allowed CV without logging its content', async () => {
-    const tx = {
-      candidate: {
-        upsert: vi.fn().mockResolvedValue({ id: 7 }),
-      },
-      resume: {
-        create: vi.fn().mockResolvedValue({ id: 11 }),
-      },
-      candidateEvent: { createMany: vi.fn() },
+  describe('Business profile CV redirect', () => {
+    const connection = {
+      id: 'business-1', companyId: 3, enabled: true, canReply: true, telegramUserId: BigInt(999),
+      company: { name: 'Acme', publicToken: '11111111-2222-3333-4444-555555555555' },
     };
-    const db = {
-      telegramBusinessConnection: {
-        findUnique: vi.fn().mockResolvedValue({
-          id: 'business-1',
-          companyId: 3,
-          enabled: true,
-          telegramUserId: BigInt(999),
-        }),
-      },
-      $transaction: vi.fn((callback) => callback(tx)),
-      candidateEvent: { create: vi.fn().mockResolvedValue({}) },
-      resume: { update: vi.fn() },
-    };
-    const queue = { add: vi.fn().mockResolvedValue(undefined) };
-    const handler = new BusinessMessageHandler(db as never, queue as never);
-
-    await handler.handle({
-      message_id: 1,
-      business_connection_id: 'business-1',
-      chat: { id: 5 },
+    const cv = {
+      message_id: 1, business_connection_id: 'business-1', chat: { id: 42 },
       from: { id: 42, first_name: 'Ali', username: 'ali' },
-      document: {
-        file_id: 'file-1',
-        file_unique_id: 'unique-1',
-        file_name: 'cv.pdf',
-        mime_type: 'application/pdf',
-        file_size: 1024,
-      },
-    });
-
-    expect(tx.candidate.upsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { companyId_telegramUserId: { companyId: 3, telegramUserId: '42' } },
-        create: expect.objectContaining({ source: 'TELEGRAM' }),
-      }),
-    );
-    expect(queue.add).toHaveBeenCalledWith({
-      resumeId: 11,
-      candidateId: 7,
-      companyId: 3,
-      fileId: 'file-1',
-    });
-  });
-
-  it('replies in the CV sender chat through the business connection only after Telegram accepts it', async () => {
-    const tx = {
-      candidate: { upsert: vi.fn().mockResolvedValue({ id: 7, fullName: 'Ali' }) },
-      resume: { create: vi.fn().mockResolvedValue({ id: 11 }) },
-      candidateEvent: { createMany: vi.fn() },
+      document: { file_id: 'file-1', file_unique_id: 'unique-1', file_name: 'cv.pdf', mime_type: 'application/pdf', file_size: 1024 },
     };
-    const candidateEventCreate = vi.fn().mockResolvedValue({});
-    const db = {
-      telegramBusinessConnection: {
-        findUnique: vi.fn().mockResolvedValue({
-          id: 'business-1', companyId: 3, enabled: true, canReply: true,
-          telegramUserId: BigInt(999),
-        }),
-      },
-      $transaction: vi.fn((callback) => callback(tx)),
-      candidateEvent: { create: candidateEventCreate },
-      resume: { update: vi.fn() },
-    };
-    const queue = { add: vi.fn().mockResolvedValue(undefined) };
-    const telegramApi = { sendMessage: vi.fn().mockResolvedValue({ ok: false, description: 'Forbidden' }) };
-    const handler = new BusinessMessageHandler(db as never, queue as never, telegramApi as never);
-    const message = {
-      message_id: 1,
-      business_connection_id: 'business-1',
-      chat: { id: 42 },
-      from: { id: 42, first_name: 'Ali' },
-      document: {
-        file_id: 'file-1', file_unique_id: 'unique-1', file_name: 'cv.pdf',
-        mime_type: 'application/pdf', file_size: 1024,
-      },
+    const setup = (overrides: Record<string, unknown> = {}, nudge: string | null = 'OK') => {
+      const db = {
+        telegramBusinessConnection: { findUnique: vi.fn().mockResolvedValue({ ...connection, ...overrides }) },
+        candidate: { upsert: vi.fn() },
+        resume: { create: vi.fn() },
+        $transaction: vi.fn(),
+      };
+      const telegramApi = {
+        getMe: vi.fn().mockResolvedValue({ username: 'hr_bot' }),
+        sendMessage: vi.fn().mockResolvedValue({ ok: true }),
+      };
+      const security = { redis: { set: vi.fn().mockResolvedValue(nudge) } };
+      return { db, telegramApi, security, handler: new BusinessMessageHandler(db as never, telegramApi as never, security as never) };
     };
 
-    await handler.handle(message);
-    expect(telegramApi.sendMessage).toHaveBeenCalledWith(
-      '42', expect.stringContaining('Rezyumengiz muvaffaqiyatli qabul qilindi'),
-      { businessConnectionId: 'business-1' },
-    );
-    expect(candidateEventCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ type: 'TELEGRAM_DELIVERY_FAILED' }),
+    it('replies with the bot link and stores nothing', async () => {
+      const { db, telegramApi, security, handler } = setup();
+      await handler.handle(cv);
+      expect(telegramApi.sendMessage).toHaveBeenCalledWith(
+        '42',
+        expect.stringContaining('https://t.me/hr_bot?start=join_11111111-2222-3333-4444-555555555555'),
+        { businessConnectionId: 'business-1' },
+      );
+      expect(security.redis.set).toHaveBeenCalledWith('telegram-join-nudge:business-1:42', '1', 'EX', 86400, 'NX');
+      expect(db.$transaction).not.toHaveBeenCalled();
+      expect(db.candidate.upsert).not.toHaveBeenCalled();
+      expect(db.resume.create).not.toHaveBeenCalled();
     });
 
-    telegramApi.sendMessage.mockResolvedValueOnce({ ok: true });
-    await handler.handle(message);
-    expect(candidateEventCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining({ type: 'TELEGRAM_AUTO_REPLY_SENT' }),
+    it('does not repeat the reply within a day for the same chat', async () => {
+      const { telegramApi, handler } = setup({}, null);
+      await handler.handle(cv);
+      expect(telegramApi.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('ignores the HR account itself, non-CV files and connections that cannot reply', async () => {
+      const own = setup();
+      await own.handler.handle({ ...cv, from: { id: 999, first_name: 'HR' } });
+      const photo = setup();
+      await photo.handler.handle({ ...cv, document: { ...cv.document, file_name: 'photo.png', mime_type: 'image/png' } });
+      const silent = setup({ canReply: false });
+      await silent.handler.handle(cv);
+      for (const { telegramApi } of [own, photo, silent]) expect(telegramApi.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('survives a failed Telegram reply', async () => {
+      const { telegramApi, handler } = setup();
+      telegramApi.sendMessage.mockResolvedValueOnce({ ok: false, description: 'Forbidden' });
+      await expect(handler.handle(cv)).resolves.toBeUndefined();
     });
   });
 

@@ -15,11 +15,16 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import type { AuthRequest } from '../../common/utils/security';
 import { TelegramService } from './telegram.service';
 import { TelegramAdminService } from './telegram-admin.service';
+import { TelegramJoinService } from './telegram-join.service';
 import type { TelegramUpdate } from './types/telegram.types';
 
 @Controller('v1/integrations/telegram')
 export class TelegramController {
-  constructor(@Inject(TelegramService) private telegramService: TelegramService, @Inject(TelegramAdminService) private adminService: TelegramAdminService) {}
+  constructor(@Inject(TelegramService) private telegramService: TelegramService, @Inject(TelegramAdminService) private adminService: TelegramAdminService, @Inject(TelegramJoinService) private joinService: TelegramJoinService) {}
+
+  @Get('candidate-link')
+  @UseGuards(AuthGuard)
+  candidateLink(@Req() req: AuthRequest) { return this.joinService.candidateLink(req.user.companyId); }
 
   @Get('admin/status')
   @UseGuards(AuthGuard)
