@@ -11,5 +11,9 @@ services:
     logging: *bounded-logs
   backend:
     logging: *bounded-logs
+    # Every release lives in its own directory, so the Telegram discovery session is kept outside
+    # it and replaces the release-relative ./.local mount from compose.yaml.
+    volumes:
+      - ${HOME}/hr-recruiter/secrets/telegram-discovery:/run/secrets/telegram-discovery:ro
   frontend:
     logging: *bounded-logs
