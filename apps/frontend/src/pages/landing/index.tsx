@@ -1,14 +1,19 @@
 import {
   ArrowRight,
   ArrowUpRight,
+  Briefcase,
+  Building2,
   Check,
   ClipboardList,
   FileSearch,
   GitBranch,
   Layers3,
   Menu,
+  Send,
   ShieldCheck,
   Sparkles,
+  TrendingUp,
+  Users,
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -17,6 +22,16 @@ import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../../components/language-switcher';
 import './landing.css';
 import './landing.dark.css';
+import './landing-sections.css';
+import './landing-sections.dark.css';
+
+const NAV = [
+  { href: '#telegram', key: 'navTelegram' },
+  { href: '#features', key: 'navFeatures' },
+  { href: '#for-whom', key: 'navWhom' },
+  { href: '#pricing', key: 'navPricing' },
+  { href: '#faq', key: 'navFaq' },
+] as const;
 
 export function LandingPage() {
   const { t } = useTranslation();
@@ -31,21 +46,32 @@ export function LandingPage() {
     document.querySelector('meta[property="og:description"]')?.setAttribute('content', description);
   }, [t]);
 
+  const flow = [1, 2, 3, 4, 5].map((n) => ({
+    number: n,
+    title: t(`landing.flow${n}Title`),
+    text: t(`landing.flow${n}Text`),
+  }));
   const features = [
     { icon: ClipboardList, title: t('landing.feature1Title'), text: t('landing.feature1Text') },
     { icon: FileSearch, title: t('landing.feature2Title'), text: t('landing.feature2Text') },
     { icon: GitBranch, title: t('landing.feature3Title'), text: t('landing.feature3Text') },
+  ];
+  const audiences = [
+    { icon: Briefcase, title: t('landing.whom1Title'), text: t('landing.whom1Text') },
+    { icon: Building2, title: t('landing.whom2Title'), text: t('landing.whom2Text') },
+    { icon: Users, title: t('landing.whom3Title'), text: t('landing.whom3Text') },
+    { icon: TrendingUp, title: t('landing.whom4Title'), text: t('landing.whom4Text') },
   ];
   const steps = [
     { number: '01', title: t('landing.step1Title'), text: t('landing.step1Text') },
     { number: '02', title: t('landing.step2Title'), text: t('landing.step2Text') },
     { number: '03', title: t('landing.step3Title'), text: t('landing.step3Text') },
   ];
-  const questions = [
-    { question: t('landing.faq1Question'), answer: t('landing.faq1Answer') },
-    { question: t('landing.faq2Question'), answer: t('landing.faq2Answer') },
-    { question: t('landing.faq3Question'), answer: t('landing.faq3Answer') },
-  ];
+  const planFeatures = [1, 2, 3, 4, 5, 6].map((n) => t(`landing.plan${n}`));
+  const questions = [1, 2, 3, 4, 5].map((n) => ({
+    question: t(`landing.faq${n}Question`),
+    answer: t(`landing.faq${n}Answer`),
+  }));
 
   return (
     <div className="landing-page">
@@ -61,9 +87,11 @@ export function LandingPage() {
             shortlist<span className="landing-brand-dot">.</span>
           </Link>
           <nav className="landing-nav" aria-label={t('landing.navigation')}>
-            <a href="#features">{t('landing.navFeatures')}</a>
-            <a href="#how-it-works">{t('landing.navHow')}</a>
-            <a href="#faq">{t('landing.navFaq')}</a>
+            {NAV.map(({ href, key }) => (
+              <a key={href} href={href}>
+                {t(`landing.${key}`)}
+              </a>
+            ))}
           </nav>
           <div className="landing-header-actions">
             <LanguageSwitcher />
@@ -86,15 +114,11 @@ export function LandingPage() {
         </div>
         {menuOpen && (
           <nav className="landing-mobile-nav" aria-label={t('landing.navigation')}>
-            <a href="#features" onClick={() => setMenuOpen(false)}>
-              {t('landing.navFeatures')}
-            </a>
-            <a href="#how-it-works" onClick={() => setMenuOpen(false)}>
-              {t('landing.navHow')}
-            </a>
-            <a href="#faq" onClick={() => setMenuOpen(false)}>
-              {t('landing.navFaq')}
-            </a>
+            {NAV.map(({ href, key }) => (
+              <a key={href} href={href} onClick={() => setMenuOpen(false)}>
+                {t(`landing.${key}`)}
+              </a>
+            ))}
             <Link to="/login">{t('landing.signIn')}</Link>
             <Link to="/register">{t('landing.startFree')}</Link>
             <LanguageSwitcher />
@@ -114,80 +138,39 @@ export function LandingPage() {
               <Link className="landing-button" to="/register">
                 {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <a className="landing-text-link" href="#how-it-works">
-                {t('landing.seeHow')} <ArrowUpRight size={16} aria-hidden="true" />
+              <a className="landing-text-link" href="#telegram">
+                {t('landing.seeFlow')} <ArrowUpRight size={16} aria-hidden="true" />
               </a>
             </div>
             <div className="landing-trust">
               <ShieldCheck size={18} aria-hidden="true" /> {t('landing.trustNote')}
             </div>
           </div>
-          <div className="landing-preview" aria-label={t('landing.previewLabel')}>
-            <div className="landing-preview-window">
-              <div className="landing-preview-top">
-                <div className="landing-preview-dots">
-                  <i />
-                  <i />
-                  <i />
+          <div className="landing-preview" aria-label={t('landing.chatLabel')}>
+            <div className="landing-chat">
+              <div className="landing-chat-head">
+                <span className="landing-chat-avatar">
+                  <Send size={17} aria-hidden="true" />
+                </span>
+                <div>
+                  <strong>Shortlist bot</strong>
+                  <small>{t('landing.chatStatus')}</small>
                 </div>
-                <span>shortlist / {t('landing.previewWorkspace')}</span>
               </div>
-              <div className="landing-preview-body">
-                <div className="landing-preview-sidebar">
-                  <span className="landing-preview-side-brand">
-                    <Layers3 size={17} /> shortlist.
-                  </span>
-                  <span className="landing-preview-side-active">
-                    ▦ &nbsp; {t('landing.previewOverview')}
-                  </span>
-                  <span>▣ &nbsp; {t('landing.previewVacancies')}</span>
-                  <span>◉ &nbsp; {t('landing.previewCandidates')}</span>
-                  <span>◇ &nbsp; {t('landing.previewPipeline')}</span>
+              <div className="landing-chat-body">
+                <p className="landing-bubble landing-bubble-bot">{t('landing.chatField')}</p>
+                <div className="landing-chip-row" aria-hidden="true">
+                  <span className="landing-chip">SMM</span>
+                  <span className="landing-chip landing-chip-active">IT</span>
+                  <span className="landing-chip">Videograf</span>
+                  <span className="landing-chip">{t('landing.chatOther')}</span>
                 </div>
-                <div className="landing-preview-content">
-                  <div className="landing-preview-heading">
-                    <div>
-                      <small>{t('landing.previewWorkspace')}</small>
-                      <strong>{t('landing.previewOverview')}</strong>
-                    </div>
-                    <span className="landing-preview-avatar">HR</span>
-                  </div>
-                  <div className="landing-preview-stats">
-                    <div>
-                      <small>{t('landing.previewVacancies')}</small>
-                      <strong>04</strong>
-                    </div>
-                    <div>
-                      <small>{t('landing.previewCandidates')}</small>
-                      <strong>28</strong>
-                    </div>
-                    <div>
-                      <small>{t('landing.previewApplications')}</small>
-                      <strong>16</strong>
-                    </div>
-                  </div>
-                  <div className="landing-preview-list">
-                    <div className="landing-preview-list-head">
-                      <strong>{t('landing.previewPipeline')}</strong>
-                      <span>•••</span>
-                    </div>
-                    <div className="landing-preview-row">
-                      <span className="landing-preview-initial">A</span>
-                      <div>
-                        <b>Frontend Developer</b>
-                        <small>{t('landing.previewReview')}</small>
-                      </div>
-                      <span className="landing-preview-pill">{t('landing.previewActive')}</span>
-                    </div>
-                    <div className="landing-preview-row">
-                      <span className="landing-preview-initial landing-preview-initial-alt">B</span>
-                      <div>
-                        <b>Product Designer</b>
-                        <small>{t('landing.previewReview')}</small>
-                      </div>
-                      <span className="landing-preview-pill">{t('landing.previewActive')}</span>
-                    </div>
-                  </div>
+                <p className="landing-bubble landing-bubble-user">IT</p>
+                <p className="landing-bubble landing-bubble-bot">{t('landing.chatName')}</p>
+                <p className="landing-bubble landing-bubble-user">Aziz Karimov</p>
+                <div className="landing-bubble landing-bubble-bot landing-bubble-result">
+                  <strong>{t('landing.chatResult')}</strong>
+                  <span>{t('landing.chatResultDetail')}</span>
                 </div>
               </div>
             </div>
@@ -196,10 +179,29 @@ export function LandingPage() {
                 <Check size={17} />
               </span>
               <div>
-                <strong>{t('landing.previewNoteTitle')}</strong>
-                <small>{t('landing.previewNoteText')}</small>
+                <strong>{t('landing.chatNoteTitle')}</strong>
+                <small>{t('landing.chatNoteText')}</small>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section id="telegram" className="landing-section landing-flow" aria-labelledby="flow-title">
+          <div className="landing-container">
+            <div className="landing-section-head">
+              <span className="landing-kicker">{t('landing.flowKicker')}</span>
+              <h2 id="flow-title">{t('landing.flowTitle')}</h2>
+              <p>{t('landing.flowIntro')}</p>
+            </div>
+            <ol className="landing-flow-grid">
+              {flow.map((step) => (
+                <li className="landing-flow-card" key={step.number}>
+                  <span className="landing-flow-number">{step.number}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
@@ -219,6 +221,27 @@ export function LandingPage() {
                 <article className="landing-feature-card" key={title}>
                   <span className="landing-feature-icon">
                     <Icon size={24} aria-hidden="true" />
+                  </span>
+                  <h3>{title}</h3>
+                  <p>{text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="for-whom" className="landing-section landing-whom" aria-labelledby="whom-title">
+          <div className="landing-container">
+            <div className="landing-section-head">
+              <span className="landing-kicker">{t('landing.whomKicker')}</span>
+              <h2 id="whom-title">{t('landing.whomTitle')}</h2>
+              <p>{t('landing.whomIntro')}</p>
+            </div>
+            <div className="landing-whom-grid">
+              {audiences.map(({ icon: Icon, title, text }) => (
+                <article className="landing-whom-card" key={title}>
+                  <span className="landing-feature-icon">
+                    <Icon size={22} aria-hidden="true" />
                   </span>
                   <h3>{title}</h3>
                   <p>{text}</p>
@@ -252,6 +275,35 @@ export function LandingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section id="pricing" className="landing-section landing-pricing" aria-labelledby="pricing-title">
+          <div className="landing-container landing-pricing-layout">
+            <div className="landing-pricing-intro">
+              <span className="landing-kicker">{t('landing.pricingKicker')}</span>
+              <h2 id="pricing-title">{t('landing.pricingTitle')}</h2>
+              <p>{t('landing.pricingIntro')}</p>
+            </div>
+            <div className="landing-plan">
+              <span className="landing-plan-badge">{t('landing.planBadge')}</span>
+              <h3>{t('landing.planName')}</h3>
+              <div className="landing-plan-price">
+                <strong>{t('landing.planPrice')}</strong>
+                <span>{t('landing.planPriceNote')}</span>
+              </div>
+              <ul>
+                {planFeatures.map((feature) => (
+                  <li key={feature}>
+                    <Check size={16} aria-hidden="true" /> {feature}
+                  </li>
+                ))}
+              </ul>
+              <Link className="landing-button" to="/register">
+                {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
+              </Link>
+              <p className="landing-plan-footnote">{t('landing.planFootnote')}</p>
             </div>
           </div>
         </section>
