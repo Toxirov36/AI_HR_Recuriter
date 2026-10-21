@@ -6,6 +6,7 @@ COPY apps/frontend/package.json apps/frontend/package.json
 COPY packages packages
 RUN npm ci --ignore-scripts
 COPY apps/frontend apps/frontend
+ARG VITE_SUPPORT_TELEGRAM_URL=""
 RUN npm run build -w apps/frontend
 FROM nginx:1.28-alpine
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf

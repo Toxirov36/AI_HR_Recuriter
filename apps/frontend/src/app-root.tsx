@@ -6,6 +6,7 @@ import {
   GitBranch,
   Layers3,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
   Menu,
   MoreVertical,
@@ -28,6 +29,14 @@ import { ErrorBoundary } from './components/error-boundary';
 import { useTranslation } from 'react-i18next';
 import {
   Alert,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Avatar,
   AvatarFallback,
   DropdownMenu,
@@ -50,6 +59,9 @@ import {
 } from './components/ui';
 import './styles.css';
 import './styles.dark.css';
+
+// Support contact shown in the profile menu; hidden until a URL (e.g. https://t.me/<username>) is configured at build time.
+const SUPPORT_URL = (import.meta.env.VITE_SUPPORT_TELEGRAM_URL as string | undefined)?.trim();
 
 function SidebarNav({
   links,
@@ -108,6 +120,7 @@ function AppShell() {
   const { user, refresh } = useAuth();
   const [error, setError] = useState('');
   const [menu, setMenu] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [search, setSearch] = useState('');
   const location = useLocation();
@@ -299,11 +312,24 @@ function AppShell() {
                       </NavLink>
                     </DropdownMenuItem>
                   )}
+                  {SUPPORT_URL && (
+                    <DropdownMenuItem asChild>
+                      <a
+                        href={SUPPORT_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="cursor-pointer flex items-center"
+                      >
+                        <LifeBuoy className="mr-2.5 h-4 w-4 text-slate-500" />
+                        <span>{t('navigation.support')}</span>
+                      </a>
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className="text-red-600 focus:text-red-600 focus:bg-red-50 cursor-pointer flex items-center"
-                  onClick={() => logout()}
+                  className="bg-transparent text-red-600 hover:bg-red-50 focus:text-red-600 focus:bg-red-50 cursor-pointer flex items-center"
+                  onSelect={() => setConfirmLogout(true)}
                 >
                   <LogOut className="mr-2.5 h-4 w-4 text-red-500" />
                   <span>{t('navigation.signOut')}</span>
@@ -323,6 +349,20 @@ function AppShell() {
           </footer>
         </main>
       </div>
+      <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('navigation.signOutTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('navigation.signOutConfirm')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('navigation.signOutCancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void logout()}>
+              {t('navigation.signOutAction')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
         <DialogContent className="workspace-search-dialog sm:max-w-[520px]">
           <DialogHeader>

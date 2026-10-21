@@ -69,6 +69,7 @@ jobs:
       - name: Build and publish images on GitHub
         env:
           GH_TOKEN: ${{ github.token }}
+          SUPPORT_TELEGRAM_URL: ${{ vars.SUPPORT_TELEGRAM_URL }}
         run: |
           set -euo pipefail
           registry="ghcr.io/${GITHUB_REPOSITORY,,}"
@@ -76,6 +77,7 @@ jobs:
           for service in backend frontend; do
             docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" \
+              --build-arg "VITE_SUPPORT_TELEGRAM_URL=${SUPPORT_TELEGRAM_URL:-}" \
               -f "apps/$service/Dockerfile" -t "$registry-$service:$GITHUB_SHA" .
             if [[ "$service" == backend ]]; then
               docker run --rm --entrypoint node "$registry-$service:$GITHUB_SHA" -e \
