@@ -19,7 +19,7 @@ import {
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '../../components/language-switcher';
+import { LandingLanguageSelect } from '../../components/landing-language-select';
 import './landing.css';
 import './landing.dark.css';
 import './landing-sections.css';
@@ -94,7 +94,7 @@ export function LandingPage() {
             ))}
           </nav>
           <div className="landing-header-actions">
-            <LanguageSwitcher />
+            <LandingLanguageSelect />
             <Link className="landing-signin" to="/login">
               {t('landing.signIn')}
             </Link>
@@ -121,7 +121,7 @@ export function LandingPage() {
             ))}
             <Link to="/login">{t('landing.signIn')}</Link>
             <Link to="/register">{t('landing.startFree')}</Link>
-            <LanguageSwitcher />
+            <LandingLanguageSelect />
           </nav>
         )}
       </header>

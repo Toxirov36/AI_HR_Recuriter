@@ -109,6 +109,12 @@
   color: #93a8a0;
 }
 
+.dark .landing-lang {
+  border: 1px solid #24352e;
+  background: #131e1a;
+  color: #93a8a0;
+}
+
 @media (max-width: 1060px) {
   .dark .landing-menu-toggle {
     border: 1px solid #24352e;

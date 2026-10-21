@@ -1,0 +1,2 @@
+/* Minimal reset for the landing page, which loads before (and without) the application stylesheet. */
+@tailwind base;

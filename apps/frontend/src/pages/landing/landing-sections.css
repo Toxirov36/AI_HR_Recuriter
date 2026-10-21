@@ -298,6 +298,23 @@
   }
 }
 
+/* Native language select (no dropdown library on the landing page). */
+.landing-lang {
+  padding: 8px 10px;
+  border: 1px solid #dbe8df;
+  border-radius: 10px;
+  background: #fff;
+  color: #4c6256;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.landing-lang:focus-visible {
+  outline: 3px solid #64ae80;
+  outline-offset: 2px;
+}
+
 /* The header now has five links: switch to the menu button earlier, and keep labels on one line. */
 .landing-nav a,
 .landing-button-small {
