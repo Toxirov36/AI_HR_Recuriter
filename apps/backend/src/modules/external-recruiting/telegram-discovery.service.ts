@@ -6,7 +6,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { Database } from '../../database/prisma.service';
 import { Security, type Identity } from '../../common/utils/security';
 import { GeminiProvider } from '../ai/providers/gemini.provider';
-import { TelegramDiscoveryClient, type DiscoveredChannel } from './telegram-discovery.client';
+import { floodSeconds, TelegramDiscoveryClient, type DiscoveredChannel } from './telegram-discovery.client';
 
 const QUEUE_NAME = 'telegram-channel-discovery';
 const querySchema = z.object({ queries: z.array(z.string().trim().min(5).max(80)).min(2).max(4) }).strict();
@@ -57,7 +57,7 @@ export class TelegramDiscoveryService implements OnModuleInit, OnModuleDestroy {
     if (this.security.config.NODE_ENV === 'test') return;
     this.connection = this.security.createBullMqConnection();
     this.queue = new Queue(QUEUE_NAME, { connection: this.connection });
-    this.worker = new Worker(QUEUE_NAME, job => this.process(job), { connection: this.connection, concurrency: 1, lockDuration: 5 * 60_000 });
+    this.worker = new Worker(QUEUE_NAME, job => this.process(job), { connection: this.connection, concurrency: 1, lockDuration: 10 * 60_000 });
     this.worker.on('error', error => this.logger.warn(`Channel discovery worker: ${error.message}`));
     void this.recover();
     this.recoveryTimer = setInterval(() => void this.recover(), 60_000);
@@ -150,9 +150,17 @@ export class TelegramDiscoveryService implements OnModuleInit, OnModuleDestroy {
         'Generate 2 to 4 short (1 to 3 words) search phrases likely to appear verbatim in recent Telegram vacancy posts. Cover Uzbek and Russian profession names. Avoid long sentences and generic words alone.',
         { title: vacancy.title.slice(0, 200), description: vacancy.description.slice(0, 2500), requirements: vacancy.requirements.map(r => r.name).slice(0, 20) }, instructions, this.security.config.GEMINI_FALLBACK_MODEL);
       const found = new Map<string, { id: string; title: string; username: string }>();
+      // A Telegram flood wait stops the Telegram calls, but whatever was gathered so far is still rated and shown.
+      let throttled = false;
       for (const query of searchQueries(vacancy.title, queries.queries)) {
-        for (const channel of await this.telegram.search(query)) {
-          if (!found.has(channel.id) && found.size < 30) found.set(channel.id, channel);
+        try {
+          for (const channel of await this.telegram.search(query)) {
+            if (!found.has(channel.id) && found.size < 25) found.set(channel.id, channel);
+          }
+        } catch (error) {
+          if (floodSeconds(error) === null || !found.size) throw error;
+          throttled = true;
+          break;
         }
       }
       const channels: DiscoveredChannel[] = [];
@@ -163,9 +171,14 @@ export class TelegramDiscoveryService implements OnModuleInit, OnModuleDestroy {
         } catch (error) {
           const message = (error as Error).message ?? '';
           if (/CHANNEL_PRIVATE|USERNAME_INVALID|CHANNEL_INVALID|USER_BANNED_IN_CHANNEL/i.test(message)) continue;
+          if (floodSeconds(error) !== null && channels.length) {
+            throttled = true;
+            break;
+          }
           throw error;
         }
       }
+      if (throttled) this.logger.warn(`Channel discovery ${run.id}: Telegram rate limit reached, using ${channels.length} inspected channels`);
       const results: ChannelRecommendation[] = channels.map(channel => ({
         telegramId: channel.telegramId,
         title: channel.title,
@@ -209,8 +222,8 @@ export class TelegramDiscoveryService implements OnModuleInit, OnModuleDestroy {
         ? 'AI so‘rovlar limiti tugadi. Google AI Studio limitini tekshiring yoki keyinroq qayta urinib ko‘ring.'
         : /Gemini is temporarily unavailable|Gemini took too long/i.test(message)
           ? 'AI xizmati vaqtincha ishlamayapti. Keyinroq qayta urinib ko‘ring.'
-          : /FLOOD_WAIT|Too many requests/i.test(message)
-            ? 'Telegram so‘rovlar chegarasiga yetildi. Keyinroq qayta urinib ko‘ring.'
+          : floodSeconds(error) !== null || /FLOOD_WAIT|Too many requests/i.test(message)
+            ? `Telegram so‘rovlar chegarasiga yetildi. ${floodSeconds(error) ? `Taxminan ${Math.max(1, Math.ceil((floodSeconds(error) ?? 60) / 60))} daqiqadan keyin` : 'Keyinroq'} qayta urinib ko‘ring.`
             : /session|disconnected|unauthorized/i.test(message)
               ? 'Telegram qidiruv hisobi uzilgan. Serverdagi hisobni qayta ulang.'
               : 'Kanal tahlili yakunlanmadi. Keyinroq qayta urinib ko‘ring.';

@@ -16,11 +16,34 @@ export type DiscoveredChannel = {
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Telegram throttles user accounts hard: pace requests and wait out short flood waits.
+const MIN_GAP_MS = 1000;
+const MAX_FLOOD_SLEEP_SECONDS = 45;
+const MAX_FLOOD_RETRIES = 2;
+
+/** Seconds Telegram asked us to wait, or null when the error is not a flood wait. */
+export function floodSeconds(error: unknown): number | null {
+  const candidate = error as { name?: string; seconds?: unknown; message?: string } | null;
+  const message = candidate?.message ?? '';
+  if (typeof candidate?.seconds === 'number' && (candidate.name === 'FloodWaitError' || /flood/i.test(message))) return candidate.seconds;
+  const parsed = /FLOOD_WAIT_(\d+)|wait of (\d+) seconds/i.exec(message);
+  if (parsed) return Number(parsed[1] ?? parsed[2]);
+  return candidate?.name === 'FloodWaitError' ? 60 : null;
+}
+
+export class TelegramFloodError extends Error {
+  constructor(readonly seconds: number) {
+    super(`FLOOD_WAIT_${seconds}`);
+    this.name = 'FloodWaitError';
+  }
+}
+
 @Injectable()
 export class TelegramDiscoveryClient implements OnModuleDestroy {
   private readonly config = getConfig();
   private client?: TelegramClient<StringSession>;
   private connecting?: Promise<TelegramClient<StringSession>>;
+  private nextRequestAt = 0;
 
   get configured() {
     return Boolean(this.config.TELEGRAM_API_ID && this.config.TELEGRAM_API_HASH && this.config.TELEGRAM_USER_SESSION_FILE);
@@ -31,6 +54,29 @@ export class TelegramDiscoveryClient implements OnModuleDestroy {
     if (this.client) return this.client;
     if (!this.connecting) this.connecting = this.connect().finally(() => { this.connecting = undefined; });
     return this.connecting;
+  }
+
+  private async pace() {
+    const gap = process.env.NODE_ENV === 'test' ? 0 : MIN_GAP_MS;
+    const at = Math.max(Date.now(), this.nextRequestAt);
+    this.nextRequestAt = at + gap;
+    if (at > Date.now()) await sleep(at - Date.now());
+  }
+
+  /** One paced Telegram request; short flood waits are slept through and retried, long ones surface as TelegramFloodError. */
+  private async call<T>(request: (client: TelegramClient<StringSession>) => Promise<T>): Promise<T> {
+    const client = await this.ready();
+    for (let attempt = 0; ; attempt += 1) {
+      await this.pace();
+      try {
+        return await request(client);
+      } catch (error) {
+        const seconds = floodSeconds(error);
+        if (seconds === null) throw error;
+        if (seconds > MAX_FLOOD_SLEEP_SECONDS || attempt >= MAX_FLOOD_RETRIES) throw new TelegramFloodError(seconds);
+        await sleep((seconds + 1) * 1000);
+      }
+    }
   }
 
   private async connect() {
@@ -68,8 +114,7 @@ export class TelegramDiscoveryClient implements OnModuleDestroy {
   }
 
   async search(query: string): Promise<Array<{ id: string; title: string; username: string }>> {
-    const client = await this.ready();
-    const result = await client.invoke(new Api.messages.SearchGlobal({
+    const result = await this.call(client => client.invoke(new Api.messages.SearchGlobal({
       q: query,
       filter: new Api.InputMessagesFilterEmpty(),
       minDate: Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000),
@@ -79,7 +124,7 @@ export class TelegramDiscoveryClient implements OnModuleDestroy {
       offsetId: 0,
       limit: 40,
       broadcastsOnly: true,
-    }));
+    })));
     const channels = new Map<string, { id: string; title: string; username: string }>();
     const add = (chat: Api.TypeChat) => {
       if (!(chat instanceof Api.Channel) || chat.broadcast !== true || !/^[a-zA-Z0-9_]{5,32}$/.test(chat.username ?? '')) return;
@@ -95,20 +140,19 @@ export class TelegramDiscoveryClient implements OnModuleDestroy {
       }
     }
     if (channels.size < 4) {
-      const byName = await client.invoke(new Api.contacts.Search({ q: query, limit: 12 }));
+      const byName = await this.call(client => client.invoke(new Api.contacts.Search({ q: query, limit: 12 })));
       for (const chat of byName.chats) add(chat);
     }
     return [...channels.values()];
   }
 
   async inspect(username: string): Promise<DiscoveredChannel | null> {
-    const client = await this.ready();
-    const entity = await client.getEntity(username);
+    const entity = await this.call(client => client.getEntity(username));
     if (!(entity instanceof Api.Channel) || entity.broadcast !== true || !/^[a-zA-Z0-9_]{5,32}$/.test(entity.username ?? '')) return null;
-    const full = await client.invoke(new Api.channels.GetFullChannel({ channel: entity }));
+    const full = await this.call(client => client.invoke(new Api.channels.GetFullChannel({ channel: entity })));
     if (!(full.fullChat instanceof Api.ChannelFull)) return null;
     const cutoff = Math.floor((Date.now() - 30 * 24 * 60 * 60 * 1000) / 1000);
-    const messages = await client.getMessages(entity, { limit: 100 });
+    const messages = await this.call(client => client.getMessages(entity, { limit: 100 }));
     const posts = messages
       .filter(message => message instanceof Api.Message && typeof message.message === 'string' && message.message.trim() && Number(message.date) >= cutoff)
       .slice(0, 10)

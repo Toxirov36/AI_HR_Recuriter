@@ -73,6 +73,34 @@ describe('Telegram channel discovery', () => {
     expect(update.mock.calls.some(([arg]) => arg.data.results)).toBe(false);
   });
 
+  it('states how long to wait when Telegram asks for a long flood wait', async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const db = { vacancy: { findFirst: vi.fn().mockResolvedValue(vacancy) }, telegramChannelDiscovery: { findUnique: vi.fn().mockResolvedValue(run), update } };
+    const gemini = { generate: vi.fn().mockResolvedValue({ queries: ['dasturchi', 'разработчик'] }) };
+    const telegram = { search: vi.fn().mockRejectedValue(Object.assign(new Error('A wait of 300 seconds is required'), { name: 'FloodWaitError', seconds: 300 })) };
+    await (service(db, gemini, telegram) as unknown as { process(job: unknown): Promise<void> }).process({ data: { runId: 7 } });
+    expect(update).toHaveBeenCalledWith({ where: { id: 7 }, data: expect.objectContaining({ status: 'FAILED', error: expect.stringContaining('5 daqiqadan keyin') }) });
+  });
+
+  it('keeps the channels gathered before Telegram throttled the account instead of failing the whole run', async () => {
+    const update = vi.fn().mockResolvedValue(undefined);
+    const db = { vacancy: { findFirst: vi.fn().mockResolvedValue(vacancy) }, telegramChannelDiscovery: { findUnique: vi.fn().mockResolvedValue(run), update } };
+    const flood = Object.assign(new Error('A wait of 300 seconds is required'), { name: 'FloodWaitError', seconds: 300 });
+    const gemini = { generate: vi.fn().mockResolvedValueOnce({ queries: ['dasturchi', 'разработчик'] }).mockResolvedValueOnce({ ratings: [
+      { username: 'devjobs', score: 80, reason: 'Dasturchilar uchun ish postlari ko‘p uchraydi.', inUzbekistanMarket: true },
+    ] }) };
+    const telegram = {
+      search: vi.fn().mockResolvedValue([{ id: '11', title: 'Dev Jobs', username: 'devjobs' }, { id: '22', title: 'General', username: 'generaljobs' }]),
+      inspect: vi.fn()
+        .mockResolvedValueOnce({ telegramId: '11', title: 'Dev Jobs', username: 'devjobs', description: 'Programming and software engineering jobs in Uzbekistan, Tashkent based companies', subscriberCount: 500, posts: ['Node.js backend role in Tashkent'], checkedAt: '2026-10-15T00:00:00.000Z' })
+        .mockRejectedValueOnce(flood),
+    };
+    await (service(db, gemini, telegram) as unknown as { process(job: unknown): Promise<void> }).process({ data: { runId: 7 } });
+    const completed = update.mock.calls.find(([arg]) => arg.data.status === 'COMPLETED')?.[0];
+    expect(completed.data.results).toEqual([expect.objectContaining({ telegramId: '11', score: 80 })]);
+    expect(update.mock.calls.some(([arg]) => arg.data.status === 'FAILED')).toBe(false);
+  });
+
   it('reports AI quota limits clearly without saving fabricated scores', async () => {
     const update = vi.fn().mockResolvedValue(undefined);
     const db = { vacancy: { findFirst: vi.fn().mockResolvedValue(vacancy) }, telegramChannelDiscovery: { findUnique: vi.fn().mockResolvedValue(run), update } };
