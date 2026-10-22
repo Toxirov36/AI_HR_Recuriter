@@ -74,36 +74,42 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
 
         {hasDraft &&
           draft.map((question, index) => (
-            <section key={question.id} className="space-y-2 rounded-xl border border-slate-200 p-4">
-              <h3 className="font-semibold">
+            <section key={question.id} className="space-y-2 rounded-xl border border-slate-200 p-3">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                 {index + 1}. {question.type === 'HARD_SKILL' ? t('vacancies.assessmentHard') : t('vacancies.assessmentSoft')}
               </h3>
               <Textarea
+                className="min-h-0 text-sm font-medium"
                 aria-label={`${t('vacancies.assessmentQuestion')} ${index + 1}`}
                 value={question.question}
                 rows={2}
                 onChange={(event) => change(index, { question: event.target.value })}
               />
-              <div className="space-y-2">
+              <div className="space-y-1.5" role="radiogroup" aria-label={`${t('vacancies.assessmentCorrect')} ${index + 1}`}>
                 {question.options.map((option, optionIndex) => (
-                  <label key={optionIndex} className="flex items-center gap-2">
+                  <div key={optionIndex} className="flex items-center gap-2">
                     <input
                       type="radio"
+                      className="h-4 w-4 shrink-0 cursor-pointer accent-emerald-700"
                       name={`correct-${question.id}`}
                       checked={question.correctIndex === optionIndex}
+                      title={t('vacancies.assessmentCorrect')}
                       aria-label={`${t('vacancies.assessmentCorrect')} ${index + 1}.${'ABCD'[optionIndex]}`}
                       onChange={() => change(index, { correctIndex: optionIndex })}
                     />
-                    <span className="w-4 font-semibold">{'ABCD'[optionIndex]}</span>
+                    <span className="w-4 shrink-0 text-center text-xs font-semibold text-slate-500">{'ABCD'[optionIndex]}</span>
                     <Input
+                      className="h-9 min-w-0 flex-1 text-sm font-normal"
                       aria-label={`${index + 1}.${'ABCD'[optionIndex]}`}
                       value={option}
                       onChange={(event) => changeOption(index, optionIndex, event.target.value)}
                     />
-                  </label>
+                  </div>
                 ))}
               </div>
               <Textarea
+                className="min-h-0 text-xs font-normal text-slate-600"
+                placeholder={t('vacancies.assessmentExplanation')}
                 aria-label={`${t('vacancies.assessmentExplanation')} ${index + 1}`}
                 value={question.explanation}
                 rows={2}
