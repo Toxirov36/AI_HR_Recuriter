@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import i18n, { changeLanguage } from '../i18n';
 import { LandingLanguageSelect } from './landing-language-select';
 
@@ -12,12 +12,39 @@ describe('LandingLanguageSelect', () => {
   it('lists the four languages and switches the interface language', async () => {
     await changeLanguage('en');
     render(<LandingLanguageSelect />);
-    const select = screen.getByRole('combobox', { name: 'Language' });
-    expect(Array.from((select as HTMLSelectElement).options).map((option) => option.value)).toEqual(['uz', 'ru', 'en', 'tg']);
-    expect((select as HTMLSelectElement).value).toBe('en');
+    const trigger = screen.getByRole('button', { name: 'Language' });
+    expect(trigger).toHaveTextContent('English');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
 
-    fireEvent.change(select, { target: { value: 'ru' } });
+    fireEvent.click(trigger);
+    const list = screen.getByRole('listbox', { name: 'Language' });
+    const options = within(list).getAllByRole('option');
+    expect(options).toHaveLength(4);
+    expect(options.find((option) => option.getAttribute('aria-selected') === 'true')).toHaveTextContent('English');
+
+    fireEvent.click(options[1]);
     await waitFor(() => expect(i18n.language).toBe('ru'));
     expect(document.documentElement.lang).toBe('ru');
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  });
+
+  it('works from the keyboard and closes on Escape or an outside click', async () => {
+    await changeLanguage('uz');
+    render(<LandingLanguageSelect />);
+    const trigger = screen.getByRole('button', { name: /Til|Language/ });
+    fireEvent.keyDown(trigger, { key: 'ArrowDown' });
+    const list = screen.getByRole('listbox');
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    fireEvent.keyDown(list, { key: 'Enter' });
+    await waitFor(() => expect(i18n.language).toBe('ru'));
+
+    fireEvent.click(trigger);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' });
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+
+    fireEvent.click(trigger);
+    fireEvent.pointerDown(document.body);
+    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
 });

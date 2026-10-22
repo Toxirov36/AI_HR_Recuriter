@@ -115,6 +115,27 @@
   color: #93a8a0;
 }
 
+.dark .landing-lang:hover {
+  border-color: #24352e;
+}
+
+.dark .landing-lang-menu {
+  border: 1px solid #24352e;
+  background: #131e1a;
+}
+
+.dark .landing-lang-option {
+  color: #93a8a0;
+}
+
+.dark .landing-lang-option.is-active {
+  background: #17261f;
+}
+
+.dark .landing-lang-option.is-selected {
+  color: #58c0a0;
+}
+
 @media (max-width: 1060px) {
   .dark .landing-menu-toggle {
     border: 1px solid #24352e;

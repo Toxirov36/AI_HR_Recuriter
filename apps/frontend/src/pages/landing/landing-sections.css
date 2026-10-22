@@ -298,11 +298,19 @@
   }
 }
 
-/* Native language select (no dropdown library on the landing page). */
+/* Language dropdown (a small custom list: no dropdown library on the landing page). */
+.landing-lang-wrap {
+  position: relative;
+}
 .landing-lang {
-  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 124px;
+  padding: 8px 12px;
   border: 1px solid #dbe8df;
-  border-radius: 10px;
+  border-radius: 999px;
   background: #fff;
   color: #4c6256;
   font: inherit;
@@ -310,9 +318,55 @@
   font-weight: 600;
   cursor: pointer;
 }
+.landing-lang:hover {
+  border-color: #b9d8c3;
+}
 .landing-lang:focus-visible {
   outline: 3px solid #64ae80;
   outline-offset: 2px;
+}
+.landing-lang-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  min-width: 100%;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid #dbe8df;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 22px 44px -22px #1b4f3a77;
+  list-style: none;
+  outline: none;
+}
+.landing-lang-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  color: #4c6256;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.landing-lang-option.is-active {
+  background: #eef5ef;
+}
+.landing-lang-option.is-selected {
+  color: #1d6148;
+  font-weight: 700;
+}
+.landing-mobile-nav .landing-lang-wrap {
+  margin-top: 10px;
+}
+.landing-mobile-nav .landing-lang-menu {
+  position: static;
+  margin-top: 6px;
+  box-shadow: none;
 }
 
 /* The header now has five links: switch to the menu button earlier, and keep labels on one line. */
