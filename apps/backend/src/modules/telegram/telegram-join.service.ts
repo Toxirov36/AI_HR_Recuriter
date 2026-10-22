@@ -9,19 +9,19 @@ import { TelegramApiService } from './telegram-api.service';
 import { TelegramApplyService } from './telegram-apply.service';
 import { TelegramQueueService } from './telegram-queue.service';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
+import { TelegramLanguageService } from './telegram-language.service';
+import { botText, DEFAULT_BOT_LANG, matchesAnyLang, type BotMessageKey } from './telegram-i18n';
 import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/telegram.types';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_CV_BYTES = 10 * 1024 * 1024;
 const MAX_VACANCY_BUTTONS = 10;
-const BACK_TEXT = '⬅️ Orqaga';
-const CANCEL_TEXT = '✖️ Bekor qilish';
+type Tr = (key: BotMessageKey, params?: Record<string, string | number>) => string;
 /** Steps before the CV is submitted: the candidate can still leave without leaving a trace. */
 const CANCELLABLE_STEPS = ['PRIVACY', 'FIELD', 'VACANCY', 'NAME', 'PHONE', 'DOCUMENT'];
-const NAME_PROMPT = 'Ism va familiyangizni yozing (masalan: Aziz Karimov):';
-const navButtons = (back?: string) => [...(back ? [{ text: BACK_TEXT, callback_data: back }] : []), { text: CANCEL_TEXT, callback_data: 'join:cancel' }];
-const navKeyboard = (...rows: Array<Array<{ text: string; request_contact?: boolean }>>) => ({
-  keyboard: [...rows, [{ text: BACK_TEXT }, { text: CANCEL_TEXT }]],
+const navButtons = (tr: Tr, back?: string) => [...(back ? [{ text: tr('btnBack'), callback_data: back }] : []), { text: tr('btnCancel'), callback_data: 'join:cancel' }];
+const navKeyboard = (tr: Tr, ...rows: Array<Array<{ text: string; request_contact?: boolean }>>) => ({
+  keyboard: [...rows, [{ text: tr('btnBack') }, { text: tr('btnCancel') }]],
   resize_keyboard: true,
 });
 const CV_MIME_TYPES = [
@@ -64,7 +64,14 @@ export class TelegramJoinService {
     @Inject(TelegramApplyService) private apply: TelegramApplyService,
     @Optional() @Inject(R2Storage) private storage?: R2Storage,
     @Optional() @Inject(TelegramScreeningAlertService) private alerts?: TelegramScreeningAlertService,
+    @Optional() @Inject(TelegramLanguageService) private languages?: TelegramLanguageService,
   ) {}
+
+  /** Translator for the user's chosen bot language (Uzbek when none is stored). */
+  private async tr(userId: string): Promise<Tr> {
+    const lang = (await this.languages?.get(userId)) ?? DEFAULT_BOT_LANG;
+    return (key, params) => botText(lang, key, params);
+  }
 
   /** The link HR shares with candidates (and the Business redirect message uses the same one). */
   async candidateLink(companyId: number) {
@@ -81,17 +88,18 @@ export class TelegramJoinService {
   async start(message: TelegramDirectMessage, token: string) {
     if (!message.from || message.chat.type !== 'private') return;
     const userId = String(message.from.id);
+    const tr = await this.tr(userId);
 
     const company = await this.db.company.findFirst({
       where: { publicToken: token, isActive: true },
       select: { id: true, name: true, retentionDays: true },
     });
     if (!company) {
-      await this.telegram.sendMessage(message.chat.id, 'Bu havola yaroqsiz yoki ariza qabul qilish to‘xtatilgan.');
+      await this.telegram.sendMessage(message.chat.id, tr('joinInvalidLink'));
       return;
     }
     if (this.storage && !this.storage.enabled) {
-      await this.telegram.sendMessage(message.chat.id, 'Hozircha Telegram orqali ariza qabul qilinmayapti. Keyinroq urinib ko‘ring.');
+      await this.telegram.sendMessage(message.chat.id, tr('joinStorageOff'));
       return;
     }
 
@@ -118,12 +126,12 @@ export class TelegramJoinService {
 
     await this.telegram.sendMessage(
       message.chat.id,
-      `${company.name} ga ariza.\n\n${company.name} ma’lumotlaringiz, ismingiz, telefon raqamingiz va CVni ishga qabul qilish uchun saqlaydi (${company.retentionDays} kungacha). Tanlangan lavozimga mos test savollari AI yordamida yaratiladi va CVingiz AI orqali tahlil qilinadi; natijalar HRga ko‘rsatiladi. Davom etishga rozimisiz?`,
+      tr('joinConsent', { company: company.name, days: company.retentionDays }),
       {
         replyMarkup: {
           inline_keyboard: [[
-            { text: 'Roziman', callback_data: 'join:privacy:yes' },
-            { text: 'Rad etaman', callback_data: 'join:privacy:no' },
+            { text: tr('agree'), callback_data: 'join:privacy:yes' },
+            { text: tr('decline'), callback_data: 'join:privacy:no' },
           ]],
         },
       },
@@ -135,17 +143,18 @@ export class TelegramJoinService {
     if (!data.startsWith('join:')) return false;
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
+    const tr = await this.tr(userId);
 
     const session = await this.activeSession(userId);
     if (!session) {
-      await this.telegram.answerCallbackQuery(query.id, 'Ariza sessiyasi tugagan. Havolani qayta oching.', true);
+      await this.telegram.answerCallbackQuery(query.id, tr('joinSessionExpired'), true);
       return true;
     }
-    const stale = () => this.telegram.answerCallbackQuery(query.id, 'Bu bosqich allaqachon yakunlangan.');
+    const stale = () => this.telegram.answerCallbackQuery(query.id, tr('stepDone'));
 
     if (data === 'join:cancel') {
       await this.telegram.answerCallbackQuery(query.id);
-      await this.cancelFlow(chatId, userId, session.step);
+      await this.cancelFlow(chatId, userId, session.step, tr);
       return true;
     }
 
@@ -159,7 +168,7 @@ export class TelegramJoinService {
         return true;
       }
       await this.telegram.answerCallbackQuery(query.id);
-      await this.sendVacancyList(chatId, session.companyId);
+      await this.sendVacancyList(chatId, session.companyId, userId, tr);
       return true;
     }
 
@@ -169,13 +178,13 @@ export class TelegramJoinService {
         await stale();
         return true;
       }
-      await this.telegram.answerCallbackQuery(query.id, 'Ariza bekor qilindi');
-      await this.telegram.sendMessage(chatId, 'Rozilik berilmadi. Ma’lumotlar saqlanmaydi.');
+      await this.telegram.answerCallbackQuery(query.id, tr('applyCancelled'));
+      await this.telegram.sendMessage(chatId, tr('noConsent'));
       return true;
     }
 
     if (data === 'join:privacy:yes') {
-      await this.offerVacancies(query, session);
+      await this.offerVacancies(query, session, tr);
       return true;
     }
 
@@ -185,32 +194,32 @@ export class TelegramJoinService {
         await stale();
         return true;
       }
-      await this.chooseVacancy(query, session, Number(vacancyMatch[1]));
+      await this.chooseVacancy(query, session, Number(vacancyMatch[1]), tr);
       return true;
     }
 
     if (data === 'join:quizstart') {
       if (session.step !== 'ASSESSMENT') {
-        await this.telegram.answerCallbackQuery(query.id, 'Test faol emas yoki yakunlangan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('quizInactive'));
         return true;
       }
       const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
       if (!assessment.success) {
-        await this.telegram.answerCallbackQuery(query.id, 'Test hali tayyor emas. Birozdan keyin urinib ko‘ring.', true);
+        await this.telegram.answerCallbackQuery(query.id, tr('quizNotReadyLater'), true);
         return true;
       }
-      await this.telegram.answerCallbackQuery(query.id, 'Test boshlandi!');
-      await this.sendQuestion(chatId, assessment.data.questions, session.currentQuestionIndex);
+      await this.telegram.answerCallbackQuery(query.id, tr('quizStarted'));
+      await this.sendQuestion(chatId, assessment.data.questions, session.currentQuestionIndex, tr);
       return true;
     }
 
     const answerMatch = data.match(/^join:q:(\d+):(\d+)$/);
     if (answerMatch) {
-      await this.answer(query, session, Number(answerMatch[1]), Number(answerMatch[2]));
+      await this.answer(query, session, Number(answerMatch[1]), Number(answerMatch[2]), tr);
       return true;
     }
 
-    await this.telegram.answerCallbackQuery(query.id, 'Bu tugma avvalgi so‘rovga tegishli.', true);
+    await this.telegram.answerCallbackQuery(query.id, tr('buttonStale'), true);
     return true;
   }
 
@@ -221,19 +230,20 @@ export class TelegramJoinService {
     const chatId = message.chat.id;
     const userId = String(message.from.id);
     const text = message.text.trim();
+    const tr = await this.tr(userId);
 
-    if (text === CANCEL_TEXT || /^\/cancel(@\w+)?$/i.test(text)) {
-      await this.cancelFlow(chatId, userId, session.step);
+    if (matchesAnyLang(text, 'btnCancel') || /^\/cancel(@\w+)?$/i.test(text)) {
+      await this.cancelFlow(chatId, userId, session.step, tr);
       return true;
     }
-    if (text === BACK_TEXT && session.step === 'PHONE') {
+    if (matchesAnyLang(text, 'btnBack') && session.step === 'PHONE') {
       const reset = await this.db.telegramJoinSession.updateMany({ where: { telegramUserId: userId, step: 'PHONE' }, data: { step: 'NAME', fullName: null } });
-      if (reset.count) await this.telegram.sendMessage(chatId, `${NAME_PROMPT}\n\nBekor qilish uchun /cancel yozing.`, { replyMarkup: { remove_keyboard: true } });
+      if (reset.count) await this.telegram.sendMessage(chatId, `${tr('namePrompt')}\n\n${tr('cancelHint')}`, { replyMarkup: { remove_keyboard: true } });
       return true;
     }
-    if (text === BACK_TEXT && session.step === 'DOCUMENT') {
+    if (matchesAnyLang(text, 'btnBack') && session.step === 'DOCUMENT') {
       const reset = await this.db.telegramJoinSession.updateMany({ where: { telegramUserId: userId, step: 'DOCUMENT' }, data: { step: 'PHONE', phone: null } });
-      if (reset.count) await this.askPhone(chatId, session.fullName ?? '');
+      if (reset.count) await this.askPhone(chatId, session.fullName ?? '', tr);
       return true;
     }
 
@@ -241,14 +251,14 @@ export class TelegramJoinService {
       case 'NAME': {
         const fullName = parseFullName(message.text);
         if (!fullName) {
-          await this.telegram.sendMessage(chatId, 'Iltimos, ism va familiyangizni to‘liq yozing (masalan: Aziz Karimov).');
+          await this.telegram.sendMessage(chatId, tr('nameInvalid'));
           return true;
         }
         const claimed = await this.db.telegramJoinSession.updateMany({
           where: { telegramUserId: userId, step: 'NAME' },
           data: { step: 'PHONE', fullName },
         });
-        if (claimed.count) await this.askPhone(chatId, fullName);
+        if (claimed.count) await this.askPhone(chatId, fullName, tr);
         return true;
       }
       case 'PHONE': {
@@ -256,22 +266,22 @@ export class TelegramJoinService {
         if (!phone) {
           await this.telegram.sendMessage(
             chatId,
-            'Iltimos, telefon raqamingizni xalqaro formatda kiriting (masalan: <code>+998901234567</code>) yoki «Raqamni ulashish» tugmasini bosing.',
+            tr('phoneInvalidJoin'),
             { parseMode: 'HTML' },
           );
           return true;
         }
-        await this.savePhone(userId, chatId, phone);
+        await this.savePhone(userId, chatId, phone, tr);
         return true;
       }
       case 'ASSESSMENT':
-        await this.telegram.sendMessage(chatId, 'Iltimos, test savollariga javob berish uchun yuqoridagi tugmalardan (A, B, C, D) foydalaning.');
+        await this.telegram.sendMessage(chatId, tr('useQuizButtons'));
         return true;
       case 'DOCUMENT':
-        await this.telegram.sendMessage(chatId, 'Rezyumeyingizni (CV) <b>PDF</b> yoki <b>DOCX</b> fayl sifatida yuboring (10 MB gacha).', { parseMode: 'HTML' });
+        await this.telegram.sendMessage(chatId, tr('sendCv'), { parseMode: 'HTML' });
         return true;
       default:
-        await this.telegram.sendMessage(chatId, 'Iltimos, yuqoridagi tugmalardan birini tanlang.');
+        await this.telegram.sendMessage(chatId, tr('pickButton'));
         return true;
     }
   }
@@ -281,12 +291,13 @@ export class TelegramJoinService {
     const session = await this.activeSession(String(message.from.id));
     if (!session) return false;
     if (session.step !== 'PHONE') return false;
+    const tr = await this.tr(String(message.from.id));
     const phone = parsePhone(message.contact.phone_number, true);
     if (!phone) {
-      await this.telegram.sendMessage(message.chat.id, 'Raqam noto‘g‘ri ko‘rinadi. Iltimos, raqamni qo‘lda kiriting (masalan: +998901234567).');
+      await this.telegram.sendMessage(message.chat.id, tr('contactInvalid'));
       return true;
     }
-    await this.savePhone(String(message.from.id), message.chat.id, phone);
+    await this.savePhone(String(message.from.id), message.chat.id, phone, tr);
     return true;
   }
 
@@ -296,9 +307,10 @@ export class TelegramJoinService {
     const session = await this.activeSession(userId);
     if (!session) return false;
     const chatId = message.chat.id;
+    const tr = await this.tr(userId);
 
     if (session.step !== 'DOCUMENT' || !session.privacyAcceptedAt || !session.fullName) {
-      await this.telegram.sendMessage(chatId, 'CV yuborishdan oldin avvalgi bosqichlarni (soha, ism, telefon) yakunlang.');
+      await this.telegram.sendMessage(chatId, tr('cvPrecondition'));
       return true;
     }
 
@@ -306,7 +318,7 @@ export class TelegramJoinService {
     const fileName = document.file_name?.trim().slice(0, 180) ?? '';
     const mime = document.mime_type?.toLowerCase() ?? '';
     if (!/\.(pdf|docx)$/i.test(fileName) || !CV_MIME_TYPES.includes(mime) || (document.file_size ?? 0) > MAX_CV_BYTES) {
-      await this.telegram.sendMessage(chatId, 'PDF yoki DOCX formatidagi, 10 MB dan kichik CV fayl yuboring.');
+      await this.telegram.sendMessage(chatId, tr('cvInvalid'));
       return true;
     }
     await this.security.limit(`telegram-join:${userId}`, 5, 3600);
@@ -314,12 +326,12 @@ export class TelegramJoinService {
     const vacancy = session.vacancyId
       ? await this.db.vacancy.findFirst({
           where: { id: session.vacancyId, companyId: session.companyId, status: 'ACTIVE', company: { isActive: true } },
-          include: { requirements: { select: { name: true } } },
+          include: { requirements: { select: { name: true } }, field: { select: { name: true } } },
         })
       : null;
     if (session.vacancyId && !vacancy) {
       await this.cancel(userId);
-      await this.telegram.sendMessage(chatId, 'Bu vakansiya endi ariza qabul qilmayapti. Havolani qayta ochib, boshqa vakansiyani tanlang.');
+      await this.telegram.sendMessage(chatId, tr('vacancyStopped'));
       return true;
     }
     let result: { candidateId: number; resumeId: number; applicationId: number | null };
@@ -361,6 +373,13 @@ export class TelegramJoinService {
 
         let applicationId: number | null = null;
         if (vacancy) {
+          if (vacancy.fieldId != null) {
+            const sameField = await tx.application.findFirst({
+              where: { companyId: session.companyId, candidateId: candidate.id, vacancyId: { not: vacancy.id }, vacancy: { fieldId: vacancy.fieldId } },
+              select: { id: true },
+            });
+            if (sameField) throw new Error('FIELD_ALREADY_APPLIED');
+          }
           const application = await tx.application.upsert({
             where: { vacancyId_candidateId: { vacancyId: vacancy.id, candidateId: candidate.id } },
             create: { companyId: session.companyId, vacancyId: vacancy.id, candidateId: candidate.id, status: 'NEW', aiConsentGranted: true },
@@ -394,7 +413,11 @@ export class TelegramJoinService {
       });
     } catch (error) {
       if ((error as Error).message === 'ALREADY_SUBMITTED') {
-        await this.telegram.sendMessage(chatId, 'Ushbu ariza avval qabul qilingan.');
+        await this.telegram.sendMessage(chatId, tr('alreadySubmitted'));
+        return true;
+      }
+      if ((error as Error).message === 'FIELD_ALREADY_APPLIED') {
+        await this.telegram.sendMessage(chatId, this.blockedText('field', vacancy!, tr), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
         return true;
       }
       throw error;
@@ -416,14 +439,14 @@ export class TelegramJoinService {
     if (!vacancy) {
       await this.telegram.sendMessage(
         chatId,
-        '✅ <b>Ma’lumotlaringiz va CV qabul qilindi!</b>\n\nHozircha bu sohada ochiq vakansiya yo‘q. Yangi vakansiya ochilsa, HR siz bilan bog‘lanadi.',
+        tr('noVacancyDone'),
         { parseMode: 'HTML' },
       );
       return true;
     }
 
-    await this.telegram.sendMessage(chatId, '✅ <b>CV qabul qilindi.</b> Endi qisqa test topshiring.', { parseMode: 'HTML', replyMarkup: { remove_keyboard: true } });
-    await this.prepareAssessment(userId, chatId, vacancy);
+    await this.telegram.sendMessage(chatId, tr('cvAcceptedQuiz'), { parseMode: 'HTML', replyMarkup: { remove_keyboard: true } });
+    await this.prepareAssessment(userId, chatId, vacancy, tr);
     return true;
   }
 
@@ -434,93 +457,103 @@ export class TelegramJoinService {
   }
 
   /** After consent: list the company's open vacancies (one is picked automatically, none keeps the contact details). */
-  private async offerVacancies(query: TelegramCallbackQuery, session: SessionRow) {
+  private async offerVacancies(query: TelegramCallbackQuery, session: SessionRow, tr: Tr) {
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
     const vacancies = await this.db.vacancy.findMany({
       where: this.vacancyFilter(session),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: MAX_VACANCY_BUTTONS,
-      select: { id: true, title: true },
+      select: { id: true, title: true, fieldId: true, field: { select: { name: true } } },
     });
-    const single = vacancies.length === 1 ? vacancies[0] : null;
-    if (single && (await this.alreadyApplied(session.companyId, single.id, userId))) {
+    const available = [];
+    let firstBlock: ReturnType<TelegramJoinService['blockedText']> | null = null;
+    for (const vacancy of vacancies) {
+      const reason = await this.blockedReason(session.companyId, vacancy, userId);
+      if (!reason) available.push(vacancy);
+      else firstBlock ??= this.blockedText(reason, vacancy, tr);
+    }
+    if (vacancies.length && !available.length) {
       await this.cancel(userId);
       await this.telegram.answerCallbackQuery(query.id);
-      await this.telegram.sendMessage(chatId, `«${single.title}» vakansiyasiga arizangiz allaqachon qabul qilingan.`);
+      await this.telegram.sendMessage(chatId, vacancies.length === 1 ? firstBlock! : tr('alreadyAppliedAll'), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
       return;
     }
+    const single = available.length === 1 ? available[0] : null;
     const claimed = await this.db.telegramJoinSession.updateMany({
       where: { telegramUserId: userId, step: 'PRIVACY' },
       data: {
-        step: vacancies.length > 1 ? 'VACANCY' : 'NAME',
+        step: available.length > 1 ? 'VACANCY' : 'NAME',
         privacyAcceptedAt: new Date(),
         aiConsentAt: new Date(),
         vacancyId: single?.id ?? null,
       },
     });
     if (!claimed.count) {
-      await this.telegram.answerCallbackQuery(query.id, 'Bu bosqich allaqachon yakunlangan.');
+      await this.telegram.answerCallbackQuery(query.id, tr('stepDone'));
       return;
     }
     await this.telegram.answerCallbackQuery(query.id);
 
-    if (vacancies.length > 1) {
-      await this.sendVacancyChoices(chatId, vacancies);
+    if (available.length > 1) {
+      await this.sendVacancyChoices(chatId, available, tr);
       return;
     }
     await this.telegram.sendMessage(
       chatId,
       single
-        ? `Vakansiya: «${single.title}».\n\n${NAME_PROMPT}`
-        : `Hozircha ochiq vakansiya yo‘q, lekin ma’lumotlaringizni qoldirishingiz mumkin: yangi vakansiya ochilsa HR siz bilan bog‘lanadi.\n\n${NAME_PROMPT}`,
-      { replyMarkup: { inline_keyboard: [navButtons()] } },
+        ? tr('vacancyIntro', { title: single.title, prompt: tr('namePrompt') })
+        : tr('noOpenVacancy', { prompt: tr('namePrompt') }),
+      { replyMarkup: { inline_keyboard: [navButtons(tr)] } },
     );
   }
 
-  private async sendVacancyChoices(chatId: number, vacancies: Array<{ id: number; title: string }>) {
-    await this.telegram.sendMessage(chatId, 'Qaysi vakansiyaga ariza topshirmoqchisiz?', {
+  private async sendVacancyChoices(chatId: number, vacancies: Array<{ id: number; title: string }>, tr: Tr) {
+    await this.telegram.sendMessage(chatId, tr('whichVacancy'), {
       replyMarkup: {
-        inline_keyboard: [...vacancies.map((vacancy) => [{ text: vacancy.title.slice(0, 60), callback_data: `join:vac:${vacancy.id}` }]), navButtons()],
+        inline_keyboard: [...vacancies.map((vacancy) => [{ text: vacancy.title.slice(0, 60), callback_data: `join:vac:${vacancy.id}` }]), navButtons(tr)],
       },
     });
   }
 
-  private async sendVacancyList(chatId: number, companyId: number) {
+  private async sendVacancyList(chatId: number, companyId: number, userId: string, tr: Tr) {
     const vacancies = await this.db.vacancy.findMany({
       where: this.vacancyFilter({ companyId }),
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: MAX_VACANCY_BUTTONS,
-      select: { id: true, title: true },
+      select: { id: true, title: true, fieldId: true },
     });
-    await this.sendVacancyChoices(chatId, vacancies);
+    const available = [];
+    for (const vacancy of vacancies) if (!(await this.blockedReason(companyId, vacancy, userId))) available.push(vacancy);
+    await this.sendVacancyChoices(chatId, available, tr);
   }
 
   /** Drops an unfinished application on the candidate's request; nothing is saved before the CV is submitted. */
-  private async cancelFlow(chatId: number, userId: string, step: string) {
+  private async cancelFlow(chatId: number, userId: string, step: string, tr: Tr) {
     if (!CANCELLABLE_STEPS.includes(step)) {
-      await this.telegram.sendMessage(chatId, 'CV allaqachon qabul qilingan, test boshlangan. Testni yakunlash uchun yuqoridagi tugmalardan foydalaning.');
+      await this.telegram.sendMessage(chatId, tr('cannotCancel'));
       return;
     }
     await this.db.telegramJoinSession.deleteMany({ where: { telegramUserId: userId, step: { in: CANCELLABLE_STEPS as never } } });
-    await this.telegram.sendMessage(chatId, 'Ariza bekor qilindi. Ma’lumotlaringiz saqlanmadi. Qayta boshlash uchun HR havolasini oching.', { replyMarkup: { remove_keyboard: true } });
+    await this.telegram.sendMessage(chatId, tr('cancelledFull'), { replyMarkup: { remove_keyboard: true } });
   }
 
-  private async chooseVacancy(query: TelegramCallbackQuery, session: SessionRow, vacancyId: number) {
+  private async chooseVacancy(query: TelegramCallbackQuery, session: SessionRow, vacancyId: number, tr: Tr) {
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
     const vacancy = await this.db.vacancy.findFirst({
       where: { id: vacancyId, ...this.vacancyFilter(session) },
-      select: { id: true, title: true },
+      select: { id: true, title: true, fieldId: true, field: { select: { name: true } } },
     });
     if (!vacancy) {
-      await this.telegram.answerCallbackQuery(query.id, 'Bu vakansiya endi mavjud emas.', true);
+      await this.telegram.answerCallbackQuery(query.id, tr('vacancyGone'), true);
       return;
     }
-    if (await this.alreadyApplied(session.companyId, vacancy.id, userId)) {
+    const blocked = await this.blockedReason(session.companyId, vacancy, userId);
+    if (blocked) {
       await this.cancel(userId);
       await this.telegram.answerCallbackQuery(query.id);
-      await this.telegram.sendMessage(chatId, `«${vacancy.title}» vakansiyasiga arizangiz allaqachon qabul qilingan.`);
+      await this.telegram.sendMessage(chatId, this.blockedText(blocked, vacancy, tr), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
       return;
     }
     const claimed = await this.db.telegramJoinSession.updateMany({
@@ -528,16 +561,16 @@ export class TelegramJoinService {
       data: { step: 'NAME', vacancyId: vacancy.id },
     });
     if (!claimed.count) {
-      await this.telegram.answerCallbackQuery(query.id, 'Bu bosqich allaqachon yakunlangan.');
+      await this.telegram.answerCallbackQuery(query.id, tr('stepDone'));
       return;
     }
     await this.telegram.answerCallbackQuery(query.id);
-    await this.telegram.sendMessage(chatId, `Vakansiya: «${vacancy.title}».\n\n${NAME_PROMPT}`, {
-      replyMarkup: { inline_keyboard: [navButtons('join:back:vacancy')] },
+    await this.telegram.sendMessage(chatId, tr('vacancyIntro', { title: vacancy.title, prompt: tr('namePrompt') }), {
+      replyMarkup: { inline_keyboard: [navButtons(tr, 'join:back:vacancy')] },
     });
   }
 
-  private async savePhone(userId: string, chatId: number, phone: string) {
+  private async savePhone(userId: string, chatId: number, phone: string, tr: Tr) {
     const claimed = await this.db.telegramJoinSession.updateMany({
       where: { telegramUserId: userId, step: 'PHONE' },
       data: { step: 'DOCUMENT', phone },
@@ -545,16 +578,16 @@ export class TelegramJoinService {
     if (!claimed.count) return;
     await this.telegram.sendMessage(
       chatId,
-      `✅ Telefon raqamingiz saqlandi: <b>${escapeHtml(phone)}</b>\n\nEndi rezyumeyingizni (CV) <b>PDF</b> yoki <b>DOCX</b> formatidagi fayl sifatida yuboring (10 MB gacha).`,
-      { parseMode: 'HTML', replyMarkup: navKeyboard() },
+      tr('joinPhoneSaved', { phone: escapeHtml(phone) }),
+      { parseMode: 'HTML', replyMarkup: navKeyboard(tr) },
     );
   }
 
-  private async askPhone(chatId: number, fullName: string) {
+  private async askPhone(chatId: number, fullName: string, tr: Tr) {
     await this.telegram.sendMessage(
       chatId,
-      `Rahmat, ${escapeHtml(fullName)}!\n\nTelefon raqamingizni yuboring: «Raqamni ulashish» tugmasini bosing yoki raqamni yozing (masalan: <code>+998901234567</code>).`,
-      { parseMode: 'HTML', replyMarkup: navKeyboard([{ text: 'Raqamni ulashish', request_contact: true }]) },
+      tr('askPhone', { name: escapeHtml(fullName) }),
+      { parseMode: 'HTML', replyMarkup: navKeyboard(tr, [{ text: tr('shareNumber'), request_contact: true }]) },
     );
   }
 
@@ -562,6 +595,7 @@ export class TelegramJoinService {
     userId: string,
     chatId: number,
     vacancy: { id: number; revision: number; assessmentQuestions: unknown; assessmentRevision: number | null; assessmentApprovedAt: Date | null },
+    tr: Tr,
   ) {
     let assessment;
     try {
@@ -571,7 +605,7 @@ export class TelegramJoinService {
     }
     if (!assessment) {
       await this.cancel(userId);
-      await this.telegram.sendMessage(chatId, 'Bu vakansiya uchun test hali HR tomonidan tasdiqlanmagan. Arizangiz qabul qilindi va HR tomonidan qo‘lda ko‘rib chiqiladi.');
+      await this.telegram.sendMessage(chatId, tr('joinNoApprovedTest'));
       return;
     }
     const stored = await this.db.telegramJoinSession.updateMany({
@@ -581,27 +615,27 @@ export class TelegramJoinService {
     if (!stored.count) return;
     await this.telegram.sendMessage(
       chatId,
-      `📋 <b>Lavozimga mos test (10 ta savol)</b>\n\n• 5 ta Hard skill va 5 ta Soft skill savoli\n🎯 O‘tish bali: 70% (kamida 7 ta to‘g‘ri javob).\nNatijadan qat’i nazar, arizangiz qabul qilingan.`,
-      { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: '▶️ Testni boshlash', callback_data: 'join:quizstart' }]] } },
+      tr('quizIntroJoin'),
+      { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: tr('startQuiz'), callback_data: 'join:quizstart' }]] } },
     );
   }
 
-  private async answer(query: TelegramCallbackQuery, session: SessionRow, questionId: number, choice: number) {
+  private async answer(query: TelegramCallbackQuery, session: SessionRow, questionId: number, choice: number, tr: Tr) {
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
     if (session.step !== 'ASSESSMENT') {
-      await this.telegram.answerCallbackQuery(query.id, 'Test yakunlangan.');
+      await this.telegram.answerCallbackQuery(query.id, tr('quizFinished'));
       return;
     }
     const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
     if (!assessment.success) {
-      await this.telegram.answerCallbackQuery(query.id, 'Test hali tayyor emas.', true);
+      await this.telegram.answerCallbackQuery(query.id, tr('quizNotReady'), true);
       return;
     }
     const questions = assessment.data.questions;
     const previous = (session.answers as Array<{ questionId: number; selectedIndex: number }> | null) ?? [];
     if (session.currentQuestionIndex !== previous.length || questions[session.currentQuestionIndex]?.id !== questionId || choice < 0 || choice > 3) {
-      await this.telegram.answerCallbackQuery(query.id, 'Bu savolga allaqachon javob berdingiz.');
+      await this.telegram.answerCallbackQuery(query.id, tr('alreadyAnswered'));
       return;
     }
     const answers = [...previous, { questionId, selectedIndex: choice }];
@@ -612,11 +646,11 @@ export class TelegramJoinService {
         data: { currentQuestionIndex: answers.length, answers: answers as unknown as Prisma.InputJsonValue },
       });
       if (!claimed.count) {
-        await this.telegram.answerCallbackQuery(query.id, 'Javob allaqachon qabul qilingan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('answerClaimed'));
         return;
       }
-      await this.telegram.answerCallbackQuery(query.id, 'Javob qabul qilindi');
-      await this.sendQuestion(chatId, questions, answers.length);
+      await this.telegram.answerCallbackQuery(query.id, tr('answerAccepted'));
+      await this.sendQuestion(chatId, questions, answers.length, tr);
       return;
     }
 
@@ -625,11 +659,11 @@ export class TelegramJoinService {
       where: { telegramUserId: userId, step: 'ASSESSMENT', currentQuestionIndex: session.currentQuestionIndex },
     });
     if (!finished.count) {
-      await this.telegram.answerCallbackQuery(query.id, 'Javob allaqachon qabul qilingan.');
+      await this.telegram.answerCallbackQuery(query.id, tr('answerClaimed'));
       return;
     }
-    await this.telegram.answerCallbackQuery(query.id, 'Javob qabul qilindi');
-    await this.finish(session, questions, answers, chatId);
+    await this.telegram.answerCallbackQuery(query.id, tr('answerAccepted'));
+    await this.finish(session, questions, answers, chatId, tr);
   }
 
   private async finish(
@@ -637,6 +671,7 @@ export class TelegramJoinService {
     questions: AssessmentQuestion[],
     answers: Array<{ questionId: number; selectedIndex: number }>,
     chatId: number,
+    tr: Tr,
   ) {
     const result = calculateAssessmentScore(questions, answers);
     if (session.applicationId) {
@@ -649,8 +684,8 @@ export class TelegramJoinService {
     void this.alerts?.dispatch();
     await this.telegram.sendMessage(
       chatId,
-      `📊 <b>Test natijangiz: ${result.score}%</b> (${result.correctCount}/${questions.length})\n• Hard skills: ${result.hardSkillScore}%\n• Soft skills: ${result.softSkillScore}%\n\n✅ Arizangiz qabul qilindi. HR mutaxassislari uni ko‘rib chiqadi.`,
-      { parseMode: 'HTML' },
+      tr('joinFinish', { score: result.score, correct: result.correctCount, total: questions.length, hard: result.hardSkillScore, soft: result.softSkillScore }),
+      { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } },
     );
   }
 
@@ -669,12 +704,12 @@ export class TelegramJoinService {
     }
   }
 
-  private async sendQuestion(chatId: number, questions: AssessmentQuestion[], index: number) {
+  private async sendQuestion(chatId: number, questions: AssessmentQuestion[], index: number, tr: Tr) {
     const q = questions[index];
     if (!q) return;
     const badge = q.type === 'HARD_SKILL' ? '💡 Hard Skill' : '🤝 Soft Skill';
     const text =
-      `❓ <b>Savol ${index + 1}/${questions.length}</b> [${badge}]\n\n${escapeHtml(q.question)}\n\n` +
+      `${tr('question', { n: index + 1, total: questions.length, badge })}\n\n${escapeHtml(q.question)}\n\n` +
       `<b>A)</b> ${escapeHtml(q.options[0])}\n<b>B)</b> ${escapeHtml(q.options[1])}\n<b>C)</b> ${escapeHtml(q.options[2])}\n<b>D)</b> ${escapeHtml(q.options[3])}`;
     await this.telegram.sendMessage(chatId, text, {
       parseMode: 'HTML',
@@ -685,6 +720,20 @@ export class TelegramJoinService {
         ],
       },
     });
+  }
+
+  /** One application per vacancy, and one per hiring field of a company (vacancies without a field only per vacancy). */
+  private async blockedReason(companyId: number, vacancy: { id: number; fieldId?: number | null }, userId: string): Promise<'vacancy' | 'field' | null> {
+    if (await this.alreadyApplied(companyId, vacancy.id, userId)) return 'vacancy';
+    if (vacancy.fieldId == null) return null;
+    const candidate = await this.db.candidate.findUnique({ where: { companyId_telegramUserId: { companyId, telegramUserId: userId } }, select: { id: true } });
+    if (!candidate) return null;
+    const found = await this.db.application.findFirst({ where: { companyId, candidateId: candidate.id, vacancy: { fieldId: vacancy.fieldId } }, select: { id: true } });
+    return found ? 'field' : null;
+  }
+
+  private blockedText(reason: 'vacancy' | 'field', vacancy: { title: string; field?: { name: string } | null }, tr: Tr) {
+    return reason === 'field' ? tr('alreadyAppliedField', { field: vacancy.field?.name ?? vacancy.title }) : tr('alreadyAppliedTitle', { title: vacancy.title });
   }
 
   private async alreadyApplied(companyId: number, vacancyId: number, userId: string) {

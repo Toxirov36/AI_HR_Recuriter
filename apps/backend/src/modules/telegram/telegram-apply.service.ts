@@ -17,6 +17,8 @@ import {
 } from '../ai/schemas/assessment.schema';
 import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/telegram.types';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
+import { TelegramLanguageService } from './telegram-language.service';
+import { botText, DEFAULT_BOT_LANG, type BotMessageKey } from './telegram-i18n';
 
 const MAX_CV_BYTES = 10 * 1024 * 1024;
 const escapeTelegramHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -34,6 +36,7 @@ export class TelegramApplyService {
     @Optional() @Inject(R2Storage) private storage?: R2Storage,
     @Optional() @Inject(GeminiProvider) geminiProvider?: GeminiProvider,
     @Optional() @Inject(TelegramScreeningAlertService) private alerts?: TelegramScreeningAlertService,
+    @Optional() @Inject(TelegramLanguageService) private languages?: TelegramLanguageService,
   ) {
     const candidate =
       geminiProvider ??
@@ -43,19 +46,27 @@ export class TelegramApplyService {
     this.gemini = candidate ?? new GeminiProvider(this.security);
   }
 
+  /** Translator for the user's chosen bot language (Uzbek when none is stored). */
+  private async tr(userId: string) {
+    const lang = (await this.languages?.get(userId)) ?? DEFAULT_BOT_LANG;
+    return (key: BotMessageKey, params?: Record<string, string | number>) => botText(lang, key, params);
+  }
+
   async start(message: TelegramDirectMessage, token: string) {
     if (!message.from || message.chat.type !== 'private') return;
+    const tr = await this.tr(String(message.from.id));
 
     const vacancy = await this.db.vacancy.findUnique({
       where: { publicToken: token, status: 'ACTIVE', company: { isActive: true } },
       include: {
         company: { select: { name: true, retentionDays: true } },
         requirements: { select: { name: true } },
+        field: { select: { name: true } },
       },
     });
 
     if (!vacancy) {
-      await this.telegram.sendMessage(message.chat.id, 'Bu vakansiya ariza qabul qilmayapti.');
+      await this.telegram.sendMessage(message.chat.id, tr('vacancyClosed'));
       return;
     }
 
@@ -64,14 +75,24 @@ export class TelegramApplyService {
       select: { id: true },
     });
     if (priorCandidate && await this.db.application.findUnique({ where: { vacancyId_candidateId: { vacancyId: vacancy.id, candidateId: priorCandidate.id } }, select: { id: true } })) {
-      await this.telegram.sendMessage(message.chat.id, 'Ushbu vakansiyaga arizangiz allaqachon qabul qilingan.');
+      await this.telegram.sendMessage(message.chat.id, tr('alreadyApplied'), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
       return;
+    }
+    if (priorCandidate && vacancy.fieldId != null) {
+      const sameField = await this.db.application.findFirst({
+        where: { companyId: vacancy.companyId, candidateId: priorCandidate.id, vacancy: { fieldId: vacancy.fieldId } },
+        select: { id: true },
+      });
+      if (sameField) {
+        await this.telegram.sendMessage(message.chat.id, tr('alreadyAppliedField', { field: vacancy.field?.name ?? vacancy.title }), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
+        return;
+      }
     }
 
     if (this.storage && !this.storage.enabled) {
       await this.telegram.sendMessage(
         message.chat.id,
-        `Telegram orqali CV qabul qilish sozlanmagan. Saytda ariza yuboring: ${this.security.config.FRONTEND_ORIGIN}/apply/${vacancy.publicToken}`,
+        tr('applyStorageOff', { url: `${this.security.config.FRONTEND_ORIGIN}/apply/${vacancy.publicToken}` }),
       );
       return;
     }
@@ -107,13 +128,13 @@ export class TelegramApplyService {
 
     await this.telegram.sendMessage(
       message.chat.id,
-      `«${vacancy.title}» vakansiyasiga ariza.\n\n${vacancy.company.name} ma’lumotlaringiz, Telegram profilingizdagi ism va CVni ishga qabul qilish uchun saqlaydi (${vacancy.company.retentionDays} kungacha). Lavozimga mos test savollari AI yordamida yaratiladi va CVingiz AI orqali tahlil qilinadi; natijalar HRga ko‘rsatiladi. Davom etishga rozimisiz?`,
+      tr('applyConsent', { title: vacancy.title, company: vacancy.company.name, days: vacancy.company.retentionDays }),
       {
         replyMarkup: {
           inline_keyboard: [
             [
-              { text: 'Roziman', callback_data: `apply:${vacancy.id}:privacy:yes` },
-              { text: 'Rad etaman', callback_data: `apply:${vacancy.id}:privacy:no` },
+              { text: tr('agree'), callback_data: `apply:${vacancy.id}:privacy:yes` },
+              { text: tr('decline'), callback_data: `apply:${vacancy.id}:privacy:no` },
             ],
           ],
         },
@@ -123,6 +144,7 @@ export class TelegramApplyService {
 
   async handleCallback(query: TelegramCallbackQuery) {
     const userId = String(query.from.id);
+    const tr = await this.tr(userId);
     const session = await this.db.telegramApplySession.findUnique({
       where: { telegramUserId: userId },
       include: {
@@ -137,7 +159,7 @@ export class TelegramApplyService {
     if (!session || session.expiresAt < new Date() || session.vacancy.status !== 'ACTIVE') {
       await this.telegram.answerCallbackQuery(
         query.id,
-        'Ariza sessiyasi tugagan. E’lon havolasini qayta oching.',
+        tr('applySessionExpired'),
         true,
       );
       return;
@@ -150,14 +172,14 @@ export class TelegramApplyService {
     const privacyAction = data.match(/^apply:(\d+):privacy:(yes|no)$/);
     if (privacyAction && Number(privacyAction[1]) === session.vacancyId) {
       if (session.step !== 'PRIVACY') {
-        await this.telegram.answerCallbackQuery(query.id, 'Bu bosqich allaqachon yakunlangan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('stepDone'));
         return;
       }
 
       if (privacyAction[2] === 'no') {
         const removed = await this.db.telegramApplySession.deleteMany({ where: { telegramUserId: userId, vacancyId: session.vacancyId, step: 'PRIVACY' } });
-        await this.telegram.answerCallbackQuery(query.id, removed.count ? 'Ariza bekor qilindi' : 'Bu bosqich allaqachon yakunlangan.');
-        if (removed.count) await this.telegram.sendMessage(chatId, 'Rozilik berilmadi. Ma’lumotlar saqlanmaydi.');
+        await this.telegram.answerCallbackQuery(query.id, removed.count ? tr('applyCancelled') : tr('stepDone'));
+        if (removed.count) await this.telegram.sendMessage(chatId, tr('noConsent'));
         return;
       }
 
@@ -180,43 +202,39 @@ export class TelegramApplyService {
         },
       });
       if (!claimed.count) {
-        await this.telegram.answerCallbackQuery(query.id, 'Bu bosqich allaqachon yakunlangan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('stepDone'));
         return;
       }
       await this.telegram.answerCallbackQuery(query.id);
       if (!assessment) {
-        await this.telegram.sendMessage(chatId, 'Bu vakansiya uchun test hali HR tomonidan tasdiqlanmagan. Arizangiz qo‘lda ko‘rib chiqiladi. Telefon raqamingizni yuboring (masalan: +998901234567):');
+        await this.telegram.sendMessage(chatId, tr('testNotApproved'));
         return;
       }
-      await this.telegram.sendMessage(chatId,
-        `📋 <b>Lavozimga mos test (10 ta savol)</b>\n\n` +
-        `• 5 ta Hard skill va 5 ta Soft skill savoli\n` +
-        `🎯 O‘tish bali: 70% (kamida 7 ta to‘g‘ri javob).\n` +
-        `Natijadan qat’i nazar, CVingiz qabul qilinadi.`,
-        { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: '▶️ Testni boshlash', callback_data: `apply:${session.vacancyId}:quiz:start` }]] } },
+      await this.telegram.sendMessage(chatId, tr('quizIntroApply'),
+        { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: tr('startQuiz'), callback_data: `apply:${session.vacancyId}:quiz:start` }]] } },
       );
       return;
     }
 
     if (/^apply:\d+:ai:(yes|no)$/.test(data)) {
-      await this.telegram.answerCallbackQuery(query.id, 'Eski tugma. Vakansiya havolasini qayta oching.', true);
+      await this.telegram.answerCallbackQuery(query.id, tr('oldButton'), true);
       return;
     }
 
     // 3. QUIZ START
     if (data === `apply:${session.vacancyId}:quiz:start`) {
       if (session.step !== 'ASSESSMENT') {
-        await this.telegram.answerCallbackQuery(query.id, 'Test faol emas yoki yakunlangan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('quizInactive'));
         return;
       }
 
       const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
       if (!assessment.success) {
-        await this.telegram.answerCallbackQuery(query.id, 'Test mavjud emas. Vakansiya havolasini qayta oching.', true);
+        await this.telegram.answerCallbackQuery(query.id, tr('quizMissing'), true);
         return;
       }
-      await this.telegram.answerCallbackQuery(query.id, 'Test boshlandi!');
-      await this.sendQuestion(chatId, session.vacancyId, assessment.data.questions, session.currentQuestionIndex);
+      await this.telegram.answerCallbackQuery(query.id, tr('quizStarted'));
+      await this.sendQuestion(chatId, session.vacancyId, assessment.data.questions, session.currentQuestionIndex, tr);
       return;
     }
 
@@ -224,7 +242,7 @@ export class TelegramApplyService {
     const quizAnswerMatch = data.match(/^apply:(\d+):quiz:(\d+):(\d+)$/);
     if (quizAnswerMatch && Number(quizAnswerMatch[1]) === session.vacancyId) {
       if (session.step !== 'ASSESSMENT') {
-        await this.telegram.answerCallbackQuery(query.id, 'Test yakunlangan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('quizFinished'));
         return;
       }
 
@@ -233,13 +251,13 @@ export class TelegramApplyService {
 
       const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
       if (!assessment.success) {
-        await this.telegram.answerCallbackQuery(query.id, 'Test mavjud emas. Vakansiya havolasini qayta oching.', true);
+        await this.telegram.answerCallbackQuery(query.id, tr('quizMissing'), true);
         return;
       }
       const rawAnswers = (session.answers as Array<{ questionId: number; selectedIndex: number }>) || [];
 
       if (session.currentQuestionIndex !== rawAnswers.length || assessment.data.questions[session.currentQuestionIndex]?.id !== qId || choiceIdx < 0 || choiceIdx > 3) {
-        await this.telegram.answerCallbackQuery(query.id, 'Bu savolga allaqachon javob berdingiz.');
+        await this.telegram.answerCallbackQuery(query.id, tr('alreadyAnswered'));
         return;
       }
 
@@ -255,13 +273,13 @@ export class TelegramApplyService {
         },
       });
       if (!claimed.count) {
-        await this.telegram.answerCallbackQuery(query.id, 'Javob allaqachon qabul qilingan.');
+        await this.telegram.answerCallbackQuery(query.id, tr('answerClaimed'));
         return;
       }
-      await this.telegram.answerCallbackQuery(query.id, 'Javob qabul qilindi');
+      await this.telegram.answerCallbackQuery(query.id, tr('answerAccepted'));
 
       if (nextIndex < assessment.data.questions.length) {
-        await this.sendQuestion(chatId, session.vacancyId, assessment.data.questions, nextIndex);
+        await this.sendQuestion(chatId, session.vacancyId, assessment.data.questions, nextIndex, tr);
       } else {
         const result = calculateAssessmentScore(assessment.data.questions, updatedAnswers);
 
@@ -291,10 +309,7 @@ export class TelegramApplyService {
         });
 
         await this.telegram.sendMessage(chatId,
-          `📊 <b>Test natijangiz: ${result.score}%</b> (${result.correctCount}/10)\n` +
-          `• Hard skills: ${result.hardSkillScore}%\n` +
-          `• Soft skills: ${result.softSkillScore}%\n\n` +
-          `Arizangizni yakunlash uchun telefon raqamingizni yuboring (masalan: <code>+998901234567</code>):`,
+          tr('quizResultAskPhone', { score: result.score, correct: result.correctCount, hard: result.hardSkillScore, soft: result.softSkillScore }),
           { parseMode: 'HTML' },
         );
       }
@@ -303,7 +318,7 @@ export class TelegramApplyService {
 
     await this.telegram.answerCallbackQuery(
       query.id,
-      'Bu tugma avvalgi so‘rovga tegishli.',
+      tr('buttonStale'),
       true,
     );
   }
@@ -317,6 +332,7 @@ export class TelegramApplyService {
     });
 
     if (!session || session.expiresAt < new Date()) return false;
+    const tr = await this.tr(userId);
 
     if (session.step === 'CONTACT_PHONE') {
       const rawText = message.text.trim();
@@ -325,7 +341,7 @@ export class TelegramApplyService {
       if (!/^\+?[0-9]{9,15}$/.test(cleanedPhone)) {
         await this.telegram.sendMessage(
           message.chat.id,
-          'Iltimos, telefon raqamingizni xalqaro formatda to‘g‘ri kiriting (masalan: <code>+998901234567</code>):',
+          tr('phoneInvalidApply'),
           { parseMode: 'HTML' },
         );
         return true;
@@ -368,8 +384,7 @@ export class TelegramApplyService {
 
       await this.telegram.sendMessage(
         message.chat.id,
-        `✅ Telefon raqamingiz saqlandi: <b>${cleanedPhone}</b>\n\n` +
-          `Endi «${escapeTelegramHtml(session.vacancy.title)}» vakansiyasi uchun rezyumeyingizni (CV) <b>PDF</b> yoki <b>DOCX</b> formatidagi fayl sifatida yuboring (10 MB gacha).`,
+        tr('phoneSaved', { phone: cleanedPhone, title: escapeTelegramHtml(session.vacancy.title) }),
         { parseMode: 'HTML' },
       );
       return true;
@@ -378,7 +393,7 @@ export class TelegramApplyService {
     if (session.step === 'ASSESSMENT') {
       await this.telegram.sendMessage(
         message.chat.id,
-        'Iltimos, test savollariga javob berish uchun yuqoridagi tugmalardan (A, B, C, D) foydalaning.',
+        tr('useQuizButtons'),
       );
       return true;
     }
@@ -395,6 +410,7 @@ export class TelegramApplyService {
     });
 
     if (!session || session.expiresAt < new Date()) return false;
+    const tr = await this.tr(userId);
 
     if (session.step === 'CONTACT_PHONE') {
       let rawPhone = message.contact.phone_number.trim();
@@ -438,8 +454,7 @@ export class TelegramApplyService {
 
       await this.telegram.sendMessage(
         message.chat.id,
-        `✅ Telefon raqamingiz qabul qilindi: <b>${cleanedPhone}</b>\n\n` +
-          `Endi «${escapeTelegramHtml(session.vacancy.title)}» vakansiyasi uchun rezyumeyingizni (CV) <b>PDF</b> yoki <b>DOCX</b> formatidagi fayl sifatida yuboring (10 MB gacha).`,
+        tr('phoneAccepted', { phone: cleanedPhone, title: escapeTelegramHtml(session.vacancy.title) }),
         { parseMode: 'HTML' },
       );
       return true;
@@ -451,12 +466,14 @@ export class TelegramApplyService {
   async handleDocument(message: TelegramDirectMessage) {
     if (!message.from || !message.document || message.chat.type !== 'private') return;
     const userId = String(message.from.id);
+    const tr = await this.tr(userId);
     const session = await this.db.telegramApplySession.findUnique({
       where: { telegramUserId: userId },
       include: {
         vacancy: {
           include: {
             requirements: { select: { name: true } },
+            field: { select: { name: true } },
           },
         },
       },
@@ -471,7 +488,7 @@ export class TelegramApplyService {
     ) {
       await this.telegram.sendMessage(
         message.chat.id,
-        'Avval vacancy havolasini ochib, test va ma’lumotlarni kiritish bosqichlarini yakunlang.',
+        tr('applyFirst'),
       );
       return;
     }
@@ -489,7 +506,7 @@ export class TelegramApplyService {
     ) {
       await this.telegram.sendMessage(
         message.chat.id,
-        'PDF yoki DOCX formatidagi, 10 MB dan kichik CV fayl yuboring.',
+        tr('cvInvalid'),
       );
       return;
     }
@@ -533,6 +550,14 @@ export class TelegramApplyService {
           aiConsentAt: session.aiConsentAt,
         },
       });
+
+      if (session.vacancy.fieldId != null) {
+        const sameField = await tx.application.findFirst({
+          where: { companyId: session.companyId, candidateId: candidate.id, vacancyId: { not: session.vacancyId }, vacancy: { fieldId: session.vacancy.fieldId } },
+          select: { id: true },
+        });
+        if (sameField) throw new Error('FIELD_ALREADY_APPLIED');
+      }
 
       const application = await tx.application.upsert({
         where: { vacancyId_candidateId: { vacancyId: session.vacancyId, candidateId: candidate.id } },
@@ -588,7 +613,11 @@ export class TelegramApplyService {
     });
     } catch (error) {
       if ((error as Error).message === 'APPLICATION_ALREADY_SUBMITTED') {
-        await this.telegram.sendMessage(message.chat.id, 'Ushbu ariza avval qabul qilingan.');
+        await this.telegram.sendMessage(message.chat.id, tr('alreadySubmitted'));
+        return;
+      }
+      if ((error as Error).message === 'FIELD_ALREADY_APPLIED') {
+        await this.telegram.sendMessage(message.chat.id, tr('alreadyAppliedField', { field: session.vacancy.field?.name ?? session.vacancy.title }), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
         return;
       }
       throw error;
@@ -607,14 +636,12 @@ export class TelegramApplyService {
 
       await this.telegram.sendMessage(
         message.chat.id,
-        `✅ <b>Rezyumeyingiz va arizangiz qabul qilindi!</b>\n\n` +
+        tr('applyAccepted') +
           (assessmentResult
-            ? `📊 Test natijangiz: <b>${assessmentResult.score}%</b> (${assessmentResult.correctCount}/10 to‘g‘ri)\n` +
-              `• Hard skills: ${assessmentResult.hardSkillScore}%\n` +
-              `• Soft skills: ${assessmentResult.softSkillScore}%\n\n`
-            : 'Test vaqtincha ishlamadi; arizangiz HR tomonidan qo‘lda ko‘rib chiqiladi.\n\n') +
-          'HR mutaxassislari arizangizni ko‘rib chiqadi.',
-        { parseMode: 'HTML' },
+            ? tr('applyScore', { score: assessmentResult.score, correct: assessmentResult.correctCount, hard: assessmentResult.hardSkillScore, soft: assessmentResult.softSkillScore })
+            : tr('applyNoTest')) +
+          tr('hrReview'),
+        { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } },
       );
     } catch (error) {
       this.logger.warn(`Telegram application queue failed resumeId=${result.resume.id}`);
@@ -624,7 +651,7 @@ export class TelegramApplyService {
       });
       await this.telegram.sendMessage(
         message.chat.id,
-        'Ariza va test natijalari qabul qilindi, ammo CVni qayta ishlash navbatida uzilish bo‘ldi. HRga xabar yetkaziladi.',
+        tr('queueFailed'),
       );
     }
   }
@@ -648,6 +675,7 @@ export class TelegramApplyService {
     vacancyId: number,
     questions: AssessmentQuestion[],
     index: number,
+    tr: (key: BotMessageKey, params?: Record<string, string | number>) => string,
   ) {
     const q = questions[index];
     if (!q) return;
@@ -655,7 +683,7 @@ export class TelegramApplyService {
     const categoryBadge = q.type === 'HARD_SKILL' ? '💡 Hard Skill' : '🤝 Soft Skill';
 
     const text =
-      `❓ <b>Savol ${index + 1}/${questions.length}</b> [${categoryBadge}]\n\n` +
+      `${tr('question', { n: index + 1, total: questions.length, badge: categoryBadge })}\n\n` +
       `${escapeTelegramHtml(q.question)}\n\n` +
       `<b>A)</b> ${escapeTelegramHtml(q.options[0])}\n` +
       `<b>B)</b> ${escapeTelegramHtml(q.options[1])}\n` +

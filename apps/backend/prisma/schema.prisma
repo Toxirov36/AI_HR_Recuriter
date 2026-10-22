@@ -562,3 +562,11 @@ model VacancyRecommendation {
   @@index([companyId, vacancyId, matchScore])
   @@index([candidateId])
 }
+
+/// Language a Telegram user picked for the candidate bot, plus the deep link they opened before choosing.
+model TelegramUserLanguage {
+  telegramUserId String @id
+  language String?
+  pendingStart String?
+  updatedAt DateTime @updatedAt
+}

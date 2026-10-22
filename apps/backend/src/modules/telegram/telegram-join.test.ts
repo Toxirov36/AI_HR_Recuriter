@@ -98,7 +98,7 @@ describe('Telegram join flow', () => {
     db.candidate.findUnique.mockResolvedValue({ id: 7 });
     db.application.findUnique.mockResolvedValue({ id: 1 });
     await service.handleCallback(callback('join:privacy:yes'));
-    expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('allaqachon'));
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('allaqachon'), expect.anything());
     expect(db.telegramJoinSession.deleteMany).toHaveBeenCalled();
   });
 
@@ -218,7 +218,7 @@ describe('Telegram join flow', () => {
 
     expect(db.application.updateMany).toHaveBeenCalledWith({ where: { id: 9, companyId: 3 }, data: expect.objectContaining({ assessmentScore: 100 }) });
     expect(db.telegramScreeningAlert.createMany).toHaveBeenCalledWith(expect.objectContaining({ data: [{ companyId: 3, applicationId: 9, chatId: '77' }] }));
-    expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('100%'), { parseMode: 'HTML' });
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('100%'), expect.objectContaining({ parseMode: 'HTML' }));
   });
 
   it('ignores a duplicate or out-of-order answer', async () => {

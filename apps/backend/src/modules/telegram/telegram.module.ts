@@ -8,6 +8,8 @@ import { BusinessConnectionHandler } from './handlers/business-connection.handle
 import { BusinessMessageHandler } from './handlers/business-message.handler';
 import { TelegramApplyService } from './telegram-apply.service';
 import { TelegramJoinService } from './telegram-join.service';
+import { TelegramLanguageService } from './telegram-language.service';
+import { TelegramMyApplicationsService } from './telegram-my-applications.service';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExternalRecruitingModule } from '../external-recruiting/external-recruiting.module';
@@ -27,6 +29,8 @@ import { TelegramAdminService } from './telegram-admin.service';
     TelegramApplyService,
     TelegramJoinService,
     TelegramScreeningAlertService,
+    TelegramLanguageService,
+    TelegramMyApplicationsService,
     TelegramAdminService,
     GeminiProvider,
   ],
