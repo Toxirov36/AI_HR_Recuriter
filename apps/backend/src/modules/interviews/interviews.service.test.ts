@@ -161,7 +161,7 @@ describe('the candidate’s page', () => {
     expect(db.interview.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 9, status: 'PROPOSED' }, data: expect.objectContaining({ status: 'CONFIRMED', confirmedSlotId: 2 }) }));
     expect(google.createEvent).toHaveBeenCalledWith(5, expect.objectContaining({ withMeet: true, attendeeEmail: 'ali@example.com' }));
     expect(notifications.sendInterviewConfirmation).toHaveBeenCalledWith(expect.objectContaining({ interview: expect.objectContaining({ meetUrl: 'https://meet.google.com/abc-defg-hij' }) }));
-    expect(notifications.notifyOrganizer).toHaveBeenCalled();
+    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('🔗 Google Meet: https://meet.google.com/abc-defg-hij') }));
     expect(view.confirmed?.meetUrl).toBe('https://meet.google.com/abc-defg-hij');
   });
 
@@ -196,6 +196,7 @@ describe('the candidate’s page', () => {
     expect(google.createEvent).toHaveBeenCalledWith(5, expect.objectContaining({ withMeet: false }));
     expect(notifications.sendInterviewConfirmation).toHaveBeenCalled();
     expect(view.confirmed?.location).toBe('Tashkent, Amir Temur 1');
+    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('📍 Tashkent, Amir Temur 1') }));
   });
 
   it('refuses answers for cancelled or already confirmed interviews, and a decline asks HR for new times', async () => {

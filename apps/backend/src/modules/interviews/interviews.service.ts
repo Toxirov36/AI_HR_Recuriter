@@ -202,7 +202,10 @@ export class InterviewsService {
     await this.notifications
       .notifyOrganizer({
         companyId: interview.companyId, organizerId: interview.organizerId, applicationId: interview.applicationId,
-        text: `✅ ${candidate.fullName} suhbat vaqtini tasdiqladi: ${formatInterviewTime(slot.startsAt, interview.timezone)} (${vacancy.title}).`,
+        text:
+          `✅ ${candidate.fullName} suhbat vaqtini tasdiqladi: ${formatInterviewTime(slot.startsAt, interview.timezone)} (${vacancy.title}).` +
+          (interview.mode === 'ONLINE' && event?.meetUrl ? `\n🔗 Google Meet: ${event.meetUrl}` : '') +
+          (interview.mode === 'OFFLINE' && interview.location ? `\n📍 ${interview.location}` : ''),
       })
       .catch(() => undefined);
     return this.viewOf(confirmed);
