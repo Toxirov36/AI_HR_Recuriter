@@ -16,13 +16,6 @@ export type Requirement = {
   description?: string | null;
   required: boolean;
 };
-export type VacancyField = {
-  id: number;
-  name: string;
-  sortOrder: number;
-  isActive: boolean;
-  _count?: { vacancies: number };
-};
 export type Vacancy = {
   id: number;
   publicToken?: string;
@@ -31,8 +24,6 @@ export type Vacancy = {
   description: string;
   status: string;
   department?: string | null;
-  fieldId?: number | null;
-  field?: { id: number; name: string } | null;
   location?: string | null;
   workModel?: string | null;
   employmentType?: string | null;

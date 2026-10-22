@@ -49,7 +49,7 @@ import {
   useData,
 } from '../../components/ui';
 import { toast } from 'sonner';
-import type { Page, Vacancy, VacancyField, Requirement } from '../../types';
+import type { Page, Vacancy, Requirement } from '../../types';
 import { useAuth } from '../../features/auth';
 import { VacancyGenerator } from '../../features/create-vacancy';
 import { TopCandidatesModal } from '../../features/ai-matching';
@@ -86,8 +86,6 @@ export function VacancyForm({
 
   const [title, setTitle] = useState(value?.title ?? '');
   const [department, setDepartment] = useState(value?.department ?? initialMeta.department);
-  const [fieldId, setFieldId] = useState(value?.fieldId ? String(value.fieldId) : '');
-  const [fieldOptions, setFieldOptions] = useState<VacancyField[]>([]);
   const [location, setLocation] = useState(value?.location ?? initialMeta.location);
   const [workModel, setWorkModel] = useState(value?.workModel ?? initialMeta.workModel);
   const [employmentType, setEmploymentType] = useState(value?.employmentType ?? initialMeta.employmentType);
@@ -112,12 +110,6 @@ export function VacancyForm({
   const [hhScheduleId, setHhScheduleId] = useState(value?.hhScheduleId ?? '');
 
   useEffect(() => {
-    void api<VacancyField[]>('/vacancy-fields')
-      .then((list) => Array.isArray(list) && setFieldOptions(list))
-      .catch(() => undefined);
-  }, []);
-
-  useEffect(() => {
     void api<{ connected: boolean; connectedByUserId: number | null }>('/integrations/recruiting/headhunter/status')
       .then(status => status.connected && status.connectedByUserId === user?.id ? api<HhFields>('/integrations/recruiting/headhunter/fields').then(setHhFields) : undefined)
       .catch(() => undefined);
@@ -137,7 +129,6 @@ export function VacancyForm({
           title: title.trim(),
           description: cleanDesc,
           department: department.trim() || null,
-          fieldId: fieldId ? Number(fieldId) : null,
           location: location.trim() || null,
           workModel: workModel || null,
           employmentType: employmentType || null,
@@ -245,17 +236,6 @@ export function VacancyForm({
                   maxLength={100}
                   placeholder={t('vacancies.optionalPlaceholder')}
                   className="form-control-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="field-bot-field">{t('vacancies.labelField')}</label>
-                <FormSelect
-                  id="field-bot-field"
-                  value={fieldId}
-                  onChange={setFieldId}
-                  emptyLabel={t('vacancies.fieldOther')}
-                  options={fieldOptions.filter((f) => f.isActive || String(f.id) === fieldId).map((f) => ({ value: String(f.id), label: f.name }))}
                 />
               </div>
 
@@ -741,7 +721,6 @@ export function Vacancies() {
 
                     <div className="vacancy-card-bottom">
                       <div className="vacancy-footer-meta-tags">
-                        {v.field && <span className="tag-item">{v.field.name}</span>}
                         <span className="tag-item">{meta.seniority || t('vacancies.notSpecified')}</span>
                         <span className="tag-item">{meta.employmentType || t('vacancies.notSpecified')}</span>
                         <span className="tag-item">{t('vacancies.applicationsCount', { count: appCount })}</span>

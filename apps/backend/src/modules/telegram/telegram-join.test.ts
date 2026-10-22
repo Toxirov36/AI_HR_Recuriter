@@ -7,7 +7,7 @@ const future = () => new Date(Date.now() + 60_000);
 const user = { id: 42, first_name: 'Ali', username: 'ali' };
 const chat = { id: 42, type: 'private' as const };
 const callback = (data: string) => ({ id: 'cb', from: user, message: { message_id: 1, chat }, data });
-const base = { telegramUserId: '42', companyId: 3, fieldId: null, vacancyId: null, fullName: null, phone: null, privacyAcceptedAt: null, aiConsentAt: null, applicationId: null, currentQuestionIndex: 0, answers: [], assessmentQuestions: null, assessmentRevision: null, expiresAt: future() };
+const base = { telegramUserId: '42', companyId: 3, vacancyId: null, fullName: null, phone: null, privacyAcceptedAt: null, aiConsentAt: null, applicationId: null, currentQuestionIndex: 0, answers: [], assessmentQuestions: null, assessmentRevision: null, expiresAt: future() };
 
 function setup(session: Record<string, unknown> | null, extra: Record<string, unknown> = {}) {
   const db: any = {
@@ -19,7 +19,6 @@ function setup(session: Record<string, unknown> | null, extra: Record<string, un
     },
     telegramApplySession: { deleteMany: vi.fn() },
     company: { findFirst: vi.fn().mockResolvedValue({ id: 3, name: 'Acme', retentionDays: 180 }) },
-    vacancyField: { findMany: vi.fn().mockResolvedValue([{ id: 1, name: 'SMM' }, { id: 2, name: 'IT' }]), findFirst: vi.fn().mockResolvedValue({ id: 1 }), findUnique: vi.fn().mockResolvedValue({ name: 'SMM' }) },
     vacancy: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn() },
     candidate: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ id: 7 }) },
     application: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ id: 9 }), updateMany: vi.fn() },
@@ -79,7 +78,6 @@ describe('Telegram join flow', () => {
     expect(db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { telegramUserId: '42', step: 'PRIVACY' }, data: expect.objectContaining({ step: 'VACANCY', vacancyId: null }) }));
     const markup = telegram.sendMessage.mock.calls[0][2].replyMarkup.inline_keyboard.flat().map((b: any) => b.callback_data);
     expect(markup).toEqual(['join:vac:5', 'join:vac:6']);
-    expect(db.vacancyField.findMany).not.toHaveBeenCalled();
   });
 
   it('skips the vacancy step when there is exactly one, and warns when there is none', async () => {
@@ -134,7 +132,7 @@ describe('Telegram join flow', () => {
   const document = { file_id: 'f1', file_unique_id: 'u1', file_name: 'cv.pdf', mime_type: 'application/pdf', file_size: 2048 };
 
   it('creates the candidate, application and resume from the CV and starts the test', async () => {
-    const { db, queue, apply, telegram, service } = setup({ step: 'DOCUMENT', vacancyId: 5, fieldId: 1, fullName: 'Aziz Karimov', phone: '+998901234567', privacyAcceptedAt: new Date(), aiConsentAt: new Date() });
+    const { db, queue, apply, telegram, service } = setup({ step: 'DOCUMENT', vacancyId: 5, fullName: 'Aziz Karimov', phone: '+998901234567', privacyAcceptedAt: new Date(), aiConsentAt: new Date() });
     db.vacancy.findFirst.mockResolvedValue({ id: 5, companyId: 3, title: 'SMM Lead', description: 'd', revision: 1, assessmentQuestions: null, assessmentRevision: null, requirements: [] });
     expect(await service.handleDocument({ message_id: 1, chat, from: user, document } as never)).toBe(true);
 
@@ -148,7 +146,7 @@ describe('Telegram join flow', () => {
   });
 
   it('keeps the CV for the talent pool when no vacancy was chosen', async () => {
-    const { db, queue, apply, telegram, service } = setup({ step: 'DOCUMENT', vacancyId: null, fieldId: 1, fullName: 'Aziz Karimov', phone: '+998901234567', privacyAcceptedAt: new Date() });
+    const { db, queue, apply, telegram, service } = setup({ step: 'DOCUMENT', vacancyId: null, fullName: 'Aziz Karimov', phone: '+998901234567', privacyAcceptedAt: new Date() });
     await service.handleDocument({ message_id: 1, chat, from: user, document } as never);
     expect(db.application.upsert).not.toHaveBeenCalled();
     expect(apply.getAssessment).not.toHaveBeenCalled();

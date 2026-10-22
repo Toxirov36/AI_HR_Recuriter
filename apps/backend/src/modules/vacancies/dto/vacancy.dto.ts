@@ -19,7 +19,6 @@ export const vacancySchema = z
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
     department: optionalMeta(100),
-    fieldId: z.number().int().positive().nullable().optional(),
     location: optionalMeta(100),
     workModel: optionalMeta(50),
     employmentType: optionalMeta(50),

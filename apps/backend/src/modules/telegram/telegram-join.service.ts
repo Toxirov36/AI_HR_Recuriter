@@ -92,7 +92,6 @@ export class TelegramJoinService {
       update: {
         companyId: company.id,
         step: 'PRIVACY',
-        fieldId: null,
         vacancyId: null,
         fullName: null,
         phone: null,
@@ -277,10 +276,6 @@ export class TelegramJoinService {
       await this.telegram.sendMessage(chatId, 'Bu vakansiya endi ariza qabul qilmayapti. Havolani qayta ochib, boshqa vakansiyani tanlang.');
       return true;
     }
-    const field = session.fieldId
-      ? await this.db.vacancyField.findUnique({ where: { id_companyId: { id: session.fieldId, companyId: session.companyId } }, select: { name: true } })
-      : null;
-
     let result: { candidateId: number; resumeId: number; applicationId: number | null };
     try {
       result = await this.db.$transaction(async (tx) => {
@@ -345,8 +340,8 @@ export class TelegramJoinService {
             candidateId: candidate.id,
             type: 'TELEGRAM_APPLICATION_RECEIVED',
             label: vacancy
-              ? `Applied via Telegram bot for ${vacancy.title}${field ? ` (${field.name})` : ''}`
-              : `Left details via Telegram bot${field ? ` for field ${field.name}` : ''}; no open vacancy`,
+              ? `Applied via Telegram bot for ${vacancy.title}`
+              : 'Left details via Telegram bot; no open vacancy',
           },
         });
         return { candidateId: candidate.id, resumeId: resume.id, applicationId };
