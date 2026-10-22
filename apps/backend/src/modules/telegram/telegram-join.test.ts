@@ -77,7 +77,7 @@ describe('Telegram join flow', () => {
     expect(await service.handleCallback(callback('join:privacy:yes'))).toBe(true);
     expect(db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { telegramUserId: '42', step: 'PRIVACY' }, data: expect.objectContaining({ step: 'VACANCY', vacancyId: null }) }));
     const markup = telegram.sendMessage.mock.calls[0][2].replyMarkup.inline_keyboard.flat().map((b: any) => b.callback_data);
-    expect(markup).toEqual(['join:vac:5', 'join:vac:6']);
+    expect(markup).toEqual(['join:vac:5', 'join:vac:6', 'join:cancel']);
   });
 
   it('skips the vacancy step when there is exactly one, and warns when there is none', async () => {
@@ -89,7 +89,7 @@ describe('Telegram join flow', () => {
     const none = setup({ step: 'PRIVACY' });
     await none.service.handleCallback(callback('join:privacy:yes'));
     expect(none.db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'NAME', vacancyId: null }) }));
-    expect(none.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('ochiq vakansiya yo‘q'));
+    expect(none.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('ochiq vakansiya yo‘q'), expect.anything());
   });
 
   it('refuses a vacancy the candidate already applied to', async () => {
@@ -111,6 +111,45 @@ describe('Telegram join flow', () => {
     const expired = setup({ step: 'VACANCY', expiresAt: new Date(Date.now() - 1000) });
     expect(await expired.service.handleText({ message_id: 1, chat, from: user, text: 'hello' } as never)).toBe(false);
     expect(expired.db.telegramJoinSession.deleteMany).toHaveBeenCalled();
+  });
+
+  it('lets the candidate cancel at any step before the CV, without saving anything', async () => {
+    const byButton = setup({ step: 'NAME' });
+    expect(await byButton.service.handleCallback(callback('join:cancel'))).toBe(true);
+    expect(byButton.db.telegramJoinSession.deleteMany).toHaveBeenCalled();
+    expect(byButton.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('bekor qilindi'), expect.objectContaining({ replyMarkup: { remove_keyboard: true } }));
+
+    const byCommand = setup({ step: 'PHONE', fullName: 'Aziz Karimov' });
+    expect(await byCommand.service.handleText({ message_id: 1, chat, from: user, text: '/cancel' } as never)).toBe(true);
+    expect(byCommand.db.telegramJoinSession.deleteMany).toHaveBeenCalled();
+
+    const byKeyboard = setup({ step: 'DOCUMENT', fullName: 'Aziz Karimov', phone: '+998901234567' });
+    await byKeyboard.service.handleText({ message_id: 2, chat, from: user, text: '✖️ Bekor qilish' } as never);
+    expect(byKeyboard.db.telegramJoinSession.deleteMany).toHaveBeenCalled();
+  });
+
+  it('does not cancel once the CV is submitted and the test has started', async () => {
+    const { db, telegram, service } = setup({ step: 'ASSESSMENT', applicationId: 9 });
+    await service.handleCallback(callback('join:cancel'));
+    expect(db.telegramJoinSession.deleteMany).not.toHaveBeenCalled();
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('test boshlangan'));
+  });
+
+  it('goes back: name -> vacancy list, phone -> name, CV -> phone', async () => {
+    const toList = setup({ step: 'NAME', vacancyId: 5 });
+    toList.db.vacancy.findMany.mockResolvedValue([{ id: 5, title: 'SMM Lead' }, { id: 6, title: 'Backend Developer' }]);
+    await toList.service.handleCallback(callback('join:back:vacancy'));
+    expect(toList.db.telegramJoinSession.updateMany).toHaveBeenCalledWith({ where: { telegramUserId: '42', step: 'NAME' }, data: { step: 'VACANCY', vacancyId: null } });
+    expect(toList.telegram.sendMessage.mock.calls[0][2].replyMarkup.inline_keyboard.flat().map((b: any) => b.callback_data)).toEqual(['join:vac:5', 'join:vac:6', 'join:cancel']);
+
+    const toName = setup({ step: 'PHONE', fullName: 'Aziz Karimov' });
+    await toName.service.handleText({ message_id: 1, chat, from: user, text: '⬅️ Orqaga' } as never);
+    expect(toName.db.telegramJoinSession.updateMany).toHaveBeenCalledWith({ where: { telegramUserId: '42', step: 'PHONE' }, data: { step: 'NAME', fullName: null } });
+
+    const toPhone = setup({ step: 'DOCUMENT', fullName: 'Aziz Karimov', phone: '+998901234567' });
+    await toPhone.service.handleText({ message_id: 2, chat, from: user, text: '⬅️ Orqaga' } as never);
+    expect(toPhone.db.telegramJoinSession.updateMany).toHaveBeenCalledWith({ where: { telegramUserId: '42', step: 'DOCUMENT' }, data: { step: 'PHONE', phone: null } });
+    expect(toPhone.telegram.sendMessage.mock.calls[0][1]).toContain('Telefon raqamingizni');
   });
 
   it('collects name, then phone, then asks for the CV', async () => {

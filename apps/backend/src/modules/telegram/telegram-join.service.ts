@@ -14,6 +14,16 @@ import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/teleg
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_CV_BYTES = 10 * 1024 * 1024;
 const MAX_VACANCY_BUTTONS = 10;
+const BACK_TEXT = '⬅️ Orqaga';
+const CANCEL_TEXT = '✖️ Bekor qilish';
+/** Steps before the CV is submitted: the candidate can still leave without leaving a trace. */
+const CANCELLABLE_STEPS = ['PRIVACY', 'FIELD', 'VACANCY', 'NAME', 'PHONE', 'DOCUMENT'];
+const NAME_PROMPT = 'Ism va familiyangizni yozing (masalan: Aziz Karimov):';
+const navButtons = (back?: string) => [...(back ? [{ text: BACK_TEXT, callback_data: back }] : []), { text: CANCEL_TEXT, callback_data: 'join:cancel' }];
+const navKeyboard = (...rows: Array<Array<{ text: string; request_contact?: boolean }>>) => ({
+  keyboard: [...rows, [{ text: BACK_TEXT }, { text: CANCEL_TEXT }]],
+  resize_keyboard: true,
+});
 const CV_MIME_TYPES = [
   'application/pdf',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -133,6 +143,26 @@ export class TelegramJoinService {
     }
     const stale = () => this.telegram.answerCallbackQuery(query.id, 'Bu bosqich allaqachon yakunlangan.');
 
+    if (data === 'join:cancel') {
+      await this.telegram.answerCallbackQuery(query.id);
+      await this.cancelFlow(chatId, userId, session.step);
+      return true;
+    }
+
+    if (data === 'join:back:vacancy') {
+      const reset = await this.db.telegramJoinSession.updateMany({
+        where: { telegramUserId: userId, step: 'NAME' },
+        data: { step: 'VACANCY', vacancyId: null },
+      });
+      if (!reset.count) {
+        await stale();
+        return true;
+      }
+      await this.telegram.answerCallbackQuery(query.id);
+      await this.sendVacancyList(chatId, session.companyId);
+      return true;
+    }
+
     if (data === 'join:privacy:no') {
       const removed = await this.db.telegramJoinSession.deleteMany({ where: { telegramUserId: userId, step: 'PRIVACY' } });
       if (!removed.count) {
@@ -190,6 +220,22 @@ export class TelegramJoinService {
     if (!session) return false;
     const chatId = message.chat.id;
     const userId = String(message.from.id);
+    const text = message.text.trim();
+
+    if (text === CANCEL_TEXT || /^\/cancel(@\w+)?$/i.test(text)) {
+      await this.cancelFlow(chatId, userId, session.step);
+      return true;
+    }
+    if (text === BACK_TEXT && session.step === 'PHONE') {
+      const reset = await this.db.telegramJoinSession.updateMany({ where: { telegramUserId: userId, step: 'PHONE' }, data: { step: 'NAME', fullName: null } });
+      if (reset.count) await this.telegram.sendMessage(chatId, `${NAME_PROMPT}\n\nBekor qilish uchun /cancel yozing.`, { replyMarkup: { remove_keyboard: true } });
+      return true;
+    }
+    if (text === BACK_TEXT && session.step === 'DOCUMENT') {
+      const reset = await this.db.telegramJoinSession.updateMany({ where: { telegramUserId: userId, step: 'DOCUMENT' }, data: { step: 'PHONE', phone: null } });
+      if (reset.count) await this.askPhone(chatId, session.fullName ?? '');
+      return true;
+    }
 
     switch (session.step) {
       case 'NAME': {
@@ -376,7 +422,7 @@ export class TelegramJoinService {
       return true;
     }
 
-    await this.telegram.sendMessage(chatId, '✅ <b>CV qabul qilindi.</b> Endi qisqa test topshiring.', { parseMode: 'HTML' });
+    await this.telegram.sendMessage(chatId, '✅ <b>CV qabul qilindi.</b> Endi qisqa test topshiring.', { parseMode: 'HTML', replyMarkup: { remove_keyboard: true } });
     await this.prepareAssessment(userId, chatId, vacancy);
     return true;
   }
@@ -420,17 +466,44 @@ export class TelegramJoinService {
     await this.telegram.answerCallbackQuery(query.id);
 
     if (vacancies.length > 1) {
-      await this.telegram.sendMessage(chatId, 'Qaysi vakansiyaga ariza topshirmoqchisiz?', {
-        replyMarkup: { inline_keyboard: vacancies.map((vacancy) => [{ text: vacancy.title.slice(0, 60), callback_data: `join:vac:${vacancy.id}` }]) },
-      });
+      await this.sendVacancyChoices(chatId, vacancies);
       return;
     }
     await this.telegram.sendMessage(
       chatId,
       single
-        ? `Vakansiya: «${single.title}».\n\nIsm va familiyangizni yozing (masalan: Aziz Karimov):`
-        : 'Hozircha ochiq vakansiya yo‘q, lekin ma’lumotlaringizni qoldirishingiz mumkin: yangi vakansiya ochilsa HR siz bilan bog‘lanadi.\n\nIsm va familiyangizni yozing (masalan: Aziz Karimov):',
+        ? `Vakansiya: «${single.title}».\n\n${NAME_PROMPT}`
+        : `Hozircha ochiq vakansiya yo‘q, lekin ma’lumotlaringizni qoldirishingiz mumkin: yangi vakansiya ochilsa HR siz bilan bog‘lanadi.\n\n${NAME_PROMPT}`,
+      { replyMarkup: { inline_keyboard: [navButtons()] } },
     );
+  }
+
+  private async sendVacancyChoices(chatId: number, vacancies: Array<{ id: number; title: string }>) {
+    await this.telegram.sendMessage(chatId, 'Qaysi vakansiyaga ariza topshirmoqchisiz?', {
+      replyMarkup: {
+        inline_keyboard: [...vacancies.map((vacancy) => [{ text: vacancy.title.slice(0, 60), callback_data: `join:vac:${vacancy.id}` }]), navButtons()],
+      },
+    });
+  }
+
+  private async sendVacancyList(chatId: number, companyId: number) {
+    const vacancies = await this.db.vacancy.findMany({
+      where: this.vacancyFilter({ companyId }),
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: MAX_VACANCY_BUTTONS,
+      select: { id: true, title: true },
+    });
+    await this.sendVacancyChoices(chatId, vacancies);
+  }
+
+  /** Drops an unfinished application on the candidate's request; nothing is saved before the CV is submitted. */
+  private async cancelFlow(chatId: number, userId: string, step: string) {
+    if (!CANCELLABLE_STEPS.includes(step)) {
+      await this.telegram.sendMessage(chatId, 'CV allaqachon qabul qilingan, test boshlangan. Testni yakunlash uchun yuqoridagi tugmalardan foydalaning.');
+      return;
+    }
+    await this.db.telegramJoinSession.deleteMany({ where: { telegramUserId: userId, step: { in: CANCELLABLE_STEPS as never } } });
+    await this.telegram.sendMessage(chatId, 'Ariza bekor qilindi. Ma’lumotlaringiz saqlanmadi. Qayta boshlash uchun HR havolasini oching.', { replyMarkup: { remove_keyboard: true } });
   }
 
   private async chooseVacancy(query: TelegramCallbackQuery, session: SessionRow, vacancyId: number) {
@@ -459,7 +532,9 @@ export class TelegramJoinService {
       return;
     }
     await this.telegram.answerCallbackQuery(query.id);
-    await this.telegram.sendMessage(chatId, `Vakansiya: «${vacancy.title}».\n\nIsm va familiyangizni yozing (masalan: Aziz Karimov):`);
+    await this.telegram.sendMessage(chatId, `Vakansiya: «${vacancy.title}».\n\n${NAME_PROMPT}`, {
+      replyMarkup: { inline_keyboard: [navButtons('join:back:vacancy')] },
+    });
   }
 
   private async savePhone(userId: string, chatId: number, phone: string) {
@@ -471,7 +546,7 @@ export class TelegramJoinService {
     await this.telegram.sendMessage(
       chatId,
       `✅ Telefon raqamingiz saqlandi: <b>${escapeHtml(phone)}</b>\n\nEndi rezyumeyingizni (CV) <b>PDF</b> yoki <b>DOCX</b> formatidagi fayl sifatida yuboring (10 MB gacha).`,
-      { parseMode: 'HTML', replyMarkup: { remove_keyboard: true } },
+      { parseMode: 'HTML', replyMarkup: navKeyboard() },
     );
   }
 
@@ -479,14 +554,7 @@ export class TelegramJoinService {
     await this.telegram.sendMessage(
       chatId,
       `Rahmat, ${escapeHtml(fullName)}!\n\nTelefon raqamingizni yuboring: «Raqamni ulashish» tugmasini bosing yoki raqamni yozing (masalan: <code>+998901234567</code>).`,
-      {
-        parseMode: 'HTML',
-        replyMarkup: {
-          keyboard: [[{ text: 'Raqamni ulashish', request_contact: true }]],
-          resize_keyboard: true,
-          one_time_keyboard: true,
-        },
-      },
+      { parseMode: 'HTML', replyMarkup: navKeyboard([{ text: 'Raqamni ulashish', request_contact: true }]) },
     );
   }
 
