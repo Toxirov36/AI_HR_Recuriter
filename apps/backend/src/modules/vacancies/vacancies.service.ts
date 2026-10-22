@@ -9,6 +9,8 @@ import { ExternalRecruitingService } from '../external-recruiting/external-recru
 import { AiService } from '../ai/ai.service';
 import type { Identity } from '../../common/utils/security';
 import { QueryVacancyDto } from './dto/query-vacancy.dto';
+import { VacancyAssessmentService } from './vacancy-assessment.service';
+import { assessmentState } from '../ai/utils/assessment-approval';
 
 @Injectable()
 export class VacanciesService {
@@ -17,6 +19,7 @@ export class VacanciesService {
     @Inject(RecruitingService) private recruiting: RecruitingService,
     @Inject(ExternalRecruitingService) private external: ExternalRecruitingService,
     @Optional() @Inject(AiService) private ai?: AiService,
+    @Optional() @Inject(VacancyAssessmentService) private assessments?: VacancyAssessmentService,
   ) {}
 
   async list(companyId: number, query: QueryVacancyDto) {
@@ -48,7 +51,12 @@ export class VacanciesService {
       }),
       this.db.vacancy.count({ where }),
     ]);
-    return { items, total, page, pageSize: 20 };
+    return {
+      items: items.map(({ assessmentQuestions, ...vacancy }) => ({ ...vacancy, assessmentState: assessmentState({ ...vacancy, assessmentQuestions }) })),
+      total,
+      page,
+      pageSize: 20,
+    };
   }
 
   vacancy(companyId: number, id: number) {
@@ -62,6 +70,12 @@ export class VacanciesService {
     if (this.ai && saved?.id) {
       setImmediate(() => {
         void this.ai?.evaluateCompanyCandidatesForVacancy(companyId, saved.id);
+      });
+    }
+    // An active vacancy gets an AI-drafted candidate test that HR must approve before the bot uses it.
+    if (saved?.status === 'ACTIVE') {
+      setImmediate(() => {
+        void this.assessments?.autoGenerate(companyId, saved.id);
       });
     }
     // A vacancy that just became ACTIVE is already visible in the candidate bot (it reads the database);

@@ -16,6 +16,19 @@ export type Requirement = {
   description?: string | null;
   required: boolean;
 };
+export type AssessmentQuestion = {
+  id: number;
+  type: 'HARD_SKILL' | 'SOFT_SKILL';
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+};
+export type AssessmentView = {
+  state: 'NONE' | 'STALE' | 'PENDING' | 'APPROVED';
+  questions: AssessmentQuestion[] | null;
+  approvedAt: string | null;
+};
 export type Vacancy = {
   id: number;
   publicToken?: string;
@@ -40,6 +53,7 @@ export type Vacancy = {
   hhSearchError?: string | null;
   assessmentQuestions?: any | null;
   assessmentRevision?: number | null;
+  assessmentState?: 'NONE' | 'STALE' | 'PENDING' | 'APPROVED';
   createdAt: string;
   _count?: { applications: number };
 };

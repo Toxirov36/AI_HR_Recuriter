@@ -212,6 +212,7 @@ model Vacancy {
   assessmentQuestions Json?
   assessmentRevision Int?
   assessmentEditVersion Int @default(0)
+  assessmentApprovedAt DateTime?
   revision Int @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

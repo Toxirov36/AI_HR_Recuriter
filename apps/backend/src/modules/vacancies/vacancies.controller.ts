@@ -16,6 +16,8 @@ import { AuthGuard } from '../../common/guards/auth.guard';
 import { AuthRequest } from '../../common/utils/security';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { VacanciesService } from './vacancies.service';
+import { VacancyAssessmentService } from './vacancy-assessment.service';
+import { vacancyAssessmentSchema, type VacancyAssessment } from '../ai/schemas/assessment.schema';
 import {
   VacancyDto,
   vacancySchema,
@@ -28,7 +30,10 @@ import {
 @Controller('vacancies')
 @UseGuards(AuthGuard)
 export class VacanciesController {
-  constructor(@Inject(VacanciesService) private service: VacanciesService) {}
+  constructor(
+    @Inject(VacanciesService) private service: VacanciesService,
+    @Inject(VacancyAssessmentService) private assessments: VacancyAssessmentService,
+  ) {}
 
   @Get()
   async vacancies(
@@ -41,6 +46,30 @@ export class VacanciesController {
   @Get(':id')
   getVacancy(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) {
     return this.service.vacancy(req.user.companyId, id);
+  }
+
+  @Get(':id/assessment')
+  assessment(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.assessments.view(req.user.companyId, id);
+  }
+
+  @Post(':id/assessment/generate')
+  generateAssessment(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.assessments.generate(req.user, id);
+  }
+
+  @Put(':id/assessment')
+  saveAssessment(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Body(new ZodValidationPipe(vacancyAssessmentSchema)) dto: VacancyAssessment,
+  ) {
+    return this.assessments.save(req.user, id, dto);
+  }
+
+  @Post(':id/assessment/approve')
+  approveAssessment(@Req() req: AuthRequest, @Param('id', ParseIntPipe) id: number) {
+    return this.assessments.approve(req.user, id);
   }
 
   @Post()

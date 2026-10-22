@@ -4,35 +4,38 @@ import { getDefaultAssessmentForVacancy } from '../ai/utils/assessment-helper';
 
 const assessment = getDefaultAssessmentForVacancy('Backend Developer');
 const vacancy = { id: 5, companyId: 3, title: 'Backend Developer', description: 'NestJS', revision: 1, status: 'ACTIVE', requirements: [{ name: 'NestJS' }] };
+const approvedVacancy = { ...vacancy, assessmentQuestions: assessment, assessmentRevision: 1, assessmentApprovedAt: new Date() };
 const callback = (data: string) => ({ id: 'cb', from: { id: 42 }, message: { message_id: 1, chat: { id: 42 } }, data });
 const answers = (correct: number) => assessment.questions.map((q, i) => ({ questionId: q.id, selectedIndex: i < correct ? q.correctIndex : (q.correctIndex + 1) % 4 }));
 const bot = () => ({ answerCallbackQuery: vi.fn(), sendMessage: vi.fn().mockResolvedValue({ ok: true }) });
 const security = { config: { GEMINI_API_KEY: 'test', FRONTEND_ORIGIN: 'https://example.test' }, limit: vi.fn() };
 
 describe('Telegram vacancy screening', () => {
-  it('requires privacy consent, then freezes AI questions without a separate consent prompt', async () => {
+  it('requires privacy consent, then freezes the HR-approved questions without a separate consent prompt', async () => {
     const db = {
-      telegramApplySession: { findUnique: vi.fn().mockResolvedValue({ vacancyId: 5, step: 'PRIVACY', expiresAt: new Date(Date.now() + 60_000), vacancy }), updateMany: vi.fn().mockResolvedValue({ count: 1 }), deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      telegramApplySession: { findUnique: vi.fn().mockResolvedValue({ vacancyId: 5, step: 'PRIVACY', expiresAt: new Date(Date.now() + 60_000), vacancy: approvedVacancy }), updateMany: vi.fn().mockResolvedValue({ count: 1 }), deleteMany: vi.fn().mockResolvedValue({ count: 1 }) },
       vacancy: { updateMany: vi.fn(), findUnique: vi.fn().mockResolvedValue({ assessmentQuestions: assessment, assessmentRevision: 1 }) },
     };
     const telegram = bot();
-    const gemini = { generate: vi.fn().mockResolvedValue(assessment) };
+    const gemini = { generate: vi.fn() };
     const service = new TelegramApplyService(db as never, security as never, telegram as never, {} as never, undefined, gemini as never);
     await service.handleCallback(callback('apply:5:privacy:yes'));
+    expect(gemini.generate).not.toHaveBeenCalled();
     expect(db.telegramApplySession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'ASSESSMENT', assessmentQuestions: assessment, aiConsentAt: expect.any(Date) }) }));
     expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('10 ta savol'), expect.any(Object));
     await service.handleCallback(callback('apply:5:privacy:no'));
     expect(db.telegramApplySession.deleteMany).toHaveBeenCalled();
   });
 
-  it('routes AI generation failures to manual review without using generic questions', async () => {
+  it('routes vacancies without an HR-approved test to manual review, never generating or using generic questions', async () => {
     const db = { telegramApplySession: { findUnique: vi.fn().mockResolvedValue({ vacancyId: 5, step: 'PRIVACY', expiresAt: new Date(Date.now() + 60_000), vacancy }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) } };
     const telegram = bot();
-    const gemini = { generate: vi.fn().mockRejectedValue(new Error('unavailable')) };
+    const gemini = { generate: vi.fn() };
     const service = new TelegramApplyService(db as never, security as never, telegram as never, {} as never, undefined, gemini as never);
     await service.handleCallback(callback('apply:5:privacy:yes'));
     expect(db.telegramApplySession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'CONTACT_PHONE', assessmentRevision: null }) }));
     expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('qo‘lda ko‘rib chiqiladi'));
+    expect(gemini.generate).not.toHaveBeenCalled();
   });
 
   it.each([7, 6])('keeps a %i/10 applicant in the CV flow', async (correct) => {

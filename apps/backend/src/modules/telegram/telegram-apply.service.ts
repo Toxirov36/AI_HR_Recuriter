@@ -6,7 +6,7 @@ import { R2Storage } from '../../common/storage/r2-storage.service';
 import { TelegramApiService } from './telegram-api.service';
 import { TelegramQueueService } from './telegram-queue.service';
 import { GeminiProvider } from '../ai/providers/gemini.provider';
-import { assessmentInstructions } from '../ai/prompts/assessment.prompt';
+import { approvedAssessment } from '../ai/utils/assessment-approval';
 import {
   calculateAssessmentScore,
 } from '../ai/utils/assessment-helper';
@@ -185,7 +185,7 @@ export class TelegramApplyService {
       }
       await this.telegram.answerCallbackQuery(query.id);
       if (!assessment) {
-        await this.telegram.sendMessage(chatId, 'Hozir test savollarini tayyorlab bo‘lmadi. Arizangiz qo‘lda ko‘rib chiqiladi. Telefon raqamingizni yuboring (masalan: +998901234567):');
+        await this.telegram.sendMessage(chatId, 'Bu vakansiya uchun test hali HR tomonidan tasdiqlanmagan. Arizangiz qo‘lda ko‘rib chiqiladi. Telefon raqamingizni yuboring (masalan: +998901234567):');
         return;
       }
       await this.telegram.sendMessage(chatId,
@@ -632,48 +632,15 @@ export class TelegramApplyService {
   /** Reused by the join_ flow (TelegramJoinService). */
   async getAssessment(vacancy: {
     id: number;
-    companyId: number;
-    title: string;
-    description: string;
     revision: number;
-    assessmentQuestions?: any;
+    assessmentQuestions?: unknown;
     assessmentRevision?: number | null;
-    requirements?: { name: string }[];
+    assessmentApprovedAt?: Date | null;
   }): Promise<VacancyAssessment> {
-    if (
-      vacancy.assessmentQuestions &&
-      vacancy.assessmentRevision === vacancy.revision
-    ) {
-      const parsed = vacancyAssessmentSchema.safeParse(vacancy.assessmentQuestions);
-      if (parsed.success) {
-        return parsed.data;
-      }
-    }
-
-    if (!this.security?.config?.GEMINI_API_KEY) throw new Error('AI assessment provider is not configured');
-    const assessment = await this.gemini.generate(
-          vacancyAssessmentSchema,
-          `Generate 10 screening assessment questions (5 Hard Skills + 5 Soft Skills) for the role "${vacancy.title}".`,
-          {
-            title: vacancy.title,
-            description: vacancy.description,
-            requirements: vacancy.requirements?.map((r) => ({ name: r.name })) || [],
-          },
-          assessmentInstructions,
-        );
-
-    // Only the first completed generation wins for this vacancy revision.
-    await this.db.vacancy.updateMany({
-      where: { id: vacancy.id, companyId: vacancy.companyId, revision: vacancy.revision,
-        OR: [{ assessmentRevision: null }, { assessmentRevision: { not: vacancy.revision } }] },
-      data: { assessmentQuestions: assessment, assessmentRevision: vacancy.revision, assessmentEditVersion: { increment: 1 } },
-    });
-    const current = await this.db.vacancy.findUnique({ where: { id: vacancy.id }, select: { assessmentQuestions: true, assessmentRevision: true } });
-    if (current?.assessmentRevision === vacancy.revision) {
-      const parsed = vacancyAssessmentSchema.safeParse(current.assessmentQuestions);
-      if (parsed.success) return parsed.data;
-    }
-    return assessment;
+    // Only questions that HR approved for the current vacancy revision reach candidates.
+    const approved = approvedAssessment(vacancy);
+    if (!approved) throw new Error('The vacancy test is not approved by HR yet');
+    return approved;
   }
 
   private async sendQuestion(

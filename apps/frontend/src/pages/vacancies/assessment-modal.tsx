@@ -1,0 +1,138 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
+import { api, send } from '../../lib/api';
+import { Button, Input, Modal, Textarea } from '../../components/ui';
+import type { AssessmentQuestion, AssessmentView, Vacancy } from '../../types';
+
+/** HR reviews, edits and approves the AI-drafted candidate test; the bot only uses an approved test. */
+export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: () => void }) {
+  const { t } = useTranslation();
+  const [view, setView] = useState<AssessmentView | null>(null);
+  const [draft, setDraft] = useState<AssessmentQuestion[]>([]);
+  const [dirty, setDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const base = `/vacancies/${vacancy.id}/assessment`;
+
+  const apply = useCallback((next: AssessmentView) => {
+    setView(next);
+    setDraft(next.questions ?? []);
+    setDirty(false);
+  }, []);
+
+  useEffect(() => {
+    api<AssessmentView>(base).then(apply).catch((cause: Error) => setError(cause.message));
+  }, [base, apply]);
+
+  async function run(work: () => Promise<AssessmentView>, success?: string) {
+    setBusy(true);
+    setError('');
+    try {
+      apply(await work());
+      if (success) toast.success(success);
+    } catch (cause) {
+      setError((cause as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const saveDraft = () => send<AssessmentView>(base, { questions: draft }, 'PUT');
+
+  function change(index: number, patch: Partial<AssessmentQuestion>) {
+    setDraft((current) => current.map((question, i) => (i === index ? { ...question, ...patch } : question)));
+    setDirty(true);
+  }
+
+  function changeOption(index: number, option: number, value: string) {
+    setDraft((current) =>
+      current.map((question, i) => (i === index ? { ...question, options: question.options.map((text, o) => (o === option ? value : text)) } : question)),
+    );
+    setDirty(true);
+  }
+
+  const state = view?.state ?? 'NONE';
+  const hasDraft = state === 'PENDING' || state === 'APPROVED';
+  const complete = draft.length === 10 && draft.every((q) => q.question.trim().length >= 5 && q.explanation.trim().length >= 5 && q.options.every((o) => o.trim()));
+
+  return (
+    <Modal title={t('vacancies.assessmentTitle')} subtitle={vacancy.title} close={close} className="max-w-[820px]">
+      <div className="space-y-4 overflow-y-auto pr-1 text-sm">
+        {error && <div role="alert" className="rounded-lg bg-red-50 p-3 text-red-700">{error}</div>}
+        <p className="rounded-lg bg-slate-50 p-3 text-slate-600">{t('vacancies.assessmentIntro')}</p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-semibold ${state === 'APPROVED' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-900'}`}
+          >
+            {t(`vacancies.assessmentState${state}`)}
+          </span>
+          <Button type="button" variant="outline" disabled={busy || !view} onClick={() => void run(() => send<AssessmentView>(`${base}/generate`, {}), t('vacancies.assessmentGenerated'))}>
+            {hasDraft ? t('vacancies.assessmentRegenerate') : t('vacancies.assessmentGenerate')}
+          </Button>
+        </div>
+
+        {hasDraft &&
+          draft.map((question, index) => (
+            <section key={question.id} className="space-y-2 rounded-xl border border-slate-200 p-4">
+              <h3 className="font-semibold">
+                {index + 1}. {question.type === 'HARD_SKILL' ? t('vacancies.assessmentHard') : t('vacancies.assessmentSoft')}
+              </h3>
+              <Textarea
+                aria-label={`${t('vacancies.assessmentQuestion')} ${index + 1}`}
+                value={question.question}
+                rows={2}
+                onChange={(event) => change(index, { question: event.target.value })}
+              />
+              <div className="space-y-2">
+                {question.options.map((option, optionIndex) => (
+                  <label key={optionIndex} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name={`correct-${question.id}`}
+                      checked={question.correctIndex === optionIndex}
+                      aria-label={`${t('vacancies.assessmentCorrect')} ${index + 1}.${'ABCD'[optionIndex]}`}
+                      onChange={() => change(index, { correctIndex: optionIndex })}
+                    />
+                    <span className="w-4 font-semibold">{'ABCD'[optionIndex]}</span>
+                    <Input
+                      aria-label={`${index + 1}.${'ABCD'[optionIndex]}`}
+                      value={option}
+                      onChange={(event) => changeOption(index, optionIndex, event.target.value)}
+                    />
+                  </label>
+                ))}
+              </div>
+              <Textarea
+                aria-label={`${t('vacancies.assessmentExplanation')} ${index + 1}`}
+                value={question.explanation}
+                rows={2}
+                onChange={(event) => change(index, { explanation: event.target.value })}
+              />
+            </section>
+          ))}
+
+        {hasDraft && (
+          <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+            {dirty && <span className="mr-auto self-center text-xs text-amber-800">{t('vacancies.assessmentUnsaved')}</span>}
+            <Button type="button" variant="outline" disabled={busy || !dirty || !complete} onClick={() => void run(saveDraft, t('vacancies.assessmentSaved'))}>
+              {t('common.save', 'Saqlash')}
+            </Button>
+            <Button
+              type="button"
+              disabled={busy || !complete || (state === 'APPROVED' && !dirty)}
+              onClick={() =>
+                void run(async () => {
+                  if (dirty) await saveDraft();
+                  return send<AssessmentView>(`${base}/approve`, {});
+                }, t('vacancies.assessmentApproved'))
+              }
+            >
+              {t('vacancies.assessmentApprove')}
+            </Button>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

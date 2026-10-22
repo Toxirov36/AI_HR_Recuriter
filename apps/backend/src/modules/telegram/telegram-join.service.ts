@@ -561,7 +561,7 @@ export class TelegramJoinService {
   private async prepareAssessment(
     userId: string,
     chatId: number,
-    vacancy: { id: number; companyId: number; title: string; description: string; revision: number; assessmentQuestions: unknown; assessmentRevision: number | null; requirements: { name: string }[] },
+    vacancy: { id: number; revision: number; assessmentQuestions: unknown; assessmentRevision: number | null; assessmentApprovedAt: Date | null },
   ) {
     let assessment;
     try {
@@ -571,7 +571,7 @@ export class TelegramJoinService {
     }
     if (!assessment) {
       await this.cancel(userId);
-      await this.telegram.sendMessage(chatId, 'Hozir test savollarini tayyorlab bo‘lmadi. Arizangiz HR tomonidan qo‘lda ko‘rib chiqiladi.');
+      await this.telegram.sendMessage(chatId, 'Bu vakansiya uchun test hali HR tomonidan tasdiqlanmagan. Arizangiz qabul qilindi va HR tomonidan qo‘lda ko‘rib chiqiladi.');
       return;
     }
     const stored = await this.db.telegramJoinSession.updateMany({

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { FormEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Check, ChevronDown, Plus, Search, Pencil, Trash2, Sparkles, Link2, Send } from 'lucide-react';
+import { Check, ChevronDown, ClipboardCheck, Plus, Search, Pencil, Trash2, Sparkles, Link2, Send } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { api, send } from '../../lib/api';
 import {
@@ -49,6 +49,7 @@ import {
   useData,
 } from '../../components/ui';
 import { toast } from 'sonner';
+import { AssessmentModal } from './assessment-modal';
 import type { Page, Vacancy, Requirement } from '../../types';
 import { useAuth } from '../../features/auth';
 import { VacancyGenerator } from '../../features/create-vacancy';
@@ -539,6 +540,7 @@ export function Vacancies() {
   const [deletingVacancy, setDeletingVacancy] = useState<Vacancy | null>(null);
   const [topModalVacancyId, setTopModalVacancyId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState<Vacancy | null>(null);
+  const [reviewingTest, setReviewingTest] = useState<Vacancy | null>(null);
   const [open, setOpen] = useState(params.has('new'));
   const search = params.get('search') ?? '';
   const statusFilter = params.get('status') ?? 'ALL';
@@ -710,6 +712,11 @@ export function Vacancies() {
                             ? t('vacancies.statusDraft')
                             : t('vacancies.statusClosed')}
                       </span>
+                      {v.status === 'ACTIVE' && v.assessmentState && (
+                        <Badge className={v.assessmentState === 'APPROVED' ? 'border-emerald-300 bg-emerald-50 text-emerald-900' : 'border-amber-300 bg-amber-50 text-amber-900'}>
+                          {t(`vacancies.assessmentBadge${v.assessmentState}`)}
+                        </Badge>
+                      )}
                       {v.metadataReviewRequired && <Badge className="border-amber-300 bg-amber-50 text-amber-900">{t('vacancies.reviewRequired')}</Badge>}
                     </div>
 
@@ -750,6 +757,13 @@ export function Vacancies() {
                             <Link2 size={14} />
                           </button>
                         )}
+                        <button
+                          type="button"
+                          className="quick-action-btn"
+                          aria-label={`${t('vacancies.assessmentButton')}: ${v.title}`}
+                          title={t('vacancies.assessmentButton')}
+                          onClick={() => setReviewingTest(v)}
+                        ><ClipboardCheck size={14} /></button>
                         <button
                           type="button"
                           className="quick-action-btn text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
@@ -856,6 +870,7 @@ export function Vacancies() {
         onClose={() => setTopModalVacancyId(null)}
         onApplicationStageChanged={() => reload()}
       />
+      {reviewingTest && <AssessmentModal vacancy={reviewingTest} close={() => { setReviewingTest(null); reload(); }} />}
       {publishing && <PublicationModal vacancy={publishing} close={() => { setPublishing(null); reload(); }} />}
     </div>
   );

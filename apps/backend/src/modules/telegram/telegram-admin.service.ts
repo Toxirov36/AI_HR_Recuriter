@@ -472,7 +472,7 @@ export class TelegramAdminService {
         const valid = vacancyAssessmentSchema.parse(state.assessment);
         const updated = await this.db.vacancy.updateMany({
           where: { id, companyId: admin.companyId, revision: state.vacancyRevision, assessmentEditVersion: state.expectedVersion, status: 'ACTIVE' },
-          data: { assessmentQuestions: valid as unknown as Prisma.InputJsonValue, assessmentRevision: state.vacancyRevision, assessmentEditVersion: { increment: 1 } },
+          data: { assessmentQuestions: valid as unknown as Prisma.InputJsonValue, assessmentRevision: state.vacancyRevision, assessmentEditVersion: { increment: 1 }, assessmentApprovedAt: new Date() },
         });
         if (!updated.count) throw new Error('Vakansiya yoki savollar o‘zgargan. Qayta ochib tahrirlang.');
         await this.clearDraft(admin.telegramId);
