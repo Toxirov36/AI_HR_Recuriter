@@ -37,12 +37,13 @@ describe('AssessmentModal', () => {
     await changeLanguage('uz');
   });
 
-  it('shows the drafted questions as waiting for approval and approves them', async () => {
-    render(<AssessmentModal vacancy={vacancy} close={() => undefined} />);
+  it('shows the drafted questions as waiting for approval, approves them and closes the dialog', async () => {
+    const close = vi.fn();
+    render(<AssessmentModal vacancy={vacancy} close={close} />);
     expect(await screen.findByText('Waiting for approval')).toBeInTheDocument();
     expect(screen.getByLabelText('Question 1')).toHaveValue('Question number 1?');
     fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
-    expect(await screen.findByText('Approved')).toBeInTheDocument();
+    await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
     expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/vacancies/5/assessment/approve'))).toBe(true);
     expect(calls.some((call) => call.method === 'PUT')).toBe(false);
   });

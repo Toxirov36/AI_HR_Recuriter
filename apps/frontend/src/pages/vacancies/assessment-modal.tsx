@@ -25,12 +25,13 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
     api<AssessmentView>(base).then(apply).catch((cause: Error) => setError(cause.message));
   }, [base, apply]);
 
-  async function run(work: () => Promise<AssessmentView>, success?: string) {
+  async function run(work: () => Promise<AssessmentView>, success?: string, closeAfter = false) {
     setBusy(true);
     setError('');
     try {
       apply(await work());
       if (success) toast.success(success);
+      if (closeAfter) close();
     } catch (cause) {
       setError((cause as Error).message);
     } finally {
@@ -131,7 +132,7 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
                 void run(async () => {
                   if (dirty) await saveDraft();
                   return send<AssessmentView>(`${base}/approve`, {});
-                }, t('vacancies.assessmentApproved'))
+                }, t('vacancies.assessmentApproved'), true)
               }
             >
               {t('vacancies.assessmentApprove')}
