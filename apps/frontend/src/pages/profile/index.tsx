@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../features/auth';
 import { send } from '../../lib/api';
 import { Alert, Badge, Button, Input } from '../../components/ui';
+import { GoogleCalendarCard } from '../../features/interviews/google-calendar-card';
 
 export function Profile() {
   const { t } = useTranslation();
@@ -119,6 +120,8 @@ export function Profile() {
           )}
         </div>
       </div>
+
+      {user?.role !== 'INTERVIEWER' && <GoogleCalendarCard />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Card 1: Personal and Organization */}

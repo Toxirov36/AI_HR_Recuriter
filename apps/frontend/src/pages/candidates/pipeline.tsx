@@ -32,6 +32,7 @@ import { api, send } from '../../lib/api';
 import { useAuth } from '../../features/auth';
 import { getEvidenceSummary } from '../../lib/match-score';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
+import { InterviewPanel } from '../../features/interviews/interview-panel';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import {
   Alert,
@@ -528,6 +529,11 @@ export function Pipeline() {
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
+              {application.status !== 'REJECTED' && application.status !== 'HIRED' && (
+                <DropdownMenuItem asChild>
+                  <Link to={`/applications/${application.id}?schedule=1`}>{t('interviews.scheduleButton', 'Schedule interview')}</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem asChild>
                 <Link to={`/applications/${application.id}`}>{t('pipeline.openApplication', 'Open application')}</Link>
               </DropdownMenuItem>
@@ -1283,6 +1289,7 @@ export function ApplicationDetail() {
                 </span>
               </div>
             </section>
+            <InterviewPanel applicationId={a.id} status={a.status} onChanged={reload} />
             <section className="panel padded stage-history">
               <h2>{t('applications.stageHistoryTitle', 'Stage history')}</h2>
               <p className="muted">{t('applications.stageHistoryDesc', 'Who moved this application, and when.')}</p>

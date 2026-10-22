@@ -193,6 +193,48 @@ export type Application = {
     questions: { question: string; rationale: string; requirementId: number | null }[];
   } | null;
 };
+export type InterviewMode = 'ONLINE' | 'OFFLINE';
+export type InterviewStatus = 'PROPOSED' | 'CONFIRMED' | 'CANCELLED';
+export type InterviewSlot = { id: number; startsAt: string; endsAt: string };
+export type Interview = {
+  id: number;
+  applicationId: number;
+  mode: InterviewMode;
+  status: InterviewStatus;
+  durationMinutes: number;
+  timezone: string;
+  location: string | null;
+  note: string | null;
+  meetUrl: string | null;
+  confirmedSlotId: number | null;
+  confirmedAt: string | null;
+  declinedAt: string | null;
+  declineNote: string | null;
+  slots: InterviewSlot[];
+  organizer?: { id: number; fullName: string };
+  createdAt: string;
+};
+/** Returned once when HR proposes (or re-proposes) times; shareUrl is the candidate's link. */
+export type InterviewProposal = {
+  interview: Interview;
+  delivery: { telegramSent: boolean; emailSent: boolean };
+  shareUrl: string;
+};
+/** What the candidate's link page receives. */
+export type PublicInterview = {
+  status: InterviewStatus;
+  mode: InterviewMode;
+  companyName: string;
+  vacancyTitle: string;
+  durationMinutes: number;
+  timezone: string;
+  location: string | null;
+  note: string | null;
+  declined: boolean;
+  slots: { id: number; startsAt: string }[];
+  confirmed: { startsAt: string; meetUrl: string | null; location: string | null } | null;
+};
+export type GoogleCalendarStatus = { configured: boolean; connected: boolean; googleEmail: string | null };
 export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
 export type DashboardData = {
   vacancies: number;

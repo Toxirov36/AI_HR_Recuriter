@@ -29,6 +29,7 @@ export * from './separator';
 export * from './skeleton';
 export * from './select';
 export * from './form-select';
+export * from './date-time-picker';
 export * from './checkbox';
 export * from './tooltip';
 export * from './sonner';

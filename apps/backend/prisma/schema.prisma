@@ -126,6 +126,8 @@ model User {
   telegramAdminPairings TelegramAdminPairing[]
   telegramAdminLink TelegramAdminLink?
   hhConnections HeadHunterConnection[]
+  googleCalendarConnection GoogleCalendarConnection?
+  organizedInterviews Interview[]
   auditLogs AuditLog[]
   createdAt DateTime @default(now())
   @@index([companyId])
@@ -483,6 +485,7 @@ model Application {
   assessmentResult Json?
   reviewRevision Int @default(0)
   stageHistory ApplicationStageChange[]
+  interviews Interview[]
   screeningAlerts TelegramScreeningAlert[]
   analyzedResumeRevision Int?
   analyzedVacancyRevision Int?
@@ -571,4 +574,61 @@ model TelegramUserLanguage {
   /// Company of the last link the user opened; the bot menu browses its fields.
   companyId Int?
   updatedAt DateTime @updatedAt
+}
+
+enum InterviewMode {
+  ONLINE
+  OFFLINE
+}
+enum InterviewStatus {
+  PROPOSED
+  CONFIRMED
+  CANCELLED
+}
+/// HR proposes several time slots; the candidate picks one on a token page. HR chooses online (Google Meet) or offline (address).
+model Interview {
+  id Int @id @default(autoincrement())
+  companyId Int
+  applicationId Int
+  organizerId Int
+  mode InterviewMode
+  status InterviewStatus @default(PROPOSED)
+  durationMinutes Int @default(30)
+  timezone String @default("Asia/Tashkent")
+  location String?
+  note String?
+  tokenHash String @unique
+  confirmedSlotId Int?
+  confirmedAt DateTime?
+  meetUrl String?
+  googleEventId String?
+  declinedAt DateTime?
+  declineNote String?
+  cancelledAt DateTime?
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  organizer User @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  slots InterviewSlot[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId, status])
+  @@index([applicationId])
+}
+model InterviewSlot {
+  id Int @id @default(autoincrement())
+  interviewId Int
+  startsAt DateTime
+  endsAt DateTime
+  interview Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  @@index([interviewId])
+}
+/// A recruiter's Google Calendar, used to create events with Google Meet links. The refresh token is stored encrypted.
+model GoogleCalendarConnection {
+  userId Int @id
+  companyId Int
+  googleEmail String
+  refreshTokenEncrypted String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([companyId])
 }

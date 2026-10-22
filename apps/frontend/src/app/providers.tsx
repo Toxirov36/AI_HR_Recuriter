@@ -7,6 +7,7 @@ import { Alert, Loading, Toaster } from '../components/ui';
 import type { User } from '../types';
 import { applyRobotsMeta } from '../lib/seo';
 const PublicApplyPage = lazy(() => import('../pages/public-apply').then((m) => ({ default: m.PublicApplyPage })));
+const PublicInterviewPage = lazy(() => import('../pages/public-interview').then((m) => ({ default: m.PublicInterviewPage })));
 const LandingPage = lazy(() => import('../pages/landing').then((m) => ({ default: m.LandingPage })));
 const PrivacyPage = lazy(() => import('../pages/privacy').then((m) => ({ default: m.PrivacyPage })));
 
@@ -18,6 +19,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [location.pathname, location.search]);
 
   const isPublicApply = location.pathname.startsWith('/apply/');
+  const isPublicInterview = location.pathname.startsWith('/interview/');
   const isPrivacy = location.pathname === '/privacy';
   const isInvitation =
     location.pathname === '/' && new URLSearchParams(location.search).has('invite');
@@ -30,7 +32,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
     !next.startsWith('//') &&
     !next.startsWith('/login') &&
     !next.startsWith('/register') &&
-    !next.startsWith('/apply/')
+    !next.startsWith('/apply/') &&
+    !next.startsWith('/interview/')
       ? next
       : '/dashboard';
   const [user, setUser] = useState<User>();
@@ -55,14 +58,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   useEffect(() => {
-    if (isPublicApply || isPrivacy) return;
+    if (isPublicApply || isPublicInterview || isPrivacy) return;
     void refresh();
     const expired = () => setUser(undefined);
     window.addEventListener('session-expired', expired);
     return () => window.removeEventListener('session-expired', expired);
-  }, [refresh, isPublicApply, isPrivacy]);
+  }, [refresh, isPublicApply, isPublicInterview, isPrivacy]);
 
   if (isPublicApply) return <Suspense fallback={<Loading />}><PublicApplyPage /></Suspense>;
+  if (isPublicInterview) return <Suspense fallback={<Loading />}><PublicInterviewPage /></Suspense>;
   if (isPrivacy) return <Suspense fallback={<Loading />}><PrivacyPage /></Suspense>;
 
   if (isLanding) {

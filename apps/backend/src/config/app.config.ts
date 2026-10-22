@@ -26,6 +26,10 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must contain at least 32 characters'),
   FRONTEND_ORIGIN: z.url().default('http://localhost:5173'),
   GOOGLE_CLIENT_ID: z.string().trim().default(''),
+  // Google Calendar (interview scheduling with Meet links). All three are required together with GOOGLE_CLIENT_ID.
+  GOOGLE_CLIENT_SECRET: z.string().trim().default(''),
+  GOOGLE_OAUTH_REDIRECT_URL: z.string().trim().default(''),
+  GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().trim().default(''),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
   GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.5-flash-lite'),
@@ -108,6 +112,15 @@ export function getConfig(): AppConfig {
       throw new Error('HeadHunter callback URL must use HTTPS in production');
     if (Buffer.from(result.data.HH_TOKEN_ENCRYPTION_KEY, 'base64').length !== 32)
       throw new Error('HH_TOKEN_ENCRYPTION_KEY must be a base64 encoded 32-byte key');
+  }
+  const calendarValues = [result.data.GOOGLE_CLIENT_SECRET, result.data.GOOGLE_OAUTH_REDIRECT_URL, result.data.GOOGLE_TOKEN_ENCRYPTION_KEY];
+  if (calendarValues.some(Boolean)) {
+    if (!result.data.GOOGLE_CLIENT_ID || !calendarValues.every(Boolean))
+      throw new Error('Google Calendar configuration is incomplete. Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_OAUTH_REDIRECT_URL and GOOGLE_TOKEN_ENCRYPTION_KEY.');
+    if (!result.data.GOOGLE_OAUTH_REDIRECT_URL.startsWith('https://') && result.data.NODE_ENV === 'production')
+      throw new Error('Google OAuth redirect URL must use HTTPS in production');
+    if (Buffer.from(result.data.GOOGLE_TOKEN_ENCRYPTION_KEY, 'base64').length !== 32)
+      throw new Error('GOOGLE_TOKEN_ENCRYPTION_KEY must be a base64 encoded 32-byte key');
   }
   const discoveryValues = [result.data.TELEGRAM_API_ID, result.data.TELEGRAM_API_HASH, result.data.TELEGRAM_USER_SESSION_FILE];
   if (discoveryValues.slice(0, 2).some(Boolean) && !discoveryValues.every(Boolean)) {

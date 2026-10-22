@@ -68,6 +68,9 @@ http {{
     location ~ ^/apply/[^/]+/?$ {{
       try_files /index.html =404;
     }}
+    location ~ ^/interview/[A-Za-z0-9_-]+/?$ {{
+      try_files /index.html =404;
+    }}
     location / {{ try_files $uri $uri/ =404; }}
   }}
 }}

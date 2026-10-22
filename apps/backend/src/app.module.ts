@@ -36,6 +36,8 @@ import { PublicApplicationsModule } from './modules/public-applications/public-a
 import { CompanyAdminModule } from './modules/company-admin/company-admin.module';
 import { PlatformAdminModule } from './modules/platform-admin/platform-admin.module';
 import { ExternalRecruitingModule } from './modules/external-recruiting/external-recruiting.module';
+import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
+import { InterviewsModule } from './modules/interviews/interviews.module';
 
 @Controller('health')
 export class HealthController {
@@ -74,6 +76,8 @@ export class HealthController {
     CompanyAdminModule,
     PlatformAdminModule,
     ExternalRecruitingModule,
+    GoogleCalendarModule,
+    InterviewsModule,
   ],
   controllers: [HealthController],
 })

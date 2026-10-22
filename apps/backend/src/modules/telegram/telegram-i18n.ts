@@ -137,6 +137,22 @@ const uz = {
   fieldVacancies: '«{field}» sohasidagi vakansiyalar:',
   fieldNoVacancies: 'Bu sohada hozircha ochiq vakansiya yo‘q.',
   welcome: '👋 Assalomu alaykum, {name}!\n\nBu bot orqali vakansiyalarga ariza topshirishingiz mumkin. Quyidagi menyudan tanlang.',
+  interviewProposal:
+    '📅 Assalomu alaykum, {name}!\n\n«{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha sizni suhbatga taklif qilamiz.\n\nFormat: {format}\nDavomiyligi: {minutes} daqiqa{noteLine}\n\nO‘zingizga qulay vaqtni tanlang:',
+  interviewFormatOnline: 'Online (Google Meet)',
+  interviewFormatOffline: 'Offline (shaxsan uchrashuv)',
+  interviewChoose: '📅 Vaqtni tanlash',
+  interviewConfirmed:
+    '✅ Suhbat tasdiqlandi!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} daqiqa\n{where}',
+  interviewWhereOnline: '🔗 Google Meet: {url}',
+  interviewWhereOffline: '📍 Manzil: {address}',
+  interviewCancelled: '❌ «{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha suhbat bekor qilindi. HR siz bilan bog‘lanadi.',
+  interviewSubjectProposal: 'Suhbatga taklif',
+  interviewSubjectConfirmed: 'Suhbat tasdiqlandi',
+  interviewSubjectCancelled: 'Suhbat bekor qilindi',
+  interviewNoteLine: '\nIzoh: {note}',
+  interviewInvited:
+    '🎉 Assalomu alaykum, {name}!\n\nSizni «{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha suhbat bosqichiga taklif etamiz! HR mutaxassisi suhbat vaqti va formatini tez orada yuboradi.',
 };
 
 export type BotMessageKey = keyof typeof uz;
@@ -257,6 +273,22 @@ const ru: Record<BotMessageKey, string> = {
   fieldVacancies: 'Вакансии в сфере «{field}»:',
   fieldNoVacancies: 'В этой сфере сейчас нет открытых вакансий.',
   welcome: '👋 Здравствуйте, {name}!\n\nЧерез этого бота можно подать заявку на вакансии. Выберите в меню ниже.',
+  interviewProposal:
+    '📅 Здравствуйте, {name}!\n\nПриглашаем вас на собеседование в «{company}» на вакансию «{vacancy}».\n\nФормат: {format}\nДлительность: {minutes} мин.{noteLine}\n\nВыберите удобное время:',
+  interviewFormatOnline: 'Онлайн (Google Meet)',
+  interviewFormatOffline: 'Офлайн (личная встреча)',
+  interviewChoose: '📅 Выбрать время',
+  interviewConfirmed:
+    '✅ Собеседование подтверждено!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} мин.\n{where}',
+  interviewWhereOnline: '🔗 Google Meet: {url}',
+  interviewWhereOffline: '📍 Адрес: {address}',
+  interviewCancelled: '❌ Собеседование в «{company}» на вакансию «{vacancy}» отменено. HR свяжется с вами.',
+  interviewSubjectProposal: 'Приглашение на собеседование',
+  interviewSubjectConfirmed: 'Собеседование подтверждено',
+  interviewSubjectCancelled: 'Собеседование отменено',
+  interviewNoteLine: '\nКомментарий: {note}',
+  interviewInvited:
+    '🎉 Здравствуйте, {name}!\n\nПриглашаем вас на этап собеседования в «{company}» на вакансию «{vacancy}»! Специалист HR скоро пришлёт время и формат встречи.',
 };
 
 const tg: Record<BotMessageKey, string> = {
@@ -375,6 +407,22 @@ const tg: Record<BotMessageKey, string> = {
   fieldVacancies: 'Вакансияҳо дар соҳаи «{field}»:',
   fieldNoVacancies: 'Дар ин соҳа ҳоло вакансияи кушода нест.',
   welcome: '👋 Салом, {name}!\n\nТавассути ин бот шумо метавонед ба вакансияҳо дархост диҳед. Аз менюи зерин интихоб кунед.',
+  interviewProposal:
+    '📅 Салом, {name}!\n\nШуморо ба мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» даъват мекунем.\n\nШакл: {format}\nДавомнокӣ: {minutes} дақиқа{noteLine}\n\nВақти қулайро интихоб кунед:',
+  interviewFormatOnline: 'Онлайн (Google Meet)',
+  interviewFormatOffline: 'Офлайн (вохӯрии ҳузурӣ)',
+  interviewChoose: '📅 Интихоби вақт',
+  interviewConfirmed:
+    '✅ Мусоҳиба тасдиқ шуд!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} дақиқа\n{where}',
+  interviewWhereOnline: '🔗 Google Meet: {url}',
+  interviewWhereOffline: '📍 Суроға: {address}',
+  interviewCancelled: '❌ Мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» бекор карда шуд. HR бо шумо тамос мегирад.',
+  interviewSubjectProposal: 'Даъват ба мусоҳиба',
+  interviewSubjectConfirmed: 'Мусоҳиба тасдиқ шуд',
+  interviewSubjectCancelled: 'Мусоҳиба бекор шуд',
+  interviewNoteLine: '\nИзоҳ: {note}',
+  interviewInvited:
+    '🎉 Салом, {name}!\n\nШуморо ба марҳилаи мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» даъват мекунем! Мутахассиси HR ба зудӣ вақт ва шакли вохӯриро мефиристад.',
 };
 
 const MESSAGES: Record<BotLang, Record<BotMessageKey, string>> = { uz, ru, tg };

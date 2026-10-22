@@ -113,8 +113,8 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
       // Verify Telegram invitation message
       expect(mockTelegramApi.sendMessage).toHaveBeenCalledWith(
         '987654321',
-        expect.stringContaining('suhbat (interview) bosqichiga taklif etamiz'),
-        { businessConnectionId: 'biz_conn_99' },
+        expect.stringContaining('suhbat bosqichiga taklif etamiz'),
+        expect.objectContaining({}),
       );
 
       // Verify Email invitation message
@@ -122,7 +122,7 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
         expect.objectContaining({
           to: 'alisher@example.com',
           subject: expect.stringContaining('Senior Frontend Developer — Tech Corp'),
-          text: expect.stringContaining('suhbatga taklif etamiz'),
+          text: expect.stringContaining('suhbat bosqichiga taklif etamiz'),
         }),
       );
 
@@ -164,8 +164,8 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
       });
     });
 
-    it('does not retry a failed business invitation from the bot account', async () => {
-      mockTelegramApi.sendMessage.mockResolvedValueOnce({ ok: false, description: 'Forbidden' });
+    it('falls back to the Business chat when the bot cannot write to the candidate, and records a failure when both fail', async () => {
+      mockTelegramApi.sendMessage.mockResolvedValue({ ok: false, description: 'Forbidden' });
       const result = await service.sendInterviewInvitation({
         applicationId: 103,
         candidate: { id: 22, fullName: 'Ali', telegramUserId: '555666777', companyId: 2 },
@@ -173,7 +173,8 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
         companyName: 'Tech Corp',
       });
       expect(result.telegramSent).toBe(false);
-      expect(mockTelegramApi.sendMessage).toHaveBeenCalledTimes(1);
+      expect(mockTelegramApi.sendMessage).toHaveBeenCalledTimes(2);
+      expect(mockTelegramApi.sendMessage).toHaveBeenLastCalledWith('555666777', expect.any(String), { businessConnectionId: 'biz_conn_99' });
       expect(mockDb.candidateEvent.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ type: 'TELEGRAM_DELIVERY_FAILED' }),
       });

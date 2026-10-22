@@ -484,15 +484,14 @@ export class TelegramService {
         });
       });
 
-      // Send candidate interview invitation link
-      const schedulingUrl = `${this.config.FRONTEND_ORIGIN}/interview/schedule?appId=${applicationId}`;
+      // Tell the candidate they are invited; the time and format come from HR on the application page.
       if (application.candidate.telegramUserId) {
-        const candidateMsg =
-          `🎉 Assalomu alaykum, ${application.candidate.fullName}!\n\n` +
-          `Sizni «${application.company.name}» kompaniyasining «${application.vacancy.title}» vakansiyasi bo'yicha suhbat (interview) bosqichiga taklif etamiz!\n\n` +
-          `Suhbat uchun o'zingizga qulay vaqtni tanlang:\n` +
-          `👉 ${schedulingUrl}\n\n` +
-          `Savollaringiz bo'lsa, bemalol yozishingiz mumkin. Omad tilaymiz!`;
+        const lang = (await this.languages?.get(application.candidate.telegramUserId)) ?? 'uz';
+        const candidateMsg = botText(lang, 'interviewInvited', {
+          name: application.candidate.fullName,
+          company: application.company.name,
+          vacancy: application.vacancy.title,
+        });
 
         const bConnId =
           connection?.id ||
@@ -513,7 +512,7 @@ export class TelegramService {
 
       await this.telegramApi.answerCallbackQuery(
         query.id,
-        '✅ Nomzod suhbatga chaqirildi va taklifnoma yuborildi!',
+        '✅ Nomzod suhbatga chaqirildi. Vaqt va formatni platformada belgilang.',
       );
 
       // Edit original message to reflect interview invitation
@@ -522,7 +521,7 @@ export class TelegramService {
         const updatedText =
           `${originalText}\n\n` +
           `━━━━━━━━━━━━━━━━━━━━━\n` +
-          `✅ <b>Suhbatga chaqirildi!</b>\n` +
+          `✅ <b>Suhbatga chaqirildi!</b> Vaqt va formatni platformada belgilang.\n` +
           `👤 <b>Mas'ul:</b> ${actorName}\n` +
           `📅 <b>Sana:</b> ${new Date().toLocaleDateString('uz-UZ')}`;
 
@@ -534,7 +533,7 @@ export class TelegramService {
           {
             parseMode: 'HTML',
             replyMarkup: {
-              inline_keyboard: [[{ text: '👁 Nomzod profilini ochish', url: viewUrl }]],
+              inline_keyboard: [[{ text: '📅 Vaqtni belgilash', url: viewUrl }]],
             },
           },
         );

@@ -289,3 +289,18 @@ Channel discovery uses a separate, dedicated Telegram **user** account. Create a
 In **Platformalarda e’lon qilish → Mos kanallarni topish**, an HR user starts an on-demand search for a vacancy. The background job searches public Uzbek and Russian channels, reads their description and up to 10 text posts from the last 30 days, and uses the configured Gemini model to explain topical fit. The subscriber count is displayed separately from the fit score. Results belong to the company and vacancy; editing the vacancy marks them stale. Recommended channels link to Telegram for human contact. Publishing still requires the existing bot-admin permission and explicit approval flow. If the account, Telegram API, or Gemini is unavailable, the run reports an error instead of inventing a rating.
 
 HeadHunter is disabled until `HH_CLIENT_ID`, `HH_CLIENT_SECRET`, `HH_CALLBACK_URL`, `HH_TOKEN_ENCRYPTION_KEY` (base64 encoding of 32 random bytes), and `HH_USER_AGENT` (registered app name and a real developer contact) are configured. Register the callback as `/api/integrations/headhunter/callback`. An administrator authorizes a hh.uz employer manager through OAuth; only that manager can approve HH publication or view live resume search results. The vacancy form then loads HH region, professional role, experience, employment, and schedule choices. A valid available publication package must be chosen for each approval. Resume search returns only a short live result and hh.uz link; HH CVs are not copied into this database or sent to Gemini. The daily search stores only result counts and errors. Without an employer account, the UI shows HH as disconnected. OLX.uz publishing is not enabled until its API access is confirmed.
+
+## Interview scheduling with Google Meet
+
+A recruiter schedules an interview from the application page: HR picks the format (**online** with a Google Meet link, or **offline** at an address) and proposes up to five times. The candidate receives a link (`/interview/<token>`, also sent through the candidate bot or by email), picks one time or asks for others, and both sides get the confirmation. The link carries an unguessable token; only its hash is stored.
+
+Online interviews need the scheduling recruiter's Google account. Each recruiter connects their own calendar under **Profile → Google Calendar**; the event, with its Meet link, is created in that calendar when the candidate confirms a time.
+
+Google Cloud setup (one time):
+
+1. In the project of the existing `GOOGLE_CLIENT_ID`, enable the **Google Calendar API**.
+2. Use the same Web OAuth client (or create one) and add the authorised redirect URI `https://<your-domain>/api/integrations/google-calendar/callback`.
+3. The OAuth consent screen needs the `calendar.events` scope. It is a sensitive scope: while the app is in **Testing**, only listed test users can connect (up to 100); for everyone else the app must pass Google verification.
+4. Set in `.env`: `GOOGLE_CLIENT_SECRET`, `GOOGLE_OAUTH_REDIRECT_URL` (the same URI) and `GOOGLE_TOKEN_ENCRYPTION_KEY` (`openssl rand -base64 32`). All three are required together; without them the Profile card says Google Calendar is not configured and only offline interviews can be scheduled.
+
+Refresh tokens are stored encrypted (AES-256-GCM). If a recruiter revokes access in their Google account, the stored token is removed and they must connect again. Run `npm run db:migrate` after updating: it creates the `Interview`, `InterviewSlot` and `GoogleCalendarConnection` tables.
