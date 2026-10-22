@@ -78,6 +78,20 @@ describe('language choice in the bot', () => {
     expect(api.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('Забонро'), expect.anything());
   });
 
+  it('greets a candidate with the menu on a plain /start instead of the HR text', async () => {
+    const { api, languages } = setup({ language: 'ru', pendingStart: null });
+    const menu = { sendWelcome: vi.fn(), handleText: vi.fn().mockResolvedValue(false) };
+    const service = new TelegramService({} as never, {} as never, {} as never, api as never, {} as never, undefined, undefined, undefined, languages, undefined, menu as never);
+    await service.handleMessage(message('/start') as never);
+    expect(menu.sendWelcome).toHaveBeenCalledWith(42, '42', 'Ali');
+    expect(api.sendMessage).not.toHaveBeenCalled();
+
+    const fresh = setup(null);
+    const freshService = new TelegramService({} as never, {} as never, {} as never, fresh.api as never, {} as never, undefined, undefined, undefined, fresh.languages, undefined, menu as never);
+    await freshService.handleMessage(message('/start') as never);
+    expect(fresh.api.sendMessage.mock.calls[0][1]).toContain('Забонро');
+  });
+
   it('ignores an unknown language code', async () => {
     const { db, service } = setup(null);
     await service.handleCallbackQuery({ id: 'cb', from: user, data: 'lang:xx' } as never);

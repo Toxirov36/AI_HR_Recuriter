@@ -136,6 +136,7 @@ const uz = {
   fieldsEmpty: 'Hozircha ochiq sohalar yo‘q.',
   fieldVacancies: '«{field}» sohasidagi vakansiyalar:',
   fieldNoVacancies: 'Bu sohada hozircha ochiq vakansiya yo‘q.',
+  welcome: '👋 Assalomu alaykum, {name}!\n\nBu bot orqali vakansiyalarga ariza topshirishingiz mumkin. Quyidagi menyudan tanlang.',
 };
 
 export type BotMessageKey = keyof typeof uz;
@@ -255,6 +256,7 @@ const ru: Record<BotMessageKey, string> = {
   fieldsEmpty: 'Сейчас нет открытых сфер.',
   fieldVacancies: 'Вакансии в сфере «{field}»:',
   fieldNoVacancies: 'В этой сфере сейчас нет открытых вакансий.',
+  welcome: '👋 Здравствуйте, {name}!\n\nЧерез этого бота можно подать заявку на вакансии. Выберите в меню ниже.',
 };
 
 const tg: Record<BotMessageKey, string> = {
@@ -372,6 +374,7 @@ const tg: Record<BotMessageKey, string> = {
   fieldsEmpty: 'Ҳоло соҳаҳои кушода нест.',
   fieldVacancies: 'Вакансияҳо дар соҳаи «{field}»:',
   fieldNoVacancies: 'Дар ин соҳа ҳоло вакансияи кушода нест.',
+  welcome: '👋 Салом, {name}!\n\nТавассути ин бот шумо метавонед ба вакансияҳо дархост диҳед. Аз менюи зерин интихоб кунед.',
 };
 
 const MESSAGES: Record<BotLang, Record<BotMessageKey, string>> = { uz, ru, tg };

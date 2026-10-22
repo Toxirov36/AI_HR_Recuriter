@@ -40,7 +40,7 @@ export class TelegramService {
   ) {}
 
   /** First contact with the candidate bot: ask for a language, then resume the deep link they opened. */
-  private async askLanguageFirst(message: TelegramDirectMessage, pendingStart: string): Promise<boolean> {
+  private async askLanguageFirst(message: TelegramDirectMessage, pendingStart?: string): Promise<boolean> {
     if (!this.languages || !message.from || message.chat.type !== 'private') return false;
     const userId = String(message.from.id);
     if (await this.languages.has(userId)) return false;
@@ -150,6 +150,12 @@ export class TelegramService {
     const firstName = message.from?.first_name || 'Hurmatli foydalanuvchi';
 
     if (!token) {
+      // A candidate opening the bot without a link gets the menu; the HR text below is the fallback.
+      if (this.menu && this.languages && message.from && message.chat.type === 'private') {
+        if (await this.askLanguageFirst(message)) return;
+        await this.menu.sendWelcome(message.chat.id, String(message.from.id), firstName);
+        return;
+      }
       const welcome =
         `👋 Assalomu alaykum, ${firstName}!\n\n` +
         `Ushbu bot HR platformasining rasmiy Secretary boti hisoblanadi.\n\n` +

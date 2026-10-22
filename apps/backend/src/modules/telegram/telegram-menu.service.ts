@@ -71,6 +71,12 @@ export class TelegramMenuService {
     return true;
   }
 
+  /** Plain /start: greet the candidate and show the menu. */
+  async sendWelcome(chatId: number, userId: string, name: string) {
+    const tr = await this.tr(userId);
+    await this.sendMenu(chatId, userId, tr('welcome', { name }));
+  }
+
   async sendMenu(chatId: number, userId: string, text?: string) {
     const tr = await this.tr(userId);
     await this.telegram.sendMessage(chatId, text ?? tr('menuPrompt'), { replyMarkup: mainMenuKeyboard(tr) });
