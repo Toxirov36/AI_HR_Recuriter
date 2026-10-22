@@ -568,5 +568,7 @@ model TelegramUserLanguage {
   telegramUserId String @id
   language String?
   pendingStart String?
+  /// Company of the last link the user opened; the bot menu browses its fields.
+  companyId Int?
   updatedAt DateTime @updatedAt
 }

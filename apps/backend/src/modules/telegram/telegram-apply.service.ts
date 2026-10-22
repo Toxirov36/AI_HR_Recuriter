@@ -70,6 +70,8 @@ export class TelegramApplyService {
       return;
     }
 
+    await this.languages?.setCompany(String(message.from.id), vacancy.companyId);
+
     const priorCandidate = await this.db.candidate.findUnique({
       where: { companyId_telegramUserId: { companyId: vacancy.companyId, telegramUserId: String(message.from.id) } },
       select: { id: true },

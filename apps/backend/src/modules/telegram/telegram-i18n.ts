@@ -125,6 +125,17 @@ const uz = {
   statusOFFER: 'Taklif',
   statusHIRED: 'Qabul qilindi',
   statusREJECTED: 'Rad etildi',
+  menuFields: '🗂 Sohalar',
+  menuLanguage: '🌐 Til',
+  menuHelp: '❓ Yordam',
+  menuPrompt: 'Quyidagi menyudan tanlang:',
+  menuHelpText:
+    'ℹ️ Bu bot orqali vakansiyalarga ariza topshirishingiz mumkin.\n\n🗂 Sohalar — ochiq vakansiyalar\n📋 Arizalarim — topshirgan arizalaringiz\n🌐 Til — tilni o‘zgartirish\n\nHar bir sohaga faqat bitta ariza topshirish mumkin.',
+  menuNoCompany: 'Sohalar ro‘yxati chiqishi uchun avval HR yuborgan havola orqali botga kiring.',
+  fieldsTitle: 'Sohani tanlang:',
+  fieldsEmpty: 'Hozircha ochiq sohalar yo‘q.',
+  fieldVacancies: '«{field}» sohasidagi vakansiyalar:',
+  fieldNoVacancies: 'Bu sohada hozircha ochiq vakansiya yo‘q.',
 };
 
 export type BotMessageKey = keyof typeof uz;
@@ -233,6 +244,17 @@ const ru: Record<BotMessageKey, string> = {
   statusOFFER: 'Оффер',
   statusHIRED: 'Принят',
   statusREJECTED: 'Отказ',
+  menuFields: '🗂 Сферы',
+  menuLanguage: '🌐 Язык',
+  menuHelp: '❓ Помощь',
+  menuPrompt: 'Выберите в меню ниже:',
+  menuHelpText:
+    'ℹ️ Через этого бота можно подать заявку на вакансии.\n\n🗂 Сферы — открытые вакансии\n📋 Мои заявки — ваши поданные заявки\n🌐 Язык — сменить язык\n\nВ каждую сферу можно подать только одну заявку.',
+  menuNoCompany: 'Чтобы увидеть список сфер, сначала зайдите в бот по ссылке от HR.',
+  fieldsTitle: 'Выберите сферу:',
+  fieldsEmpty: 'Сейчас нет открытых сфер.',
+  fieldVacancies: 'Вакансии в сфере «{field}»:',
+  fieldNoVacancies: 'В этой сфере сейчас нет открытых вакансий.',
 };
 
 const tg: Record<BotMessageKey, string> = {
@@ -339,6 +361,17 @@ const tg: Record<BotMessageKey, string> = {
   statusOFFER: 'Пешниҳод',
   statusHIRED: 'Қабул шуд',
   statusREJECTED: 'Рад шуд',
+  menuFields: '🗂 Соҳаҳо',
+  menuLanguage: '🌐 Забон',
+  menuHelp: '❓ Кумак',
+  menuPrompt: 'Аз менюи зерин интихоб кунед:',
+  menuHelpText:
+    'ℹ️ Тавассути ин бот шумо метавонед ба вакансияҳо дархост диҳед.\n\n🗂 Соҳаҳо — вакансияҳои кушода\n📋 Дархостҳои ман — дархостҳои супоридаи шумо\n🌐 Забон — иваз кардани забон\n\nБа ҳар як соҳа танҳо як дархост додан мумкин аст.',
+  menuNoCompany: 'Барои дидани рӯйхати соҳаҳо аввал тавассути истиноди HR ба бот ворид шавед.',
+  fieldsTitle: 'Соҳаро интихоб кунед:',
+  fieldsEmpty: 'Ҳоло соҳаҳои кушода нест.',
+  fieldVacancies: 'Вакансияҳо дар соҳаи «{field}»:',
+  fieldNoVacancies: 'Дар ин соҳа ҳоло вакансияи кушода нест.',
 };
 
 const MESSAGES: Record<BotLang, Record<BotMessageKey, string>> = { uz, ru, tg };

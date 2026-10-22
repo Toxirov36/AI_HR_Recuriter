@@ -117,7 +117,7 @@ describe('Telegram join flow', () => {
     const byButton = setup({ step: 'NAME' });
     expect(await byButton.service.handleCallback(callback('join:cancel'))).toBe(true);
     expect(byButton.db.telegramJoinSession.deleteMany).toHaveBeenCalled();
-    expect(byButton.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('bekor qilindi'), expect.objectContaining({ replyMarkup: { remove_keyboard: true } }));
+    expect(byButton.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('bekor qilindi'), expect.objectContaining({ replyMarkup: expect.objectContaining({ keyboard: expect.any(Array) }) }));
 
     const byCommand = setup({ step: 'PHONE', fullName: 'Aziz Karimov' });
     expect(await byCommand.service.handleText({ message_id: 1, chat, from: user, text: '/cancel' } as never)).toBe(true);

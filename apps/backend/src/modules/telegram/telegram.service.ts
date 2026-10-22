@@ -12,6 +12,7 @@ import { TelegramApplyService } from './telegram-apply.service';
 import { TelegramJoinService } from './telegram-join.service';
 import { TelegramLanguageService } from './telegram-language.service';
 import { TelegramMyApplicationsService } from './telegram-my-applications.service';
+import { TelegramMenuService } from './telegram-menu.service';
 import { botText, isBotLang } from './telegram-i18n';
 import { TelegramAdminService } from './telegram-admin.service';
 import type {
@@ -35,6 +36,7 @@ export class TelegramService {
     @Optional() @Inject(TelegramJoinService) private joinService?: TelegramJoinService,
     @Optional() @Inject(TelegramLanguageService) private languages?: TelegramLanguageService,
     @Optional() @Inject(TelegramMyApplicationsService) private myApplications?: TelegramMyApplicationsService,
+    @Optional() @Inject(TelegramMenuService) private menu?: TelegramMenuService,
   ) {}
 
   /** First contact with the candidate bot: ask for a language, then resume the deep link they opened. */
@@ -52,7 +54,10 @@ export class TelegramService {
     const chatId = query.message?.chat.id ?? query.from.id;
     const pending = await this.languages.choose(userId, code);
     await this.telegramApi.answerCallbackQuery(query.id, botText(code, 'languageChanged'));
-    if (!pending) return;
+    if (!pending) {
+      await this.menu?.sendMenu(chatId, userId);
+      return;
+    }
     await this.handleMessage({
       message_id: query.message?.message_id ?? 0,
       from: query.from,
@@ -118,6 +123,7 @@ export class TelegramService {
       return;
     }
     if (await this.adminService?.handleText(message)) return;
+    if (await this.menu?.handleText(message)) return;
     const joinMatch = text.match(/^\/start\s+join_([0-9a-f-]{36})$/i);
     if (joinMatch) {
       if (await this.askLanguageFirst(message, `join_${joinMatch[1]}`)) return;
@@ -371,6 +377,7 @@ export class TelegramService {
       await this.adminService?.handleCallback(query);
       return;
     }
+    if (await this.menu?.handleCallback(query)) return;
     if (data === 'my:apps') {
       await this.telegramApi.answerCallbackQuery(query.id);
       await this.myApplications?.show(query.message?.chat.id ?? query.from.id, String(query.from.id));

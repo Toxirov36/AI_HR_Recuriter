@@ -33,6 +33,20 @@ export class TelegramLanguageService {
     return row?.pendingStart ?? null;
   }
 
+  /** Remembers the company of the last link the user opened; the bot menu browses its fields. */
+  async setCompany(userId: string, companyId: number) {
+    await this.db.telegramUserLanguage.upsert({
+      where: { telegramUserId: userId },
+      create: { telegramUserId: userId, companyId },
+      update: { companyId },
+    });
+  }
+
+  async getCompany(userId: string): Promise<number | null> {
+    const row = await this.db.telegramUserLanguage.findUnique({ where: { telegramUserId: userId }, select: { companyId: true } });
+    return row?.companyId ?? null;
+  }
+
   /** Shows the language buttons. `pendingStart` (e.g. "join_<token>") resumes once a language is picked. */
   async ask(chatId: number, userId: string, pendingStart?: string) {
     if (pendingStart) {

@@ -10,6 +10,7 @@ import { TelegramApplyService } from './telegram-apply.service';
 import { TelegramJoinService } from './telegram-join.service';
 import { TelegramLanguageService } from './telegram-language.service';
 import { TelegramMyApplicationsService } from './telegram-my-applications.service';
+import { TelegramMenuService } from './telegram-menu.service';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExternalRecruitingModule } from '../external-recruiting/external-recruiting.module';
@@ -31,6 +32,7 @@ import { TelegramAdminService } from './telegram-admin.service';
     TelegramScreeningAlertService,
     TelegramLanguageService,
     TelegramMyApplicationsService,
+    TelegramMenuService,
     TelegramAdminService,
     GeminiProvider,
   ],

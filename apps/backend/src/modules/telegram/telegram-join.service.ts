@@ -11,6 +11,7 @@ import { TelegramQueueService } from './telegram-queue.service';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { TelegramLanguageService } from './telegram-language.service';
 import { botText, DEFAULT_BOT_LANG, matchesAnyLang, type BotMessageKey } from './telegram-i18n';
+import { mainMenuKeyboard } from './telegram-menu';
 import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/telegram.types';
 
 const SESSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -98,6 +99,33 @@ export class TelegramJoinService {
       await this.telegram.sendMessage(message.chat.id, tr('joinInvalidLink'));
       return;
     }
+    await this.languages?.setCompany(userId, company.id);
+    await this.begin(message, company, null, tr);
+  }
+
+  /** Starts the application for one vacancy picked from the bot menu (Sohalar). */
+  async startVacancy(message: TelegramDirectMessage, companyId: number, vacancyId: number) {
+    if (!message.from || message.chat.type !== 'private') return;
+    const userId = String(message.from.id);
+    const tr = await this.tr(userId);
+    const vacancy = await this.db.vacancy.findFirst({
+      where: { id: vacancyId, companyId, status: 'ACTIVE', company: { isActive: true } },
+      select: { id: true, title: true, fieldId: true, field: { select: { name: true } }, company: { select: { id: true, name: true, retentionDays: true } } },
+    });
+    if (!vacancy) {
+      await this.telegram.sendMessage(message.chat.id, tr('vacancyGone'));
+      return;
+    }
+    const blocked = await this.blockedReason(companyId, vacancy, userId);
+    if (blocked) {
+      await this.telegram.sendMessage(message.chat.id, this.blockedText(blocked, vacancy, tr), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
+      return;
+    }
+    await this.begin(message, vacancy.company, vacancy.id, tr);
+  }
+
+  private async begin(message: TelegramDirectMessage, company: { id: number; name: string; retentionDays: number }, presetVacancyId: number | null, tr: Tr) {
+    const userId = String(message.from!.id);
     if (this.storage && !this.storage.enabled) {
       await this.telegram.sendMessage(message.chat.id, tr('joinStorageOff'));
       return;
@@ -106,11 +134,11 @@ export class TelegramJoinService {
     await this.db.telegramApplySession.deleteMany({ where: { telegramUserId: userId } });
     await this.db.telegramJoinSession.upsert({
       where: { telegramUserId: userId },
-      create: { telegramUserId: userId, companyId: company.id, step: 'PRIVACY', answers: [], expiresAt: this.expiry() },
+      create: { telegramUserId: userId, companyId: company.id, step: 'PRIVACY', vacancyId: presetVacancyId, answers: [], expiresAt: this.expiry() },
       update: {
         companyId: company.id,
         step: 'PRIVACY',
-        vacancyId: null,
+        vacancyId: presetVacancyId,
         fullName: null,
         phone: null,
         privacyAcceptedAt: null,
@@ -445,7 +473,7 @@ export class TelegramJoinService {
       return true;
     }
 
-    await this.telegram.sendMessage(chatId, tr('cvAcceptedQuiz'), { parseMode: 'HTML', replyMarkup: { remove_keyboard: true } });
+    await this.telegram.sendMessage(chatId, tr('cvAcceptedQuiz'), { parseMode: 'HTML', replyMarkup: mainMenuKeyboard(tr) });
     await this.prepareAssessment(userId, chatId, vacancy, tr);
     return true;
   }
@@ -461,7 +489,7 @@ export class TelegramJoinService {
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
     const vacancies = await this.db.vacancy.findMany({
-      where: this.vacancyFilter(session),
+      where: { ...this.vacancyFilter(session), ...(session.vacancyId ? { id: session.vacancyId } : {}) },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: MAX_VACANCY_BUTTONS,
       select: { id: true, title: true, fieldId: true, field: { select: { name: true } } },
@@ -535,7 +563,7 @@ export class TelegramJoinService {
       return;
     }
     await this.db.telegramJoinSession.deleteMany({ where: { telegramUserId: userId, step: { in: CANCELLABLE_STEPS as never } } });
-    await this.telegram.sendMessage(chatId, tr('cancelledFull'), { replyMarkup: { remove_keyboard: true } });
+    await this.telegram.sendMessage(chatId, tr('cancelledFull'), { replyMarkup: mainMenuKeyboard(tr) });
   }
 
   private async chooseVacancy(query: TelegramCallbackQuery, session: SessionRow, vacancyId: number, tr: Tr) {

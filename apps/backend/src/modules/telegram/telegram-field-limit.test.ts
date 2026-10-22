@@ -68,6 +68,34 @@ describe('one application per hiring field (join flow)', () => {
   });
 });
 
+describe('starting from the menu', () => {
+  const picked = { id: 5, title: 'SMM Lead', fieldId: 2, field: marketing, company: { id: 3, name: 'Acme', retentionDays: 180 } };
+
+  it('opens the consent step with the chosen vacancy preset', async () => {
+    const { db, telegram, service } = joinSetup([], false);
+    db.vacancy.findFirst.mockResolvedValue(picked);
+    db.telegramApplySession = { deleteMany: vi.fn() };
+    db.telegramJoinSession.upsert = vi.fn();
+    await service.startVacancy({ message_id: 1, chat, from: user } as never, 3, 5);
+    expect(db.telegramJoinSession.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ companyId: 3, step: 'PRIVACY', vacancyId: 5 }) }));
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('Acme'), expect.anything());
+  });
+
+  it('refuses a vacancy of a field already applied to, and a vacancy that is gone', async () => {
+    const blocked = joinSetup([], true);
+    blocked.db.vacancy.findFirst.mockResolvedValue(picked);
+    blocked.db.telegramJoinSession.upsert = vi.fn();
+    await blocked.service.startVacancy({ message_id: 1, chat, from: user } as never, 3, 5);
+    expect(blocked.db.telegramJoinSession.upsert).not.toHaveBeenCalled();
+    expect(blocked.telegram.sendMessage).toHaveBeenCalledWith(42, botText('uz', 'alreadyAppliedField', { field: 'Marketing' }), expect.anything());
+
+    const gone = joinSetup([], false);
+    gone.db.vacancy.findFirst.mockResolvedValue(null);
+    await gone.service.startVacancy({ message_id: 1, chat, from: user } as never, 3, 5);
+    expect(gone.telegram.sendMessage).toHaveBeenCalledWith(42, botText('uz', 'vacancyGone'));
+  });
+});
+
 describe('one application per hiring field (vacancy link flow)', () => {
   it('refuses a second vacancy of the same field', async () => {
     const db: any = {
