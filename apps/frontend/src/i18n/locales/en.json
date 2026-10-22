@@ -514,6 +514,12 @@
     "resumeNotUploaded": "Not uploaded",
     "sourceTelegram": "Telegram",
     "sourceWebsite": "Website",
+    "applicationsTitle": "Applications",
+    "applicationsDesc": "Every vacancy the candidate applied to.",
+    "resumeHistoryTitle": "All submitted CVs",
+    "resumeHistoryDesc": "Every file the candidate sent is kept.",
+    "resumeCurrent": "Current",
+    "downloadCvFile": "Download CV file",
     "testPassed": "Test: {{score}}% ✅",
     "testFailed": "Test: {{score}}% ❌",
     "testNoScore": "No test"

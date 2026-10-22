@@ -514,6 +514,12 @@
     "resumeNotUploaded": "Не загружено",
     "sourceTelegram": "Telegram",
     "sourceWebsite": "Сайт",
+    "applicationsTitle": "Заявки",
+    "applicationsDesc": "Все вакансии, на которые кандидат подал заявку.",
+    "resumeHistoryTitle": "Все отправленные резюме",
+    "resumeHistoryDesc": "Каждый присланный файл сохраняется.",
+    "resumeCurrent": "Текущее",
+    "downloadCvFile": "Скачать файл резюме",
     "testPassed": "Тест: {{score}}% ✅",
     "testFailed": "Тест: {{score}}% ❌",
     "testNoScore": "Нет теста"

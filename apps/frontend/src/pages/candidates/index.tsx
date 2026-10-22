@@ -37,6 +37,7 @@ import {
   Button,
   date,
   Empty,
+  getStageLabel,
   Input,
   Loading,
   Modal,
@@ -682,6 +683,44 @@ export function CandidateDetail() {
                 </div>
               </div>
             </section>
+            {Boolean(c.applications?.length) && (
+              <section className="panel padded mb-5" aria-label={t('candidates.applicationsTitle')}>
+                <div className="panel-heading flush">
+                  <div>
+                    <h2>
+                      {t('candidates.applicationsTitle')} ({c.applications?.length})
+                    </h2>
+                    <p>{t('candidates.applicationsDesc')}</p>
+                  </div>
+                </div>
+                <ul className="space-y-2">
+                  {c.applications?.map((app, index) => (
+                    <li key={app.id ?? index} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 p-3 text-sm">
+                      <div className="min-w-0">
+                        {app.id ? (
+                          <Link className="font-semibold text-[#245e4f] dark:text-[#58c0a0] underline" to={`/applications/${app.id}`}>
+                            {app.vacancy?.title}
+                          </Link>
+                        ) : (
+                          <strong>{app.vacancy?.title}</strong>
+                        )}
+                        {app.createdAt && <small className="block muted">{date(app.createdAt)}</small>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {app.assessmentScore !== null && app.assessmentScore !== undefined && (
+                          <small
+                            style={{ fontWeight: 600, color: app.assessmentScore >= 70 ? '#15803d' : '#dc2626' }}
+                          >
+                            {t(app.assessmentScore >= 70 ? 'candidates.testPassed' : 'candidates.testFailed', { score: app.assessmentScore })}
+                          </small>
+                        )}
+                        <span className="badge neutral">{getStageLabel(app.status, t)}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
             <div className="detail-grid">
               <section className="panel padded">
                 <div className="panel-heading flush">
@@ -714,6 +753,34 @@ export function CandidateDetail() {
                     >
                       <Download size={17} />
                     </a>
+                  </div>
+                )}
+                {(c.resumes?.length ?? 0) > 1 && (
+                  <div className="mt-4 space-y-2" aria-label={t('candidates.resumeHistoryTitle')}>
+                    <h3 className="text-sm font-semibold">{t('candidates.resumeHistoryTitle')} ({c.resumes?.length})</h3>
+                    <p className="muted small">{t('candidates.resumeHistoryDesc')}</p>
+                    {c.resumes?.map((resume, index) => (
+                      <div key={resume.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800">
+                        <div className="flex min-w-0 items-center gap-2.5">
+                          <FileText size={16} className="shrink-0 text-[#1a5d4c] dark:text-[#58c0a0]" />
+                          <div className="min-w-0">
+                            <span className="block truncate text-xs font-semibold">{resume.fileName}</span>
+                            <small className="muted">
+                              {date(resume.createdAt)}
+                              {index === 0 ? ` · ${t('candidates.resumeCurrent')}` : ''}
+                            </small>
+                          </div>
+                        </div>
+                        <a
+                          aria-label={`${t('candidates.downloadCvFile')}: ${resume.fileName}`}
+                          href={`/api/candidates/${c.id}/resumes/${resume.id}`}
+                          title={t('candidates.downloadCvFile')}
+                          className="ml-2 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-200/60 hover:text-slate-900"
+                        >
+                          <Download size={17} />
+                        </a>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {c.resumeText && (

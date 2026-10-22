@@ -514,6 +514,12 @@
     "resumeNotUploaded": "Боргиринашуда",
     "sourceTelegram": "Telegram",
     "sourceWebsite": "Сомона",
+    "applicationsTitle": "Аризаҳо",
+    "applicationsDesc": "Ҳамаи вакансияҳое, ки номзад ариза додааст.",
+    "resumeHistoryTitle": "Ҳамаи резюмеҳои фиристодашуда",
+    "resumeHistoryDesc": "Ҳар файле, ки номзад фиристодааст, нигоҳ дошта мешавад.",
+    "resumeCurrent": "Ҷорӣ",
+    "downloadCvFile": "Боргирии файли резюме",
     "testPassed": "Тест: {{score}}% ✅",
     "testFailed": "Тест: {{score}}% ❌",
     "testNoScore": "Тест нест"

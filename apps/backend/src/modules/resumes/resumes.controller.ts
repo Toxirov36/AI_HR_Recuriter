@@ -55,6 +55,21 @@ export class ResumesController {
     res.setHeader('Cache-Control', 'no-store');
     res.send(Buffer.from(record.resumeData!));
   }
+
+  @Get(':id/resumes/:resumeId')
+  async downloadOne(
+    @Req() req: AuthRequest,
+    @Param('id', ParseIntPipe) id: number,
+    @Param('resumeId', ParseIntPipe) resumeId: number,
+    @Res() res: Response,
+  ) {
+    await this.candidatesService.candidate(req.user.companyId, id);
+    const record = await this.resumesService.downloadResume(req.user.companyId, id, resumeId);
+    res.setHeader('Content-Type', record.resumeMime);
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(record.resumeName)}"`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(Buffer.from(record.resumeData));
+  }
 }
 
 // Backward compatibility alias

@@ -514,6 +514,12 @@
     "resumeNotUploaded": "Yuklanmagan",
     "sourceTelegram": "Telegram",
     "sourceWebsite": "Veb-sayt",
+    "applicationsTitle": "Arizalar",
+    "applicationsDesc": "Nomzod topshirgan barcha vakansiyalar.",
+    "resumeHistoryTitle": "Yuborilgan barcha CVlar",
+    "resumeHistoryDesc": "Nomzod har safar yuborgan fayl saqlanadi.",
+    "resumeCurrent": "Joriy",
+    "downloadCvFile": "CV faylini yuklab olish",
     "testPassed": "Test: {{score}}% ✅",
     "testFailed": "Test: {{score}}% ❌",
     "testNoScore": "Test yo'q"

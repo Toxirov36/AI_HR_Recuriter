@@ -198,4 +198,14 @@ export class ResumesService {
       : record.resumeData!;
     return { ...record, resumeData };
   }
+
+  /** One specific CV from the candidate's history (every submitted file is kept). */
+  async downloadResume(companyId: number, candidateId: number, resumeId: number) {
+    const record = await this.db.resume.findFirst({
+      where: { id: resumeId, candidateId, companyId },
+      select: { fileName: true, mimeType: true, objectKey: true },
+    });
+    if (!record?.objectKey) throw new BadRequestException('This CV file is not available');
+    return { resumeName: record.fileName, resumeMime: record.mimeType ?? 'application/octet-stream', resumeData: await this.storage.get(record.objectKey) };
+  }
 }

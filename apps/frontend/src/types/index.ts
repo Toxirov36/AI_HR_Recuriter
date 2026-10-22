@@ -88,6 +88,7 @@ export type Candidate = {
     id: number;
     fileName: string;
     mimeType?: string | null;
+    fileSize?: number | null;
     status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
     error?: string | null;
     createdAt: string;
@@ -95,7 +96,13 @@ export type Candidate = {
   events?: Array<{ id: number; type: string; label: string; createdAt: string }>;
   createdAt: string;
   _count?: { applications: number };
-  applications?: Array<{ assessmentScore: number | null; status: string }>;
+  applications?: Array<{
+    id?: number;
+    assessmentScore: number | null;
+    status: string;
+    createdAt?: string;
+    vacancy?: { id: number; title: string } | null;
+  }>;
 };
 export const stages = ['NEW', 'REVIEWING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED'] as const;
 export type Stage = (typeof stages)[number];
