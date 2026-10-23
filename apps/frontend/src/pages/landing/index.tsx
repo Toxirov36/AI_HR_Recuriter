@@ -32,6 +32,47 @@ import '@fontsource/onest/400.css';
 import '@fontsource/onest/500.css';
 import '@fontsource/onest/600.css';
 import './landing-a.css';
+import './landing-motion.css';
+
+/** Blocks that ease in as they scroll into view; siblings follow each other by a short beat. */
+const REVEAL = [
+  '.landing-section-head',
+  '.landing-flow-grid > *',
+  '.landing-feature-grid > *',
+  '.landing-whom-grid > *',
+  '.landing-how-intro',
+  '.landing-steps > *',
+  '.landing-pricing-intro',
+  '.landing-plan',
+  '.landing-faq-layout > div:first-child',
+  '.landing-faq-list',
+  '.landing-final-cta',
+];
+
+function useScrollReveal() {
+  useEffect(() => {
+    const root = document.querySelector('.landing-page');
+    if (!root || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const items = REVEAL.flatMap((selector) => [...root.querySelectorAll<HTMLElement>(selector)]);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          entry.target.classList.add('is-in');
+          observer.unobserve(entry.target);
+        }
+      },
+      { rootMargin: '0px 0px -8% 0px', threshold: 0.1 },
+    );
+    for (const item of items) {
+      const index = item.parentElement ? [...item.parentElement.children].indexOf(item) : 0;
+      item.style.setProperty('--reveal-delay', `${Math.min(index, 5) * 70}ms`);
+      item.classList.add('landing-reveal');
+      observer.observe(item);
+    }
+    return () => observer.disconnect();
+  }, []);
+}
 
 const NAV = [
   { href: '#telegram', key: 'navTelegram' },
@@ -44,6 +85,7 @@ const NAV = [
 export function LandingPage() {
   const { t, i18n } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  useScrollReveal();
 
   useEffect(() => {
     const title = `${t('landing.heroTitle')} · Shortlist`;
