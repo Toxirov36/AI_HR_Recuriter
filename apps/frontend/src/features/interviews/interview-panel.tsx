@@ -94,7 +94,7 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="flex items-center gap-2.5">
-            <CalendarClock size={20} className="text-[#1a5d4c]" /> {t('interviews.panelTitle', 'Interview')}
+            <CalendarClock size={20} className="text-[color:var(--brand-icon)]" /> {t('interviews.panelTitle', 'Interview')}
           </h2>
           <p className="muted mt-1">{t('interviews.panelDesc', 'Propose times; the candidate picks one.')}</p>
         </div>
@@ -149,7 +149,7 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
                   href={active.meetUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-2 rounded-xl bg-[#1a5d4c] px-4 py-2.5 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-[#154a3d]"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[color:var(--brand-solid)] px-4 py-2.5 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-[color:var(--brand-solid-hover)]"
                 >
                   <Video size={16} /> {t('interviews.joinMeet', 'Join Google Meet')}
                 </a>
@@ -168,7 +168,7 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
             <Row icon={<MapPin size={18} />}>
               <span className="font-medium">{active.location}</span>
               {active.mapUrl && (
-                <a className="ml-3 text-sm font-semibold text-[#1a5d4c] underline" href={active.mapUrl} target="_blank" rel="noreferrer">
+                <a className="ml-3 text-sm font-semibold text-[color:var(--brand-icon)] underline" href={active.mapUrl} target="_blank" rel="noreferrer">
                   {t('interviews.openMap', 'Open on map')}
                 </a>
               )}
@@ -179,7 +179,7 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
             <button
               type="button"
               onClick={() => setDialog('reschedule')}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#1a5d4c] bg-white px-4 py-2.5 text-sm font-semibold text-[#1a5d4c] shadow-sm transition-colors hover:bg-emerald-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-[color:var(--brand-icon)] bg-white px-4 py-2.5 text-sm font-semibold text-[color:var(--brand-icon)] shadow-sm transition-colors hover:bg-emerald-50"
             >
               <CalendarClock size={16} /> {t('interviews.reschedule', 'Propose new times')}
             </button>

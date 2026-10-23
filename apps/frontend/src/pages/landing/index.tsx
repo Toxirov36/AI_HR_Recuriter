@@ -1,64 +1,30 @@
-import {
-  ArrowRight,
-  ArrowUpRight,
-  Briefcase,
-  Building2,
-  Check,
-  ClipboardList,
-  FileSearch,
-  GitBranch,
-  Layers3,
-  Menu,
-  Send,
-  ShieldCheck,
-  Sparkles,
-  TrendingUp,
-  Users,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Check, Menu, Send, ShieldCheck, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { BrandMark } from '../../components/brand-mark';
 import { LandingLanguageSelect } from '../../components/landing-language-select';
 import { normalizeLocale } from '../../i18n/utils';
 import { landingUrlFor } from '../../lib/landing-seo-html';
-import './landing.css';
-import './landing.dark.css';
-import './landing-sections.css';
-import './landing-sections.dark.css';
-import '@fontsource/unbounded/700.css';
-import '@fontsource/unbounded/800.css';
+import '@fontsource/onest/700.css';
 import '@fontsource/onest/400.css';
 import '@fontsource/onest/500.css';
 import '@fontsource/onest/600.css';
-import './landing-a.css';
-import './landing-motion.css';
+import './landing.css';
 
 /** Blocks that ease in as they scroll into view; siblings follow each other by a short beat. */
-const REVEAL = [
-  '.landing-section-head',
-  '.landing-flow-grid > *',
-  '.landing-feature-grid > *',
-  '.landing-whom-grid > *',
-  '.landing-how-intro',
-  '.landing-steps > *',
-  '.landing-pricing-intro',
-  '.landing-plan',
-  '.landing-faq-layout > div:first-child',
-  '.landing-faq-list',
-  '.landing-final-cta',
-];
+const REVEAL = ['.sl-step', '.sl-col', '.sl-fact'];
 
 function useScrollReveal() {
   useEffect(() => {
-    const root = document.querySelector('.landing-page');
+    const root = document.querySelector('.sl-page');
     if (!root || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const items = REVEAL.flatMap((selector) => [...root.querySelectorAll<HTMLElement>(selector)]);
     const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-          entry.target.classList.add('is-in');
+          entry.target.classList.remove('is-pending');
           observer.unobserve(entry.target);
         }
       },
@@ -66,12 +32,37 @@ function useScrollReveal() {
     );
     for (const item of items) {
       const index = item.parentElement ? [...item.parentElement.children].indexOf(item) : 0;
-      item.style.setProperty('--reveal-delay', `${Math.min(index, 5) * 70}ms`);
-      item.classList.add('landing-reveal');
+      item.style.setProperty('--delay', `${Math.min(index, 5) * 80}ms`);
+      item.classList.add('is-pending');
       observer.observe(item);
     }
     return () => observer.disconnect();
   }, []);
+}
+
+/** The id of the section being read, so the navigation can say where the visitor is. */
+function useActiveSection(ids: readonly string[]) {
+  const [active, setActive] = useState('');
+  useEffect(() => {
+    if (!('IntersectionObserver' in window)) return;
+    const visible = new Set<string>();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) visible.add(entry.target.id);
+          else visible.delete(entry.target.id);
+        }
+        setActive(ids.find((id) => visible.has(id)) ?? '');
+      },
+      { rootMargin: '-35% 0px -55% 0px' },
+    );
+    for (const id of ids) {
+      const node = document.getElementById(id);
+      if (node) observer.observe(node);
+    }
+    return () => observer.disconnect();
+  }, [ids]);
+  return active;
 }
 
 const NAV = [
@@ -81,10 +72,13 @@ const NAV = [
   { href: '#pricing', key: 'navPricing' },
   { href: '#faq', key: 'navFaq' },
 ] as const;
+const SECTION_IDS = NAV.map((item) => item.href.slice(1));
 
 export function LandingPage() {
   const { t, i18n } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const active = useActiveSection(SECTION_IDS);
   useScrollReveal();
 
   useEffect(() => {
@@ -99,301 +93,327 @@ export function LandingPage() {
     document.querySelector('meta[property="og:url"]')?.setAttribute('content', url);
   }, [t, i18n.language]);
 
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [menuOpen]);
+
   const flow = [1, 2, 3, 4, 5].map((n) => ({
     number: n,
     title: t(`landing.flow${n}Title`),
     text: t(`landing.flow${n}Text`),
   }));
-  const features = [
-    { icon: ClipboardList, title: t('landing.feature1Title'), text: t('landing.feature1Text') },
-    { icon: FileSearch, title: t('landing.feature2Title'), text: t('landing.feature2Text') },
-    { icon: GitBranch, title: t('landing.feature3Title'), text: t('landing.feature3Text') },
-  ];
-  const audiences = [
-    { icon: Briefcase, title: t('landing.whom1Title'), text: t('landing.whom1Text') },
-    { icon: Building2, title: t('landing.whom2Title'), text: t('landing.whom2Text') },
-    { icon: Users, title: t('landing.whom3Title'), text: t('landing.whom3Text') },
-    { icon: TrendingUp, title: t('landing.whom4Title'), text: t('landing.whom4Text') },
-  ];
-  const steps = [
-    { number: '01', title: t('landing.step1Title'), text: t('landing.step1Text') },
-    { number: '02', title: t('landing.step2Title'), text: t('landing.step2Text') },
-    { number: '03', title: t('landing.step3Title'), text: t('landing.step3Text') },
-  ];
+  const facts = [1, 2, 3].map((n) => ({
+    title: t(`landing.feature${n}Title`),
+    text: t(`landing.feature${n}Text`),
+  }));
+  const audiences = [1, 2, 3, 4].map((n) => ({
+    title: t(`landing.whom${n}Title`),
+    text: t(`landing.whom${n}Text`),
+  }));
+  const steps = [1, 2, 3].map((n) => ({
+    title: t(`landing.step${n}Title`),
+    text: t(`landing.step${n}Text`),
+  }));
   const planFeatures = [1, 2, 3, 4, 5, 6].map((n) => t(`landing.plan${n}`));
   const questions = [1, 2, 3, 4, 5].map((n) => ({
     question: t(`landing.faq${n}Question`),
     answer: t(`landing.faq${n}Answer`),
   }));
+  // Sample candidates: the first one is the person who just finished the chat on the left.
+  const ranked = [
+    { name: 'Aziz Karimov', stage: 'dashStage1', match: 92 },
+    { name: 'Malika Yusupova', stage: 'dashStage2', match: 81 },
+    { name: 'Jasur Tursunov', stage: 'dashStage3', match: 67 },
+  ];
+  const board = [
+    { stage: 'dashStage3', names: ['Jasur T.', 'Dilnoza R.', 'Bobur S.'] },
+    { stage: 'dashStage2', names: ['Malika Y.', 'Otabek N.'] },
+    { stage: 'dashStage1', names: ['Aziz K.'] },
+    { stage: 'dashStage4', names: ['Sardor B.'] },
+  ];
 
   return (
-    <div className="landing-page">
-      <a className="landing-skip" href="#landing-main">
+    <div className="sl-page">
+      <a className="sl-skip" href="#landing-main">
         {t('landing.skip')}
       </a>
-      <header className="landing-header">
-        <div className="landing-container landing-header-inner">
-          <Link className="landing-brand" to="/" aria-label="Shortlist">
-            <span className="landing-brand-mark">
-              <Layers3 size={21} aria-hidden="true" />
+      <header className={`sl-header${scrolled ? ' is-scrolled' : ''}`}>
+        <div className="sl-container sl-header-inner">
+          <Link className="sl-brand" to="/" aria-label="Shortlist">
+            <BrandMark size={34} />
+            <span>
+              shortlist<span className="sl-dot">.</span>
             </span>
-            shortlist<span className="landing-brand-dot">.</span>
           </Link>
-          <nav className="landing-nav" aria-label={t('landing.navigation')}>
+          <nav className="sl-nav" aria-label={t('landing.navigation')}>
             {NAV.map(({ href, key }) => (
-              <a key={href} href={href}>
+              <a key={href} href={href} aria-current={active === href.slice(1) ? 'location' : undefined}>
                 {t(`landing.${key}`)}
               </a>
             ))}
           </nav>
-          <div className="landing-header-actions">
+          <div className="sl-header-actions">
             <LandingLanguageSelect />
-            <Link className="landing-signin" to="/login">
+            <Link className="sl-signin" to="/login">
               {t('landing.signIn')}
             </Link>
-            <Link className="landing-button landing-button-small" to="/register">
-              {t('landing.startFree')} <ArrowUpRight size={16} aria-hidden="true" />
+            <Link className="sl-button sl-button-small" to="/register">
+              {t('landing.startFree')}
             </Link>
           </div>
           <button
-            className="landing-menu-toggle"
+            className="sl-menu-toggle"
             type="button"
             aria-label={menuOpen ? t('landing.closeMenu') : t('landing.openMenu')}
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen(!menuOpen)}
           >
-            {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            {menuOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
           </button>
         </div>
         {menuOpen && (
-          <nav className="landing-mobile-nav" aria-label={t('landing.navigation')}>
+          <nav className="sl-mobile-nav" aria-label={t('landing.navigation')}>
             {NAV.map(({ href, key }) => (
               <a key={href} href={href} onClick={() => setMenuOpen(false)}>
                 {t(`landing.${key}`)}
               </a>
             ))}
             <Link to="/login">{t('landing.signIn')}</Link>
-            <Link to="/register">{t('landing.startFree')}</Link>
-            <LandingLanguageSelect />
+            <Link className="sl-button" to="/register">
+              {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
+            </Link>
           </nav>
         )}
       </header>
 
       <main id="landing-main">
-        <section className="landing-hero landing-container" aria-labelledby="landing-title">
-          <div className="landing-hero-copy">
-            <span className="landing-eyebrow">
-              <Sparkles size={15} aria-hidden="true" /> {t('landing.eyebrow')}
-            </span>
+        <section className="sl-hero sl-container" aria-labelledby="landing-title">
+          <div className="sl-hero-copy">
             <h1 id="landing-title">{t('landing.heroTitle')}</h1>
-            <p className="landing-hero-description">{t('landing.heroText')}</p>
-            <div className="landing-hero-actions">
-              <Link className="landing-button" to="/register">
+            <p className="sl-lead">{t('landing.heroText')}</p>
+            <div className="sl-hero-actions">
+              <Link className="sl-button" to="/register">
                 {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <a className="landing-text-link" href="#telegram">
-                {t('landing.seeFlow')} <ArrowUpRight size={16} aria-hidden="true" />
+              <a className="sl-link" href="#telegram">
+                {t('landing.seeFlow')}
               </a>
             </div>
-            <div className="landing-trust">
+            <p className="sl-trust">
               <ShieldCheck size={18} aria-hidden="true" /> {t('landing.trustNote')}
-            </div>
+            </p>
           </div>
-          <div className="landing-preview" aria-label={t('landing.chatLabel')}>
-            <div className="landing-chat">
-              <div className="landing-chat-head">
-                <span className="landing-chat-avatar">
-                  <Send size={17} aria-hidden="true" />
+
+          <div className="sl-stage">
+            <div className="sl-chat" role="img" aria-label={t('landing.chatLabel')}>
+              <div className="sl-chat-head">
+                <span className="sl-chat-avatar">
+                  <Send size={16} aria-hidden="true" />
                 </span>
                 <div>
                   <strong>Shortlist bot</strong>
                   <small>{t('landing.chatStatus')}</small>
                 </div>
               </div>
-              <div className="landing-chat-body">
-                <p className="landing-bubble landing-bubble-bot">{t('landing.chatField')}</p>
-                <div className="landing-chip-row" aria-hidden="true">
-                  <span className="landing-chip">SMM</span>
-                  <span className="landing-chip landing-chip-active">IT</span>
-                  <span className="landing-chip">Videograf</span>
-                  <span className="landing-chip">{t('landing.chatOther')}</span>
+              <div className="sl-chat-body">
+                <p className="sl-bubble sl-bubble-bot">{t('landing.chatField')}</p>
+                <div className="sl-chips">
+                  <span>SMM</span>
+                  <span className="is-on">IT</span>
+                  <span>Video</span>
+                  <span>{t('landing.chatOther')}</span>
                 </div>
-                <p className="landing-bubble landing-bubble-user">IT</p>
-                <p className="landing-bubble landing-bubble-bot">{t('landing.chatName')}</p>
-                <p className="landing-bubble landing-bubble-user">Aziz Karimov</p>
-                <div className="landing-bubble landing-bubble-bot landing-bubble-result">
-                  <strong>{t('landing.chatResult')}</strong>
+                <p className="sl-bubble sl-bubble-user">IT</p>
+                <p className="sl-bubble sl-bubble-bot">{t('landing.chatName')}</p>
+                <p className="sl-bubble sl-bubble-user">Aziz Karimov</p>
+                <p className="sl-bubble sl-bubble-bot sl-bubble-result">
+                  <strong>{t('landing.chatScore')}</strong>
                   <span>{t('landing.chatResultDetail')}</span>
-                </div>
+                </p>
               </div>
             </div>
-            <div className="landing-preview-note">
-              <span>
-                <Check size={17} />
-              </span>
-              <div>
-                <strong>{t('landing.chatNoteTitle')}</strong>
-                <small>{t('landing.chatNoteText')}</small>
+
+            <div className="sl-panel" role="img" aria-label={t('landing.dashLabel')}>
+              <div className="sl-panel-head">
+                <div>
+                  <strong>{t('landing.dashTitle')}</strong>
+                  <small>{t('landing.dashSort')}</small>
+                </div>
+                <span className="sl-sample">{t('landing.dashSample')}</span>
+              </div>
+              <ol className="sl-rank">
+                {ranked.map((person, index) => (
+                  <li key={person.name} className={index === 0 ? 'is-top' : undefined}>
+                    <span className="sl-avatar">{person.name[0]}</span>
+                    <div className="sl-rank-who">
+                      <strong>{person.name}</strong>
+                      <small>{t(`landing.${person.stage}`)}</small>
+                    </div>
+                    <div className="sl-rank-score">
+                      <b>{person.match}%</b>
+                      <i style={{ ['--w' as string]: `${person.match}%` }} />
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <div className="sl-summary">
+                <strong>{t('landing.dashSummaryTitle')}</strong>
+                <p>{t('landing.dashSummary')}</p>
+                <span className="sl-summary-action">
+                  {t('landing.dashInvite')} <ArrowRight size={16} aria-hidden="true" />
+                </span>
               </div>
             </div>
           </div>
         </section>
 
-        <section id="telegram" className="landing-section landing-flow" aria-labelledby="flow-title">
-          <div className="landing-container">
-            <div className="landing-section-head">
-              <span className="landing-kicker">{t('landing.flowKicker')}</span>
+        <section id="telegram" className="sl-flow" aria-labelledby="flow-title">
+          <div className="sl-container sl-flow-layout">
+            <div className="sl-flow-intro">
               <h2 id="flow-title">{t('landing.flowTitle')}</h2>
               <p>{t('landing.flowIntro')}</p>
             </div>
-            <ol className="landing-flow-grid">
+            <ol className="sl-steps">
               {flow.map((step) => (
-                <li className="landing-flow-card" key={step.number}>
-                  <span className="landing-flow-number">{step.number}</span>
-                  <h3>{step.title}</h3>
-                  <p>{step.text}</p>
+                <li className="sl-step" key={step.number}>
+                  <span className="sl-step-n">{step.number}</span>
+                  <div>
+                    <h3>{step.title}</h3>
+                    <p>{step.text}</p>
+                  </div>
                 </li>
               ))}
             </ol>
           </div>
         </section>
 
-        <section
-          id="features"
-          className="landing-section landing-features"
-          aria-labelledby="features-title"
-        >
-          <div className="landing-container">
-            <div className="landing-section-head">
-              <span className="landing-kicker">{t('landing.featuresKicker')}</span>
-              <h2 id="features-title">{t('landing.featuresTitle')}</h2>
-              <p>{t('landing.featuresIntro')}</p>
-            </div>
-            <div className="landing-feature-grid">
-              {features.map(({ icon: Icon, title, text }) => (
-                <article className="landing-feature-card" key={title}>
-                  <span className="landing-feature-icon">
-                    <Icon size={24} aria-hidden="true" />
-                  </span>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </article>
-              ))}
-            </div>
+        <section id="features" className="sl-section sl-container" aria-labelledby="features-title">
+          <div className="sl-head">
+            <h2 id="features-title">{t('landing.featuresTitle')}</h2>
+            <p>{t('landing.featuresIntro')}</p>
           </div>
-        </section>
-
-        <section id="for-whom" className="landing-section landing-whom" aria-labelledby="whom-title">
-          <div className="landing-container">
-            <div className="landing-section-head">
-              <span className="landing-kicker">{t('landing.whomKicker')}</span>
-              <h2 id="whom-title">{t('landing.whomTitle')}</h2>
-              <p>{t('landing.whomIntro')}</p>
-            </div>
-            <div className="landing-whom-grid">
-              {audiences.map(({ icon: Icon, title, text }) => (
-                <article className="landing-whom-card" key={title}>
-                  <span className="landing-feature-icon">
-                    <Icon size={22} aria-hidden="true" />
-                  </span>
-                  <h3>{title}</h3>
-                  <p>{text}</p>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section
-          id="how-it-works"
-          className="landing-section landing-how"
-          aria-labelledby="how-title"
-        >
-          <div className="landing-container landing-how-layout">
-            <div className="landing-how-intro">
-              <span className="landing-kicker">{t('landing.howKicker')}</span>
-              <h2 id="how-title">{t('landing.howTitle')}</h2>
-              <p>{t('landing.howIntro')}</p>
-              <Link className="landing-text-link" to="/register">
-                {t('landing.startFree')} <ArrowUpRight size={16} aria-hidden="true" />
-              </Link>
-            </div>
-            <div className="landing-steps">
-              {steps.map((step) => (
-                <div className="landing-step" key={step.number}>
-                  <span>{step.number}</span>
-                  <div>
-                    <h3>{step.title}</h3>
-                    <p>{step.text}</p>
+          <div className="sl-board" role="img" aria-label={t('landing.boardLabel')}>
+            {board.map((column) => (
+              <div className="sl-col" key={column.stage}>
+                <h3>{t(`landing.${column.stage}`)}</h3>
+                {column.names.map((name) => (
+                  <div className="sl-card" key={name}>
+                    <span className="sl-avatar">{name[0]}</span>
+                    {name}
                   </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section id="pricing" className="landing-section landing-pricing" aria-labelledby="pricing-title">
-          <div className="landing-container landing-pricing-layout">
-            <div className="landing-pricing-intro">
-              <span className="landing-kicker">{t('landing.pricingKicker')}</span>
-              <h2 id="pricing-title">{t('landing.pricingTitle')}</h2>
-              <p>{t('landing.pricingIntro')}</p>
-            </div>
-            <div className="landing-plan">
-              <span className="landing-plan-badge">{t('landing.planBadge')}</span>
-              <h3>{t('landing.planName')}</h3>
-              <div className="landing-plan-price">
-                <strong>{t('landing.planPrice')}</strong>
-                <span>{t('landing.planPriceNote')}</span>
-              </div>
-              <ul>
-                {planFeatures.map((feature) => (
-                  <li key={feature}>
-                    <Check size={16} aria-hidden="true" /> {feature}
-                  </li>
                 ))}
-              </ul>
-              <Link className="landing-button" to="/register">
-                {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
-              </Link>
-              <p className="landing-plan-footnote">{t('landing.planFootnote')}</p>
-            </div>
+              </div>
+            ))}
+            <span className="sl-sample sl-board-sample">{t('landing.dashSample')}</span>
           </div>
-        </section>
-
-        <section id="faq" className="landing-section landing-faq" aria-labelledby="faq-title">
-          <div className="landing-container landing-faq-layout">
+          <div className="sl-facts">
+            {facts.map((fact) => (
+              <div className="sl-fact" key={fact.title}>
+                <h3>{fact.title}</h3>
+                <p>{fact.text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="sl-control">
+            <ShieldCheck size={28} aria-hidden="true" />
             <div>
-              <span className="landing-kicker">FAQ</span>
-              <h2 id="faq-title">{t('landing.faqTitle')}</h2>
-              <p>{t('landing.faqIntro')}</p>
-            </div>
-            <div className="landing-faq-list">
-              {questions.map(({ question, answer }) => (
-                <details key={question}>
-                  <summary>{question}</summary>
-                  <p>{answer}</p>
-                </details>
-              ))}
+              <h3>{t('landing.controlTitle')}</h3>
+              <p>{t('landing.controlText')}</p>
             </div>
           </div>
         </section>
 
-        <section className="landing-container landing-final-cta" aria-labelledby="final-cta-title">
+        <section id="for-whom" className="sl-section sl-container sl-whom" aria-labelledby="whom-title">
+          <div className="sl-head sl-head-stack">
+            <h2 id="whom-title">{t('landing.whomTitle')}</h2>
+            <p>{t('landing.whomIntro')}</p>
+          </div>
+          <dl className="sl-whom-list">
+            {audiences.map((item) => (
+              <div key={item.title}>
+                <dt>{item.title}</dt>
+                <dd>{item.text}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+
+        <section id="pricing" className="sl-section sl-container sl-pricing" aria-labelledby="pricing-title">
+          <div className="sl-pricing-copy">
+            <h2 id="pricing-title">{t('landing.pricingTitle')}</h2>
+            <p className="sl-lead">{t('landing.pricingIntro')}</p>
+            <h3 className="sl-small-title">{t('landing.howTitle')}</h3>
+            <ul className="sl-start">
+              {steps.map((step) => (
+                <li key={step.title}>
+                  <strong>{step.title}</strong>
+                  <span>{step.text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="sl-plan">
+            <span className="sl-plan-badge">{t('landing.planBadge')}</span>
+            <h3>{t('landing.planName')}</h3>
+            <div className="sl-plan-price">
+              <strong>{t('landing.planPrice')}</strong>
+              <span>{t('landing.planPriceNote')}</span>
+            </div>
+            <ul>
+              {planFeatures.map((feature) => (
+                <li key={feature}>
+                  <Check size={16} aria-hidden="true" /> {feature}
+                </li>
+              ))}
+            </ul>
+            <Link className="sl-button sl-button-lime" to="/register">
+              {t('landing.ctaButton')} <ArrowRight size={18} aria-hidden="true" />
+            </Link>
+            <p className="sl-plan-note">{t('landing.planFootnote')}</p>
+          </div>
+        </section>
+
+        <section id="faq" className="sl-section sl-container sl-faq" aria-labelledby="faq-title">
+          <div className="sl-head sl-head-stack">
+            <h2 id="faq-title">{t('landing.faqTitle')}</h2>
+            <p>{t('landing.faqIntro')}</p>
+          </div>
+          <div className="sl-faq-list">
+            {questions.map(({ question, answer }) => (
+              <details key={question}>
+                <summary>{question}</summary>
+                <p>{answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        <section className="sl-container sl-final" aria-labelledby="final-cta-title">
           <div>
-            <span className="landing-kicker">SHORTLIST</span>
             <h2 id="final-cta-title">{t('landing.ctaTitle')}</h2>
             <p>{t('landing.ctaText')}</p>
           </div>
-          <Link className="landing-button landing-button-light" to="/register">
-            {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
+          <Link className="sl-button sl-button-lime" to="/register">
+            {t('landing.ctaButton')} <ArrowRight size={18} aria-hidden="true" />
           </Link>
         </section>
       </main>
-      <footer className="landing-footer">
-        <div className="landing-container landing-footer-inner">
-          <span>
-            shortlist<span className="landing-brand-dot">.</span>
+      <footer className="sl-footer">
+        <div className="sl-container sl-footer-inner">
+          <span className="sl-footer-brand">
+            shortlist<span className="sl-dot">.</span>
           </span>
           <p>{t('landing.footer')}</p>
           <Link to="/privacy">{t('privacy.title')}</Link>

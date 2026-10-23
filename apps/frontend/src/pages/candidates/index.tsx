@@ -104,7 +104,7 @@ function CandidateForm({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
           <div className="form-group">
             <label className="form-label" htmlFor="candidate-fullName">
-              {t('candidates.labelFullName')} <span style={{ color: '#ef4444' }}>*</span>
+              {t('candidates.labelFullName')} <span className="text-[color:var(--required-mark)]">*</span>
             </label>
             <input
               id="candidate-fullName"
@@ -145,7 +145,7 @@ function CandidateForm({
             />
           </div>
         </div>
-        <p style={{ fontSize: '12.5px', color: '#64748b', marginTop: '16px', lineHeight: '1.5' }}>
+        <p className="mt-4 text-[12.5px] leading-[1.5] text-[color:var(--text-quiet)]">
           {t('candidates.emptySubtitle')}
         </p>
         <div className="modal-footer-actions">
@@ -193,7 +193,7 @@ export function Candidates() {
     }
   }
   return (
-    <>
+    <div className="candidates-page">
       <PageTitle
         eyebrow={t('pipeline.eyebrow')}
         title={t('candidates.title')}
@@ -201,9 +201,9 @@ export function Candidates() {
       >
         <Button
           onClick={() => setOpen(true)}
-          className="bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
+          className="btn-pill"
         >
-          <Plus size={17} /> {t('candidates.addCandidate')}
+          <Plus size={18} aria-hidden="true" /> {t('candidates.addCandidate')}
         </Button>
       </PageTitle>
       <div className="vacancies-toolbar candidates-toolbar">
@@ -235,7 +235,7 @@ export function Candidates() {
             exportCandidatesToCsv(data.items);
             toast.success(`${data.items.length} ${t('common.exportCsv')}`);
           }}
-          className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-slate-200 text-slate-800 bg-white hover:bg-slate-50 font-medium text-sm shadow-none shrink-0"
+          className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-slate-200 dark:border-solid dark:border-[color:var(--control-border)] text-slate-800 bg-white hover:bg-slate-50 font-medium text-sm shadow-none shrink-0"
           title={t('common.exportCsv')}
         >
           <Download size={15} /> {t('common.exportCsv')}
@@ -272,7 +272,7 @@ export function Candidates() {
                                 aria-label={`${t('candidates.viewDossier')} ${c.fullName}`}
                               >
                                 <Avatar className="h-9 w-9">
-                                  <AvatarFallback className="bg-[#1b4338] text-white font-semibold text-xs">
+                                  <AvatarFallback className="bg-[color:var(--avatar-fill)] text-white font-semibold text-xs">
                                     {c.fullName.slice(0, 2).toUpperCase()}
                                   </AvatarFallback>
                                 </Avatar>
@@ -316,7 +316,7 @@ export function Candidates() {
                               const score = app?.assessmentScore;
                               if (score === null || score === undefined) {
                                 return (
-                                  <small className="block muted" style={{ marginTop: '3px', fontSize: '11px' }}>
+                                  <small className="block muted" style={{ marginTop: '3px', fontSize: '12px' }}>
                                     {t('candidates.testNoScore')}
                                   </small>
                                 );
@@ -327,9 +327,9 @@ export function Candidates() {
                                   className="block"
                                   style={{
                                     marginTop: '3px',
-                                    fontSize: '11px',
+                                    fontSize: '12px',
                                     fontWeight: 600,
-                                    color: passed ? '#15803d' : '#dc2626',
+                                    color: passed ? 'var(--score-pass)' : 'var(--score-fail)',
                                   }}
                                 >
                                   {t(passed ? 'candidates.testPassed' : 'candidates.testFailed', { score })}
@@ -417,7 +417,7 @@ export function Candidates() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-[#dc2626] text-white hover:bg-[#b91c1c]"
+              className="bg-red-600 text-white hover:bg-red-700"
               onClick={() => deletingCandidate && void confirmDeleteCandidate(deletingCandidate)}
             >
               {t('candidates.deleteCandidate')}
@@ -425,7 +425,7 @@ export function Candidates() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </>
+    </div>
   );
 }
 
@@ -625,17 +625,17 @@ export function CandidateDetail() {
               </section>
             )}
             {!c.mergedIntoId && Boolean(duplicates?.length) && (
-              <section className="mb-5 rounded-xl border border-[#cce3d7] dark:border-[#24352e] bg-[#f4faf6] dark:bg-[#17302a] p-5" aria-label={t('candidates.duplicatesTitle')}>
-                <h2 className="text-base font-semibold text-[#183d30] dark:text-[#e6efea]">{t('candidates.duplicatesTitle')}</h2>
-                <p className="mt-1 text-sm text-[#60736b] dark:text-[#93a8a0]">{t('candidates.duplicatesDesc')}</p>
+              <section className="mb-5 rounded-xl border border-[color:var(--brand-tint-line)] bg-[color:var(--brand-tint)] p-5" aria-label={t('candidates.duplicatesTitle')}>
+                <h2 className="text-base font-semibold text-[color:var(--text-deep)]">{t('candidates.duplicatesTitle')}</h2>
+                <p className="mt-1 text-sm text-[color:var(--text-soft)]">{t('candidates.duplicatesDesc')}</p>
                 <div className="mt-3 space-y-2">
                   {duplicates?.map((match) => (
-                    <div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#dce7e0] dark:border-[#24352e] bg-white p-3 text-sm">
+                    <div key={match.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[color:var(--brand-line)] bg-white p-3 text-sm">
                       <div>
-                        <Link className="font-semibold text-[#245e4f] dark:text-[#58c0a0] underline" to={`/candidates/${match.id}`}>
+                        <Link className="font-semibold text-[color:var(--brand-text)] underline" to={`/candidates/${match.id}`}>
                           {match.fullName}
                         </Link>
-                        <p className="text-xs text-[#60736b] dark:text-[#93a8a0]">
+                        <p className="text-xs text-[color:var(--text-soft)]">
                           {match.source === 'TELEGRAM' ? t('candidates.sourceTelegram') : t('candidates.sourceWebsite')} · {match.email || match.phone} {match.resumeName ? `· ${t('candidates.hasCv')}` : ''}
                         </p>
                       </div>
@@ -648,12 +648,12 @@ export function CandidateDetail() {
               </section>
             )}
             {Boolean(c.mergedCandidates?.length) && (
-              <section className="mb-5 rounded-xl border border-[#dce7e0] dark:border-[#24352e] bg-white p-4 text-sm">
+              <section className="mb-5 rounded-xl border border-[color:var(--brand-line)] bg-white p-4 text-sm">
                 <strong>{t('candidates.mergedHistoryTitle')}</strong>
-                <p className="mt-1 text-[#60736b] dark:text-[#93a8a0]">{t('candidates.mergedHistoryDesc')}</p>
+                <p className="mt-1 text-[color:var(--text-soft)]">{t('candidates.mergedHistoryDesc')}</p>
                 <div className="mt-2 flex flex-wrap gap-3">
                   {c.mergedCandidates?.map((source) => (
-                    <Link key={source.id} className="text-[#245e4f] dark:text-[#58c0a0] underline" to={`/candidates/${source.id}`}>
+                    <Link key={source.id} className="text-[color:var(--brand-text)] underline" to={`/candidates/${source.id}`}>
                       {source.fullName} #{source.id}
                     </Link>
                   ))}
@@ -703,7 +703,7 @@ export function CandidateDetail() {
                     <li key={app.id ?? index} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 p-3 text-sm">
                       <div className="min-w-0">
                         {app.id ? (
-                          <Link className="font-semibold text-[#245e4f] dark:text-[#58c0a0] underline" to={`/applications/${app.id}`}>
+                          <Link className="font-semibold text-[color:var(--brand-text)] underline" to={`/applications/${app.id}`}>
                             {app.vacancy?.title}
                           </Link>
                         ) : (
@@ -714,7 +714,7 @@ export function CandidateDetail() {
                       <div className="flex items-center gap-2">
                         {app.assessmentScore !== null && app.assessmentScore !== undefined && (
                           <small
-                            style={{ fontWeight: 600, color: app.assessmentScore >= 70 ? '#15803d' : '#dc2626' }}
+                            style={{ fontWeight: 600, color: app.assessmentScore >= 70 ? 'var(--score-pass)' : 'var(--score-fail)' }}
                           >
                             {t(app.assessmentScore >= 70 ? 'candidates.testPassed' : 'candidates.testFailed', { score: app.assessmentScore })}
                           </small>
@@ -745,7 +745,7 @@ export function CandidateDetail() {
                 {c.resumeName && (
                   <div className="flex items-center justify-between p-3.5 mt-3.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-800">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="h-8 w-8 rounded-lg bg-[#1a5d4c]/10 text-[#1a5d4c] dark:text-[#58c0a0] flex items-center justify-center shrink-0">
+                      <div className="h-8 w-8 rounded-lg bg-[color:var(--brand-icon-tint)] text-[color:var(--brand-icon)] flex items-center justify-center shrink-0">
                         <FileText size={18} />
                       </div>
                       <span className="text-xs font-semibold truncate text-slate-700">{c.resumeName}</span>
@@ -767,7 +767,7 @@ export function CandidateDetail() {
                     {c.resumes?.map((resume, index) => (
                       <div key={resume.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-slate-800">
                         <div className="flex min-w-0 items-center gap-2.5">
-                          <FileText size={16} className="shrink-0 text-[#1a5d4c] dark:text-[#58c0a0]" />
+                          <FileText size={16} className="shrink-0 text-[color:var(--brand-icon)]" />
                           <div className="min-w-0">
                             <span className="block truncate text-xs font-semibold">{resume.fileName}</span>
                             <small className="muted">
@@ -815,7 +815,7 @@ export function CandidateDetail() {
                     </div>
                   </button>
                 <Button
-                  className="shrink-0 bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
+                  className="shrink-0 bg-[color:var(--brand-fill)] hover:bg-[color:var(--brand-fill-hover)] text-white flex items-center gap-1.5"
                   disabled={!user?.aiConfigured || !c.resumeText || Boolean(busy) || Boolean(c.publicSubmittedAt && !c.aiConsentAt)}
                   onClick={() => void parseResume()}
                 >
@@ -951,7 +951,7 @@ export function CandidateDetail() {
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-                  <AlertDialogAction disabled={busy === 'merge'} className="bg-[#245e4f] text-white hover:bg-[#1b4338]" onClick={() => void confirmMerge()}>
+                  <AlertDialogAction disabled={busy === 'merge'} className="bg-[color:var(--brand-fill)] text-white hover:bg-[color:var(--brand-fill-hover)]" onClick={() => void confirmMerge()}>
                     {busy === 'merge' ? t('candidates.merging') : t('candidates.mergeAction')}
                   </AlertDialogAction>
                 </AlertDialogFooter>

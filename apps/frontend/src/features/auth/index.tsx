@@ -1,22 +1,24 @@
 import { createContext, useContext, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
-import {
-  ArrowRight,
-  Check,
-  Eye,
-  EyeOff,
-  Layers3,
-  ShieldCheck,
-  Mail,
-  LockKeyhole,
-} from 'lucide-react';
+import { ArrowRight, Check, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { User } from '../../types';
 import { ApiError, send } from '../../lib/api';
-import { Alert, Button, Input, LanguageSwitcher } from '../../components/ui';
+import { BrandMark } from '../../components/brand-mark';
+import { Alert, LanguageSwitcher } from '../../components/ui';
 import { GoogleSignInButton } from './google-sign-in';
+import '@fontsource/onest/700.css';
+import '@fontsource/onest/400.css';
+import '@fontsource/onest/500.css';
+import '@fontsource/onest/600.css';
 import './auth.css';
-import './auth.dark.css';
+
+/** Sample candidates for the picture on the left; the first one is the person from the landing page chat. */
+const SAMPLE = [
+  { name: 'Aziz Karimov', match: 92 },
+  { name: 'Malika Yusupova', match: 81 },
+  { name: 'Jasur Tursunov', match: 67 },
+];
 
 export const AuthContext = createContext<{ user: User; refresh: () => Promise<void> }>(
   {} as { user: User; refresh: () => Promise<void> },
@@ -130,44 +132,56 @@ export function AuthPage({
   }
 
   return (
-    <div className="auth-layout">
-      <aside className="auth-story">
-        <div className="brand">
-          <span className="brand-mark">
-            <Layers3 size={23} />
+    <div className="au-layout">
+      <aside className="au-story">
+        <a className="au-brand" href="/" aria-label="Shortlist">
+          <BrandMark size={34} />
+          <span>
+            shortlist<span className="au-dot">.</span>
           </span>
-          shortlist<span className="brand-dot">.</span>
-        </div>
-        <div>
-          <span className="eyebrow">{t('auth.eyebrow')}</span>
-          <h1>
-            {t('auth.heroTitle1')}
-            <br />
-            {t('auth.heroTitle2')}
-          </h1>
-          <p>{t('auth.heroSubtitle')}</p>
-          <div className="auth-benefits">
-            {[t('auth.benefit1'), t('auth.benefit2'), t('auth.benefit3')].map((text) => (
-              <div key={text}>
-                <Check size={17} />
-                {text}
-              </div>
-            ))}
+        </a>
+        <div className="au-pitch">
+          <h2>{t('auth.heroTitle1')}</h2>
+          <p>
+            <strong>{t('auth.heroTitle2')}</strong> {t('auth.heroSubtitle')}
+          </p>
+          <div className="au-sample" role="img" aria-label={t('landing.dashLabel')}>
+            <div className="au-sample-head">
+              <strong>{t('landing.dashSort')}</strong>
+              <span>{t('landing.dashSample')}</span>
+            </div>
+            <ol>
+              {SAMPLE.map((person) => (
+                <li key={person.name}>
+                  <span className="au-avatar">{person.name[0]}</span>
+                  <b>{person.name}</b>
+                  <i style={{ ['--w' as string]: `${person.match}%` }} />
+                  <em>{person.match}%</em>
+                </li>
+              ))}
+            </ol>
           </div>
+          <ul className="au-benefits">
+            {[t('auth.benefit1'), t('auth.benefit2'), t('auth.benefit3')].map((text) => (
+              <li key={text}>
+                <Check size={17} aria-hidden="true" />
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
-        <small>
-          <ShieldCheck size={16} /> {t('auth.dataPrivacyNote')}
-        </small>
+        <p className="au-privacy">
+          <ShieldCheck size={16} aria-hidden="true" /> {t('auth.dataPrivacyNote')}
+        </p>
       </aside>
-      <main className="auth-main">
-        <div className="absolute top-6 right-6 md:top-8 md:right-8 z-20">
+      <main className="au-main">
+        <div className="au-lang">
           <LanguageSwitcher />
         </div>
         {googleSignup ? (
-          <form onSubmit={registerGoogle} className="auth-card">
-            <header className="auth-card-heading">
-              <span className="eyebrow">{t('auth.newWorkspaceEyebrow', 'YANGI WORKSPACE')}</span>
-              <h2>{t('auth.createCompanyTitle', 'Kompaniyangizni yarating')}</h2>
+          <form onSubmit={registerGoogle} className="au-form">
+            <header>
+              <h1>{t('auth.createCompanyTitle', 'Kompaniyangizni yarating')}</h1>
               <p>
                 {t('auth.googleVerified', 'Google hisobingiz tasdiqlandi:')} <strong>{googleSignup.email}</strong>.{' '}
                 {t('auth.finishSignup', 'Ro‘yxatdan o‘tishni yakunlang.')}
@@ -176,32 +190,30 @@ export function AuthPage({
             <Alert message={error} />
             <label>
               {t('auth.companyName')}
-              <Input
+              <input
                 name="companyName"
                 required
                 maxLength={160}
                 autoComplete="organization"
                 defaultValue={googleCompanyName}
-                className="mt-1.5"
               />
             </label>
             <label>
               {t('auth.fullName')}
-              <Input
+              <input
                 name="fullName"
                 required
                 maxLength={160}
                 autoComplete="name"
                 defaultValue={googleSignup.fullName}
-                className="mt-1.5"
               />
             </label>
-            <Button type="submit" disabled={busy} className="auth-submit w-full">
+            <button type="submit" disabled={busy} className="au-submit">
               {busy ? t('auth.creating', 'Yaratilmoqda…') : t('auth.createWorkspace', 'Workspace yaratish')}
-            </Button>
+            </button>
             <button
               type="button"
-              className="text-button"
+              className="au-link"
               disabled={busy}
               onClick={() => {
                 setGoogleSignup(null);
@@ -212,16 +224,15 @@ export function AuthPage({
             </button>
           </form>
         ) : (
-          <form ref={formRef} name={`auth-${mode}`} onSubmit={submit} className="auth-card">
-            <header className="auth-card-heading">
-              <span className="eyebrow">{t('auth.workspaceEyebrow')}</span>
-              <h2>
+          <form ref={formRef} name={`auth-${mode}`} onSubmit={submit} className="au-form">
+            <header>
+              <h1>
                 {token
                   ? t('auth.joinTeam')
                   : mode === 'login'
                     ? t('auth.welcomeBack')
                     : t('auth.makeRoom')}
-              </h2>
+              </h1>
               <p>
                 {token
                   ? t('auth.inviteSubtitle')
@@ -244,25 +255,23 @@ export function AuthPage({
                 {!token && (
                   <label>
                     {t('auth.companyName')}
-                    <Input
+                    <input
                       name="companyName"
                       required
                       maxLength={160}
                       autoComplete="organization"
                       placeholder="Acme Studio"
-                      className="mt-1.5"
                     />
                   </label>
                 )}
                 <label>
                   {t('auth.fullName')}
-                  <Input
+                  <input
                     name="fullName"
                     required
                     maxLength={160}
                     autoComplete="name"
                     placeholder="Alex Morgan"
-                    className="mt-1.5"
                   />
                 </label>
               </>
@@ -270,29 +279,24 @@ export function AuthPage({
             {!token && (
               <label>
                 {t('auth.workEmail')}
-                <div className="auth-input-wrap">
-                  <Mail size={18} className="auth-input-icon" aria-hidden="true" />
-                  <Input
-                    id="auth-email"
-                    name="email"
-                    type="email"
-                    inputMode="email"
-                    autoComplete="email"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    spellCheck={false}
-                    required
-                    placeholder="you@company.com"
-                    className="auth-email-input"
-                  />
-                </div>
+                <input
+                  id="auth-email"
+                  name="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  required
+                  placeholder="you@company.com"
+                />
               </label>
             )}
             <label>
               {t('auth.password')}
-              <div className="auth-input-wrap">
-                <LockKeyhole size={18} className="auth-input-icon" aria-hidden="true" />
-                <Input
+              <span className="au-password">
+                <input
                   name="password"
                   type={showPassword ? 'text' : 'password'}
                   required
@@ -304,24 +308,19 @@ export function AuthPage({
                       ? t('auth.passwordPlaceholderRegister')
                       : t('auth.passwordPlaceholderLogin')
                   }
-                  className="auth-password-input"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  className="auth-password-toggle"
                   aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
+                  aria-pressed={showPassword}
                   title={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
                 >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  {showPassword ? <EyeOff size={19} aria-hidden="true" /> : <Eye size={19} aria-hidden="true" />}
                 </button>
-              </div>
+              </span>
             </label>
-            <Button
-              type="submit"
-              className="auth-submit w-full flex items-center justify-center gap-2"
-              disabled={busy}
-            >
+            <button type="submit" className="au-submit" disabled={busy}>
               {busy
                 ? t('common.pleaseWait')
                 : token
@@ -329,14 +328,14 @@ export function AuthPage({
                   : mode === 'login'
                     ? t('auth.signIn')
                     : t('auth.createWorkspace')}
-              <ArrowRight size={17} />
-            </Button>
+              {!busy && <ArrowRight size={18} aria-hidden="true" />}
+            </button>
             {!token && (
-              <div className="auth-switch">
+              <p className="au-switch">
                 {mode === 'login' ? t('auth.newToShortlist') : t('auth.alreadyHaveAccount')}{' '}
                 <button
                   type="button"
-                  className="text-button"
+                  className="au-link"
                   onClick={() => {
                     const nextMode = mode === 'login' ? 'register' : 'login';
                     setMode(nextMode);
@@ -346,9 +345,9 @@ export function AuthPage({
                 >
                   {mode === 'login' ? t('auth.createAWorkspace') : t('auth.signIn')}
                 </button>
-              </div>
+              </p>
             )}
-            <small className="auth-note">{t('auth.inviteNote')}</small>
+            <p className="au-note">{t('auth.inviteNote')}</p>
           </form>
         )}
       </main>

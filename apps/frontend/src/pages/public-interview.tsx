@@ -55,14 +55,14 @@ export function PublicInterviewPage() {
   const when = (iso: string) => (interview ? formatInterviewTime(iso, interview.timezone, i18n.language) : iso);
 
   return (
-    <div className="min-h-screen bg-[#f5f8f6] dark:bg-[#17302a] text-[#18352e] dark:text-[#e6efea]">
-      <header className="border-b border-[#dfe8e3] dark:border-[#24352e] bg-white px-5 py-4 sm:px-10">
+    <div className="min-h-screen bg-[color:var(--brand-page)] text-[color:var(--text-ink)]">
+      <header className="border-b border-[color:var(--brand-line-soft)] bg-white px-5 py-4 sm:px-10">
         <div className="mx-auto flex max-w-3xl items-center justify-between">
           <div className="flex items-center gap-3 text-xl font-bold">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#245e4f] text-white">
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--brand-fill)] text-white">
               <Layers3 size={20} />
             </span>
-            shortlist<span className="-ml-3 text-[#57ae88]">.</span>
+            shortlist<span className="-ml-3 text-[color:var(--brand-dot)]">.</span>
           </div>
           <LanguageSwitcher variant="compact" />
         </div>
@@ -71,7 +71,7 @@ export function PublicInterviewPage() {
         {loading && <Loading />}
         {!loading && !interview && <Alert message={error || t('interviews.notFound', 'This link is not valid.')} />}
         {interview && (
-          <div className="rounded-2xl border border-[#dfe8e3] bg-white p-6 shadow-sm sm:p-8 text-[#18352e]">
+          <div className="rounded-2xl border border-[color:var(--brand-line-soft)] bg-white p-6 shadow-sm sm:p-8 text-[color:var(--text-ink)]">
             <h1 className="text-2xl font-bold">{t('interviews.pageTitle', 'Interview invitation')}</h1>
             <p className="mt-2 text-slate-600">
               {t('interviews.pageIntro', { company: interview.companyName, vacancy: interview.vacancyTitle, defaultValue: `${interview.companyName} invites you to an interview for ${interview.vacancyTitle}.` })}
@@ -84,7 +84,7 @@ export function PublicInterviewPage() {
               <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-700">
                 <MapPin size={15} /> {interview.location}
                 {interview.mapUrl && (
-                  <a className="ml-2 font-semibold text-[#1a5d4c] underline" href={interview.mapUrl} target="_blank" rel="noreferrer">
+                  <a className="ml-2 font-semibold text-[color:var(--brand-icon)] underline" href={interview.mapUrl} target="_blank" rel="noreferrer">
                     {t('interviews.openMap', 'Open on map')}
                   </a>
                 )}
@@ -106,7 +106,7 @@ export function PublicInterviewPage() {
                   {t('interviews.confirmedWhen', 'When')}: <b>{when(interview.confirmed.startsAt)}</b>
                 </p>
                 {interview.mode === 'ONLINE' && interview.confirmed.meetUrl && (
-                  <a className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[#1a5d4c] px-4 py-2 font-semibold text-white" href={interview.confirmed.meetUrl} target="_blank" rel="noreferrer">
+                  <a className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[color:var(--brand-solid)] px-4 py-2 font-semibold text-white" href={interview.confirmed.meetUrl} target="_blank" rel="noreferrer">
                     <Video size={16} /> {t('interviews.joinMeet', 'Join Google Meet')}
                   </a>
                 )}
@@ -114,7 +114,7 @@ export function PublicInterviewPage() {
                   <p className="mt-2 flex items-center gap-1.5">
                     <MapPin size={15} /> {interview.confirmed.location}
                     {(interview.confirmed.mapUrl ?? interview.mapUrl) && (
-                      <a className="ml-2 font-semibold text-[#1a5d4c] underline" href={(interview.confirmed.mapUrl ?? interview.mapUrl) as string} target="_blank" rel="noreferrer">
+                      <a className="ml-2 font-semibold text-[color:var(--brand-icon)] underline" href={(interview.confirmed.mapUrl ?? interview.mapUrl) as string} target="_blank" rel="noreferrer">
                         {t('interviews.openMap', 'Open on map')}
                       </a>
                     )}

@@ -1,0 +1,724 @@
+/*
+ * Shortlist design language (see DESIGN.md): one deep forest green on a warm grey ground, flat white rounded cards,
+ * pill deltas. Loaded after styles.css and styles.dark.css, so it recolours the shared tokens once and restyles the shell
+ * (sidebar, top bar, cards, tables, pills) for every page of the signed-in app. The landing and sign-in pages share the
+ * same tokens in their own stylesheets.
+ */
+:root {
+  --ground: #dedbd8;
+  --shell: #f7f6f4;
+  --brand: #0b4a2e;
+  --brand-ink: #ffffff;
+  --brand-bright: #1fbf5b;
+  --brand-soft: #9ad9b0;
+  --up: #2bd45a;
+  --down: #e53935;
+  --promo: #0f1613;
+  --r-card: 22px;
+  --r-shell: 28px;
+  --r-control: 12px;
+
+  --background: #dedbd8;
+  --foreground: #101814;
+  --surface: #ffffff;
+  --surface-muted: #f3f1ef;
+  --card: #ffffff;
+  --card-foreground: #101814;
+  --popover: #ffffff;
+  --popover-foreground: #101814;
+
+  --primary: #0b4a2e;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e3efe8;
+  --secondary: #f1efed;
+  --secondary-foreground: #101814;
+  --muted: #6a7570;
+  --muted-foreground: #6a7570;
+  --accent: #e3efe8;
+  --accent-foreground: #0b4a2e;
+
+  --destructive: #e53935;
+  --destructive-soft: #fde8e7;
+  --success: #17a24a;
+  --success-soft: #dff7e6;
+
+  --border: #e6e4e1;
+  --border-strong: #d6d3cf;
+  --input: #e6e4e1;
+  --ring: #0b4a2e;
+
+  --chart-1: #0b4a2e;
+  --chart-2: #1fbf5b;
+  --chart-3: #9ad9b0;
+  --chart-4: #5d7f6c;
+  --chart-5: #e53935;
+
+  --sidebar: #ffffff;
+  --sidebar-bg: #ffffff;
+  --sidebar-foreground: #101814;
+  --sidebar-primary: #0b4a2e;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #e3efe8;
+  --sidebar-accent-foreground: #0b4a2e;
+  --sidebar-border: #e6e4e1;
+  --sidebar-ring: #0b4a2e;
+  --sidebar-soft: #f3f1ef;
+  --sidebar-line: #ece9e6;
+  --sidebar-text: #101814;
+  --sidebar-muted: #6a7570;
+
+  --green: #0b4a2e;
+  --ink: #101814;
+  --line: #e6e4e1;
+  --soft: #f3f1ef;
+  --canvas: #dedbd8;
+  --emerald-soft: #e3efe8;
+
+  --shadow-soft: 0 1px 2px rgb(16 24 20 / 0.04);
+  --shadow-lifted: 0 18px 40px -20px rgb(16 24 20 / 0.28);
+  font-family: 'Onest', 'Inter', sans-serif;
+}
+.dark {
+  --ground: #0b120f;
+  --shell: #111a15;
+  --brand: #1f7a4d;
+  --brand-bright: #37d374;
+  --brand-soft: #2c6b4a;
+  --promo: #050806;
+
+  --background: #0b120f;
+  --foreground: #e8efea;
+  --surface: #18231d;
+  --surface-muted: #1d2a23;
+  --card: #18231d;
+  --card-foreground: #e8efea;
+  --popover: #1b2821;
+  --popover-foreground: #e8efea;
+
+  --primary: #1f7a4d;
+  --primary-foreground: #ffffff;
+  --primary-soft: #1d3a2b;
+  --secondary: #1d2a23;
+  --secondary-foreground: #e8efea;
+  --muted: #9aaaa2;
+  --muted-foreground: #9aaaa2;
+  --accent: #1d3a2b;
+  --accent-foreground: #e8efea;
+
+  --border: #26352d;
+  --border-strong: #30463d;
+  --input: #2a3d35;
+  --ring: #37d374;
+
+  --chart-1: #37d374;
+  --chart-2: #1f7a4d;
+  --chart-3: #2c6b4a;
+  --chart-4: #7fa592;
+
+  --sidebar: #18231d;
+  --sidebar-bg: #18231d;
+  --sidebar-foreground: #e8efea;
+  --sidebar-accent: #1d3a2b;
+  --sidebar-accent-foreground: #e8efea;
+  --sidebar-border: #26352d;
+  --sidebar-soft: #1d2a23;
+  --sidebar-line: #26352d;
+  --sidebar-text: #e8efea;
+  --sidebar-muted: #9aaaa2;
+
+  --green: #37d374;
+  --ink: #e8efea;
+  --line: #26352d;
+  --soft: #1d2a23;
+  --canvas: #0b120f;
+  --emerald-soft: #1d3a2b;
+}
+
+html,
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: 'Onest', 'Inter', sans-serif;
+}
+.dark body {
+  background: var(--ground);
+}
+
+/* Shell: a floating white sidebar and the content on the grey ground */
+.app-shell {
+  background: var(--ground);
+}
+.sidebar,
+.mobile-sidebar {
+  background: var(--card) !important;
+  color: var(--ink) !important;
+  border: 0 !important;
+}
+.sidebar {
+  inset: 16px auto 16px 16px;
+  width: 248px;
+  padding: 24px 16px 16px;
+  border-radius: var(--r-shell);
+}
+.main-shell {
+  margin-left: 280px;
+  background: transparent;
+}
+.sidebar .brand,
+.mobile-sidebar .brand {
+  color: var(--ink);
+  font-family: 'Onest', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.sidebar .brand-mark,
+.mobile-sidebar .brand-mark {
+  background: var(--brand);
+  color: var(--brand-ink);
+  border-radius: 11px;
+}
+.sidebar .brand-dot,
+.mobile-sidebar .brand-dot {
+  color: var(--brand-bright);
+}
+.sidebar .company-switch,
+.mobile-sidebar .company-switch {
+  margin: 22px 0 22px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--soft);
+}
+.sidebar .company-icon,
+.mobile-sidebar .company-icon {
+  background: var(--brand);
+  color: var(--brand-ink);
+  border-radius: 10px;
+}
+.sidebar .company-switch strong,
+.mobile-sidebar .company-switch strong {
+  color: var(--ink);
+}
+.sidebar .company-switch small,
+.mobile-sidebar .company-switch small,
+.company-chevron {
+  color: var(--muted-foreground);
+}
+.sidebar .nav-label,
+.mobile-sidebar .nav-label {
+  color: var(--muted-foreground);
+  letter-spacing: 0.08em;
+}
+.sidebar nav a,
+.mobile-sidebar nav a {
+  min-height: 44px;
+  border-radius: 14px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 500;
+}
+.sidebar nav a:hover,
+.mobile-sidebar nav a:hover {
+  background: var(--soft);
+  color: var(--ink);
+}
+.sidebar nav a.active,
+.mobile-sidebar nav a.active {
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-weight: 600;
+}
+.sidebar nav a.active svg,
+.mobile-sidebar nav a.active svg {
+  color: var(--brand-ink);
+}
+
+/* Top bar: no frame, the page title area sits straight on the ground */
+.topbar {
+  background: transparent;
+  backdrop-filter: none;
+  border: 0;
+  padding: 0 24px;
+  height: 72px;
+  color: var(--muted-foreground);
+}
+.topbar strong,
+.topbar .breadcrumb-page {
+  color: var(--ink);
+  font-weight: 600;
+}
+.topbar-search-pill,
+.global-search {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--muted-foreground);
+}
+.topbar-avatar {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.main-content {
+  max-width: 1680px;
+  padding: 8px 24px 0;
+}
+.page-footer {
+  color: var(--muted-foreground);
+}
+
+/* Cards: flat, white on grey, no border, no resting shadow */
+.stat,
+.panel,
+.insight-card,
+.pipeline-summary-card,
+.pipeline-filterbar {
+  border: 0;
+  border-radius: var(--r-card);
+  background: var(--card);
+  box-shadow: none;
+}
+.insight-card {
+  background: var(--primary-soft);
+}
+.stat {
+  padding: 22px 24px;
+}
+.stat:hover {
+  box-shadow: none;
+  transform: translateY(-2px);
+}
+.stat > div {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+.stat > strong {
+  font-family: 'Onest', sans-serif;
+  font-size: clamp(30px, 2.4vw, 40px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.stat footer {
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.panel-heading h2 {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.panel-heading p {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.panel-foot {
+  border-top: 0;
+}
+.page-title h1 {
+  font-size: clamp(24px, 2.2vw, 30px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+.page-title p {
+  color: var(--muted-foreground);
+  font-size: 14px;
+}
+
+/* Controls */
+input,
+select,
+textarea {
+  border-color: transparent;
+  background: var(--soft);
+  border-radius: var(--r-control);
+}
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--brand);
+  background: var(--card);
+}
+.primary {
+  background: var(--brand);
+  color: var(--brand-ink);
+  border-radius: 999px;
+}
+.primary:hover {
+  background: color-mix(in srgb, var(--brand) 88%, #fff);
+}
+.secondary {
+  background: var(--soft);
+  color: var(--ink);
+  border-color: transparent;
+  border-radius: 999px;
+}
+.text-link,
+.panel-heading .text-link {
+  color: var(--brand);
+}
+.dark .text-link,
+.dark .panel-heading .text-link {
+  color: var(--brand-bright);
+}
+
+/* Tables: no outer frame, quiet header */
+th {
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+.table-wrap {
+  border: 0;
+}
+
+/* Pills: growth is bright green, decline is red */
+.badge {
+  border-radius: 999px;
+}
+.pill-up,
+.pill-down {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.pill-up {
+  background: var(--up);
+  color: #08240f;
+}
+.pill-down {
+  background: var(--down);
+  color: #fff;
+}
+
+/* Dashboard bento (see pages/dashboard) */
+.bento {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+.bento > * {
+  min-width: 0;
+  margin: 0;
+}
+.bento .stat {
+  grid-column: span 4;
+  display: grid;
+  gap: 4px;
+  align-content: start;
+}
+.bento .stat > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.bento .stat-title {
+  flex: 1;
+  min-width: 0;
+}
+.bento .stat-icon {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 40px;
+  height: 40px;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--ink);
+}
+.bento .stat > strong {
+  margin: 14px 0 4px;
+}
+.bento .stat-hero {
+  background: var(--brand);
+  color: var(--brand-ink);
+}
+.bento .stat-hero > div,
+.bento .stat-hero > strong,
+.bento .stat-hero footer {
+  color: var(--brand-ink);
+}
+.bento .stat-hero .stat-icon {
+  background: rgb(255 255 255 / 0.14);
+  color: var(--brand-ink);
+}
+.bento .stat-hero footer {
+  opacity: 0.8;
+}
+.bento .stat-hero footer svg {
+  color: var(--brand-ink);
+}
+.bento .span-8 {
+  grid-column: span 8;
+}
+.bento .span-4 {
+  grid-column: span 4;
+}
+.bento .span-12 {
+  grid-column: 1 / -1;
+}
+.bento .pipeline-chart {
+  height: 260px;
+}
+.bento .bar-track {
+  max-width: 56px;
+  height: 150px;
+  background: var(--soft);
+  border-radius: 12px;
+}
+.bento .bar {
+  border-radius: 12px;
+  background: var(--brand-soft);
+}
+.bento .bar.reviewing {
+  background: var(--brand-bright);
+}
+.bento .bar.interview {
+  background: var(--brand-soft);
+}
+.bento .bar.offer {
+  background: var(--brand-bright);
+}
+.bento .bar.hired {
+  background: var(--brand);
+}
+.bento .bar.rejected {
+  background: var(--down);
+  opacity: 0.8;
+}
+.bento .chart-column > span {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.bento .chart-column > strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+@media (max-width: 1200px) {
+  .bento .stat {
+    grid-column: span 6;
+  }
+  .bento .span-8,
+  .bento .span-4 {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 560px) {
+  .bento .stat {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Smaller screens: the sidebar lives in the sheet, the content is full-bleed */
+@media (max-width: 1000px) {
+  .main-shell {
+    margin-left: 0;
+  }
+  .topbar {
+    padding: 0 16px;
+  }
+  .main-content {
+    padding: 4px 16px 0;
+  }
+}
+
+/*
+ * Candidate list tokens: the existing green palette (#1a5d4c family) and its status colours as roles. The light values are
+ * the colours the page always used; the dark values are chosen for contrast on the dark card (text 4.5:1, controls 3:1).
+ */
+:root {
+  --brand-page: #f5f8f6;
+  --text-ink: #18352e;
+  --brand-line-soft: #dfe8e3;
+  --brand-dot: #57ae88;
+  --brand-solid: #1a5d4c;
+  --brand-solid-hover: #154a3d;
+  --brand-selected: #eaf5ef;
+  --brand-selected-text: #165b4c;
+  --focus-brand-ring-soft: rgb(26 93 76 / 0.15);
+  --brand-text: #245e4f;
+  --brand-icon: #1a5d4c;
+  --brand-icon-tint: rgb(26 93 76 / 0.1);
+  --brand-fill: #245e4f;
+  --brand-fill-hover: #1b4338;
+  --avatar-fill: #1b4338;
+  --brand-tint: #f4faf6;
+  --brand-tint-line: #cce3d7;
+  --brand-line: #dce7e0;
+  --text-deep: #183d30;
+  --text-soft: #60736b;
+  --text-quiet: #64748b;
+  --required-mark: #ef4444;
+  --score-pass: #15803d;
+  --score-fail: #dc2626;
+  --focus-brand: #1a5d4c;
+  --focus-brand-ring: rgb(26 93 76 / 0.12);
+}
+.dark {
+  --control-border: #567a6a;
+  --card-ring: rgb(255 255 255 / 0.07);
+  --brand-page: #17302a;
+  --text-ink: #e6efea;
+  --brand-line-soft: #24352e;
+  --brand-dot: #57ae88;
+  --brand-solid: #2f7a63;
+  --brand-solid-hover: #3a8f75;
+  --brand-selected: #17302a;
+  --brand-selected-text: #58c0a0;
+  --focus-brand-ring-soft: rgb(88 192 160 / 0.25);
+  --brand-text: #58c0a0;
+  --brand-icon: #58c0a0;
+  --brand-icon-tint: rgb(88 192 160 / 0.14);
+  --brand-fill: #2f7a63;
+  --brand-fill-hover: #3a8f75;
+  --avatar-fill: #2a5a4b;
+  --brand-tint: #17302a;
+  --brand-tint-line: #24352e;
+  --brand-line: #24352e;
+  --text-deep: #e6efea;
+  --text-soft: #93a8a0;
+  --text-quiet: #94a3b8;
+  --required-mark: #f87171;
+  --score-pass: #4ade80;
+  --score-fail: #f87171;
+  --focus-brand: #58c0a0;
+  --focus-brand-ring: rgb(88 192 160 / 0.25);
+}
+/* Search, the add/edit form and its submit button keep the green focus and fill, readable on the dark card */
+.dark .vacancies-search-input:focus,
+.dark .form-control-input:focus,
+.dark .form-control-textarea:focus {
+  border-color: var(--focus-brand);
+  box-shadow: 0 0 0 2px var(--focus-brand-ring);
+}
+.dark .btn-modal-submit {
+  background: var(--brand-fill);
+}
+.dark .btn-modal-submit:hover {
+  background: var(--brand-fill-hover);
+}
+.dark .vacancy-modal-body::-webkit-scrollbar-thumb {
+  background-color: #3a4f45;
+}
+.dark .vacancy-modal-body::-webkit-scrollbar-thumb:hover {
+  background-color: #4f6a5d;
+}
+
+/*
+ * Dark rejim: sirt ajralishi, boshqaruv chegaralari va holat belgilari.
+ * Cards share one surface token and a faint inset ring (tone alone is only ~1.1:1 against the ground);
+ * input, search, pill and secondary-button edges reach 3:1 (WCAG 1.4.11).
+ */
+.dark .panel,
+.dark .stat,
+.dark .pipeline-summary-card {
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--card-ring);
+}
+.dark .sidebar {
+  box-shadow: inset 0 0 0 1px var(--card-ring);
+}
+.dark .topbar {
+  background: transparent;
+}
+.dark .vacancies-search-input,
+.dark .candidates-count-pill,
+.dark .form-control-input,
+.dark .form-control-textarea,
+.dark .btn-modal-cancel,
+.dark .pagination .secondary,
+.dark .topbar-search-pill {
+  border-color: var(--control-border);
+}
+.dark .badge.neutral {
+  background: #2a3d34;
+  color: #b9cbc2;
+}
+.dark .file-state:not(.has-file) {
+  color: #93a8a0;
+}
+.dark .icon-button.danger {
+  color: #f19a94;
+}
+.dark .icon-button.danger:hover {
+  background: rgb(241 154 148 / 0.12);
+}
+
+/* Type floor: nothing the visitor has to read is smaller than 12px (the candidate list and the shell) */
+.candidates-page {
+  display: contents;
+}
+.candidates-page th,
+.candidates-page .badge,
+.candidates-page .person small,
+.candidates-page .candidate-contact-lines a,
+.candidates-page .candidate-contact-lines > span,
+.candidates-page .file-state,
+.candidates-page .pagination,
+.candidates-page .pagination button,
+.candidates-page .page-title .eyebrow {
+  font-size: 12px;
+}
+.candidates-page .candidate-avatar-link span {
+  font-size: 12px;
+}
+.candidates-page td {
+  font-size: 13px;
+}
+.page-footer,
+.sidebar .nav-label,
+.mobile-sidebar .nav-label,
+.sidebar .company-switch small,
+.mobile-sidebar .company-switch small,
+.search-pill-kbd {
+  font-size: 12px;
+}
+
+/* Primary create button (Vakansiya yaratish, Nomzod qo'shish): a deep-green pill with a plus and a bold white label */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 28px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--brand);
+  color: var(--brand-ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: none;
+  cursor: pointer;
+  transition:
+    background-color 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.btn-pill:hover {
+  background: color-mix(in srgb, var(--brand) 86%, #fff);
+  color: var(--brand-ink);
+}
+.btn-pill:active {
+  transform: scale(0.97);
+}
+.btn-pill:focus-visible {
+  outline: 3px solid var(--focus-brand);
+  outline-offset: 3px;
+}
+.btn-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.btn-pill svg {
+  flex: none;
+}
+.bento .stat-icon svg {
+  color: inherit;
+}

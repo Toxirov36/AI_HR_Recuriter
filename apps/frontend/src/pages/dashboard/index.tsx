@@ -57,7 +57,7 @@ export function Dashboard() {
       ) : (
         data && (
           <>
-            <div className="stats stats-six">
+            <div className="bento">
               {[
                 {
                   title: t('dashboard.activeVacancies'),
@@ -101,22 +101,32 @@ export function Dashboard() {
                   text: t('dashboard.confirmedByTeam'),
                   to: '/pipeline?stage=HIRED',
                 },
-              ].map((s) => (
-                <Link to={s.to} className="stat" key={s.title}>
-                  <div>
-                    <span>{s.title}</span>
-                    <s.icon size={18} />
-                  </div>
-                  <strong>{s.value.toString().padStart(2, '0')}</strong>
-                  <footer>
-                    {s.text}
-                    <ArrowUpRight size={16} />
-                  </footer>
-                </Link>
-              ))}
-            </div>
-            <div className="dashboard-grid">
-              <section className="panel">
+              ]
+                .sort((a, b) => Number(b.to === '/pipeline') - Number(a.to === '/pipeline'))
+                .map((s) => (
+                  <Link
+                    to={s.to}
+                    className={`stat${s.to === '/pipeline' ? ' stat-hero' : ''}`}
+                    key={s.title}
+                  >
+                    <div>
+                      <span className="stat-icon">
+                        <s.icon size={16} aria-hidden="true" />
+                      </span>
+                      <span className="stat-title">{s.title}</span>
+                      {s.to === '/pipeline?stage=NEW' && s.value > 0 && (
+                        <span className="pill-up">+{s.value}</span>
+                      )}
+                    </div>
+                    <strong>{s.value.toString().padStart(2, '0')}</strong>
+                    <footer>
+                      {s.text}
+                      <ArrowUpRight size={16} />
+                    </footer>
+                  </Link>
+                ))}
+
+              <section className="panel span-8">
                 <div className="panel-heading">
                   <div>
                     <h2>{t('dashboard.pipelineHeading')}</h2>
@@ -149,7 +159,7 @@ export function Dashboard() {
                   <span className="live-dot" /> {t('dashboard.pipelineLiveFoot')}
                 </div>
               </section>
-              <section className="panel quick-actions-panel">
+              <section className="panel span-4 quick-actions-panel">
                 <div className="panel-heading">
                   <div>
                     <h2>{t('dashboard.quickActions')}</h2>
@@ -190,8 +200,8 @@ export function Dashboard() {
                   ))}
                 </div>
               </section>
-            </div>
-            <section className="panel">
+
+              <section className="panel span-12">
               <div className="panel-heading">
                 <div>
                   <h2>{t('dashboard.recentApplications')}</h2>
@@ -257,6 +267,7 @@ export function Dashboard() {
                 </Empty>
               )}
             </section>
+            </div>
           </>
         )
       )}

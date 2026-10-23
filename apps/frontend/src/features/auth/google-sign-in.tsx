@@ -157,9 +157,7 @@ export function GoogleSignInButton({
         <p className="text-xs text-slate-500 text-center">{t('auth.googleUnavailable')}</p>
       )}
       <div className="auth-provider-divider">
-        <span className="flex-1 border-t" />
         {t('auth.googleEmailDivider')}
-        <span className="flex-1 border-t" />
       </div>
     </div>
   );

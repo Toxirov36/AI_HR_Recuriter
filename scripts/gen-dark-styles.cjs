@@ -4,7 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const root = path.join(__dirname, '..');
 const postcss = require(path.join(root, 'node_modules/postcss'));
-const FILES = ['styles', 'features/auth/auth', 'pages/landing/landing', 'pages/landing/landing-sections'];
+// The landing page and the sign-in page carry their own dark tokens, so only the app stylesheet is generated.
+const FILES = ['styles'];
 
 const COLOR = /(?<![\w-])white(?![\w-])|#[0-9a-fA-F]{8}\b|#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(\s*[\d.]+[\s,]+[\d.]+[\s,]+[\d.]+(?:\s*[,/]\s*[\d.]+%?)?\s*\)/g;
 

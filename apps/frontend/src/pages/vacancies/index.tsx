@@ -663,9 +663,9 @@ export function Vacancies() {
             setEditing(null);
             setOpen(true);
           }}
-          className="vacancies-create-btn"
+          className="btn-pill"
         >
-          <Plus size={16} /> {t('vacancies.createVacancy')}
+          <Plus size={18} aria-hidden="true" /> {t('vacancies.createVacancy')}
         </Button>
       </div>
 
@@ -857,8 +857,8 @@ export function Vacancies() {
                     : t('vacancies.makeFirstSubtitle')
                 }
               >
-                <Button onClick={() => setOpen(true)}>
-                  <Plus size={16} /> {t('vacancies.createVacancy')}
+                <Button className="btn-pill" onClick={() => setOpen(true)}>
+                  <Plus size={18} aria-hidden="true" /> {t('vacancies.createVacancy')}
                 </Button>
               </Empty>
             </section>

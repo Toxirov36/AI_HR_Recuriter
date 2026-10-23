@@ -53,7 +53,7 @@ export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackL
         <AccordionItem value="filter" className="border-none">
           <AccordionTrigger
             aria-label={ariaLabel}
-            className="h-10 rounded-xl border border-slate-200 bg-white px-3.5 py-0 text-sm font-normal text-slate-900 shadow-none transition-all hover:border-slate-300 hover:no-underline data-[state=open]:border-[#1a5d4c] data-[state=open]:ring-2 data-[state=open]:ring-[#1a5d4c]/15"
+            className="h-10 rounded-xl border border-slate-200 bg-white px-3.5 py-0 text-sm font-normal text-slate-900 shadow-none transition-all hover:border-slate-300 hover:no-underline data-[state=open]:border-[color:var(--focus-brand)] data-[state=open]:ring-2 data-[state=open]:ring-[color:var(--focus-brand-ring-soft)]"
           >
             <span className="truncate pr-2 text-left">{label}</span>
           </AccordionTrigger>
@@ -68,7 +68,7 @@ export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackL
                   placeholder={search.placeholder}
                   value={search.value}
                   onChange={(event) => search.onChange(event.target.value)}
-                  className="h-9 w-full rounded-lg border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-[#1a5d4c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1a5d4c]/15"
+                  className="h-9 w-full rounded-lg border border-slate-200 px-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus-visible:border-[color:var(--focus-brand)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--focus-brand-ring-soft)]"
                 />
               </div>
             )}
@@ -87,11 +87,11 @@ export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackL
                     }}
                     className={cn(
                       'flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition-colors',
-                      selected ? 'bg-[#eaf5ef] font-medium text-[#165b4c]' : 'text-slate-700 hover:bg-slate-50',
+                      selected ? 'bg-[color:var(--brand-selected)] font-medium text-[color:var(--brand-selected-text)]' : 'text-slate-700 hover:bg-slate-50',
                     )}
                   >
                     <span className="truncate">{option.label}</span>
-                    {selected && <Check size={14} className="ml-2 shrink-0 text-[#1a5d4c]" />}
+                    {selected && <Check size={14} className="ml-2 shrink-0 text-[color:var(--brand-icon)]" />}
                   </button>
                 );
               })}

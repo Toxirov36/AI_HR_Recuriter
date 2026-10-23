@@ -622,8 +622,8 @@ export function Pipeline() {
         title={t('pipeline.title', 'Hiring pipeline')}
         text={t('pipeline.subtitle', 'Every application in one board. Stage changes are made by a person and recorded.')}
       >
-        <button className="primary" onClick={() => setOpen(true)}>
-          <Plus size={17} /> {t('pipeline.addCandidate', 'Add candidate')}
+        <button className="btn-pill" onClick={() => setOpen(true)}>
+          <Plus size={18} aria-hidden="true" /> {t('pipeline.addCandidate', 'Add candidate')}
         </button>
       </PageTitle>
 

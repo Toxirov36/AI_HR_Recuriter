@@ -59,6 +59,7 @@ import {
 } from './components/ui';
 import './styles.css';
 import './styles.dark.css';
+import './theme.css';
 
 // Support contact shown in the profile menu; VITE_SUPPORT_TELEGRAM_URL overrides the default at build time.
 const SUPPORT_URL =
@@ -276,7 +277,7 @@ function AppShell() {
               <DropdownMenuTrigger asChild>
                 <button
                   type="button"
-                  className="topbar-avatar cursor-pointer outline-none hover:ring-2 hover:ring-[#1a5d4c]/20 transition-all"
+                  className="topbar-avatar cursor-pointer outline-none hover:ring-2 hover:ring-[color:var(--focus-brand-ring-soft)] focus-visible:ring-2 focus-visible:ring-[color:var(--focus-brand)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--ground)] transition-all"
                   title={user.fullName}
                   aria-label={t('navigation.userProfileMenu')}
                 >
