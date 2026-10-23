@@ -31,6 +31,9 @@ import {
 import { stages } from '../../types';
 import type { DashboardData } from '../../types';
 
+/** The pipeline chart shows the stages a candidate moves through; rejections are not part of it. */
+const chartStages = stages.filter((stage) => stage !== 'REJECTED');
+
 export function Dashboard() {
   const { t } = useTranslation();
   const { user } = useAuth();
@@ -137,7 +140,7 @@ export function Dashboard() {
                   </Link>
                 </div>
                 <div className="pipeline-chart">
-                  {stages.map((stage) => {
+                  {chartStages.map((stage) => {
                     const count = data.stages.find((s) => s.status === stage)?._count || 0;
                     return (
                       <div className="chart-column" key={stage}>
@@ -146,7 +149,7 @@ export function Dashboard() {
                           <div
                             className={`bar ${stage.toLowerCase()}`}
                             style={{
-                              height: `${count ? Math.max(12, (count / Math.max(1, ...data.stages.map((s) => s._count))) * 100) : 3}%`,
+                              height: `${count ? Math.max(12, (count / Math.max(1, ...data.stages.filter((s) => s.status !== 'REJECTED').map((s) => s._count))) * 100) : 3}%`,
                             }}
                           />
                         </div>

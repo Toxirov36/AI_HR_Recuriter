@@ -103,7 +103,7 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
             value={mode}
             onChange={(value) => setMode(value as InterviewMode)}
             options={[
-              { value: 'ONLINE', label: t('interviews.online', 'Online (Google Meet)') },
+              { value: 'ONLINE', label: t('interviews.online', 'Online') },
               { value: 'OFFLINE', label: t('interviews.offline', 'Offline (in person)') },
             ]}
           />
@@ -112,13 +112,13 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
           <div role="note" className="-mt-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             {google?.configured ? (
               <>
-                {t('interviews.googleRequired', 'Connect your Google Calendar to create Google Meet interviews.')}{' '}
+                {t('interviews.googleRequired', 'Google Calendar is not connected: online interviews will get a Jitsi link. Connect Google for a Google Meet link and a calendar entry.')}{' '}
                 <Link to="/profile" className="font-semibold underline">
                   {t('interviews.openProfile', 'Open profile')}
                 </Link>
               </>
             ) : (
-              t('interviews.googleNotConfigured', 'Google Calendar is not configured on this server.')
+              t('interviews.googleNotConfigured', 'Google Calendar is not configured on this server: online interviews will get a Jitsi link.')
             )}
           </div>
         )}
@@ -195,7 +195,7 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
           <button type="button" className="btn-modal-cancel" onClick={close}>
             {t('common.cancel', 'Cancel')}
           </button>
-          <button type="submit" className="btn-modal-submit" disabled={busy || needsGoogle || !filled.length}>
+          <button type="submit" className="btn-modal-submit" disabled={busy || !filled.length}>
             {busy ? t('interviews.sending', 'Sending…') : t('interviews.send', 'Send to candidate')}
           </button>
         </div>

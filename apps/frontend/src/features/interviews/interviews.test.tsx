@@ -73,11 +73,11 @@ describe('schedule interview dialog', () => {
     expect((vi.mocked(send).mock.calls[0][1] as any).location).toBe('Tashkent, Amir Temur 1');
   });
 
-  it('blocks an online interview until Google Calendar is connected', () => {
+  it('lets HR send an online interview without Google Calendar, with a note about the Jitsi link', () => {
     googleStatus = { configured: true, connected: false, googleEmail: null };
     render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
-    expect(screen.getByText(/Connect your Google Calendar/)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Send to candidate' })).toBeDisabled();
+    expect(screen.getByText(/online interviews will get a Jitsi link/)).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Send to candidate' })).toBeEnabled();
   });
 
   it('reschedules an existing interview through its own endpoint', async () => {
@@ -106,7 +106,7 @@ describe('interview panel', () => {
     interviews = [interview({ status: 'CONFIRMED', confirmedSlotId: 1, meetUrl: 'https://meet.google.com/abc-defg-hij' })];
     panel('INTERVIEW');
     expect(screen.getByText('Confirmed')).toBeVisible();
-    expect(screen.getByRole('link', { name: /Google Meet/ })).toHaveAttribute('href', 'https://meet.google.com/abc-defg-hij');
+    expect(screen.getByRole('link', { name: /Join the meeting/ })).toHaveAttribute('href', 'https://meet.google.com/abc-defg-hij');
     expect(screen.getByRole('button', { name: 'Propose new times' })).toBeVisible();
   });
 
@@ -142,7 +142,7 @@ describe('candidate interview page', () => {
     fireEvent.click(screen.getAllByRole('button', { name: 'Confirm' })[1]);
     await waitFor(() => expect(send).toHaveBeenCalledWith(`/public/interviews/${'T'.repeat(32)}/confirm`, { slotId: 2 }));
     expect(await screen.findByText('Your interview is confirmed')).toBeVisible();
-    expect(screen.getByRole('link', { name: /Join Google Meet/ })).toHaveAttribute('href', 'https://meet.google.com/abc-defg-hij');
+    expect(screen.getByRole('link', { name: /Join the meeting/ })).toHaveAttribute('href', 'https://meet.google.com/abc-defg-hij');
   });
 
   it('lets the candidate say none of the times work', async () => {

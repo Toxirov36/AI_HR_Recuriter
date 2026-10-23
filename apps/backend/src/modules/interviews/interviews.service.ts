@@ -21,6 +21,9 @@ const applicationInclude = {
   company: { select: { name: true } },
 } as const;
 
+/** A public Jitsi room for online interviews when no Google Meet link could be made. */
+const jitsiLink = () => `https://meet.jit.si/shortlist-${randomBytes(9).toString('hex')}`;
+
 @Injectable()
 export class InterviewsService implements OnModuleInit {
   private readonly logger = new Logger(InterviewsService.name);
@@ -56,7 +59,6 @@ export class InterviewsService implements OnModuleInit {
     if (application.status === 'REJECTED' || application.status === 'HIRED') throw new ConflictException('This application is already closed');
     const active = await this.db.interview.findFirst({ where: { applicationId, status: { in: [...ACTIVE] } }, select: { id: true } });
     if (active) throw new ConflictException('An interview is already scheduled. Reschedule or cancel it first');
-    await this.requireCalendarFor(user, input.mode);
     const slots = this.slots(input.slots, input.durationMinutes);
     const map = this.mapFor(input.mode, input.mapUrl);
 
@@ -103,7 +105,6 @@ export class InterviewsService implements OnModuleInit {
     const mode = input.mode ?? current.mode;
     const location = mode === 'OFFLINE' ? input.location ?? current.location : null;
     if (mode === 'OFFLINE' && !location) throw new BadRequestException('Address is required for an offline interview');
-    await this.requireCalendarFor(user, mode);
     const slots = this.slots(input.slots, input.durationMinutes);
     const map = this.mapFor(mode, input.mapUrl, current);
 
@@ -183,39 +184,37 @@ export class InterviewsService implements OnModuleInit {
 
     const { candidate, vacancy, company } = interview.application;
     let event: { eventId: string; meetUrl: string | null } | null = null;
+    const online = interview.mode === 'ONLINE';
     try {
-      event = await this.google.createEvent(interview.organizerId, {
-        summary: `${vacancy.title} — ${candidate.fullName}`,
-        description: `${company.name}\n${this.security.config.FRONTEND_ORIGIN}/applications/${interview.applicationId}`,
-        location: interview.mode === 'OFFLINE' ? interview.location ?? undefined : undefined,
-        start: slot.startsAt,
-        end: slot.endsAt,
-        timezone: interview.timezone,
-        attendeeEmail: candidate.email,
-        withMeet: interview.mode === 'ONLINE',
-        requestId: `iv-${interview.id}-${slot.id}`,
-      });
-    } catch (error) {
-      if (interview.mode === 'ONLINE') {
-        // No Meet link means no usable interview: release the claim so the candidate can try again.
-        await this.db.interview.updateMany({ where: { id: interview.id, status: 'CONFIRMED', confirmedSlotId: slot.id }, data: { status: 'PROPOSED', confirmedSlotId: null, confirmedAt: null } });
-        this.logger.warn(`Interview ${interview.id} could not get a Meet link: ${(error as Error).message}`);
-        if (error instanceof GoogleCalendarNotConnectedError) throw new BadGatewayException('The recruiter’s calendar is not connected. HR has been notified');
-        throw new BadGatewayException('The meeting could not be created. Please try again in a moment');
+      if (await this.google.isConnected(interview.organizerId)) {
+        event = await this.google.createEvent(interview.organizerId, {
+          summary: `${vacancy.title} — ${candidate.fullName}`,
+          description: `${company.name}\n${this.security.config.FRONTEND_ORIGIN}/applications/${interview.applicationId}`,
+          location: interview.mode === 'OFFLINE' ? interview.location ?? undefined : undefined,
+          start: slot.startsAt,
+          end: slot.endsAt,
+          timezone: interview.timezone,
+          attendeeEmail: candidate.email,
+          withMeet: online,
+          requestId: `iv-${interview.id}-${slot.id}`,
+        });
       }
-      // Offline interviews do not depend on the calendar entry.
+    } catch (error) {
+      // The calendar entry is a convenience: the interview goes ahead without it.
       this.logger.warn(`Interview ${interview.id}: calendar entry skipped (${(error as Error).message})`);
     }
+    // An online interview always gets a link: Google Meet when the calendar made one, a Jitsi room otherwise.
+    const meetUrl = online ? event?.meetUrl ?? jitsiLink() : null;
 
     const confirmed = await this.db.interview.update({
       where: { id: interview.id },
-      data: { meetUrl: event?.meetUrl ?? null, googleEventId: event?.eventId ?? null },
+      data: { meetUrl, googleEventId: event?.eventId ?? null },
       include: { slots: { orderBy: { startsAt: 'asc' } }, application: { include: applicationInclude } },
     });
     await this.notifications
       .sendInterviewConfirmation({
         candidate, vacancy, companyName: company.name,
-        interview: { mode: interview.mode, durationMinutes: interview.durationMinutes, timezone: interview.timezone, startsAt: slot.startsAt, meetUrl: event?.meetUrl, location: interview.location, mapUrl: interview.mapUrl, mapLat: interview.mapLat, mapLng: interview.mapLng },
+        interview: { mode: interview.mode, durationMinutes: interview.durationMinutes, timezone: interview.timezone, startsAt: slot.startsAt, meetUrl, location: interview.location, mapUrl: interview.mapUrl, mapLat: interview.mapLat, mapLng: interview.mapLng },
       })
       .catch(() => undefined);
     await this.notifications
@@ -223,7 +222,7 @@ export class InterviewsService implements OnModuleInit {
         companyId: interview.companyId, organizerId: interview.organizerId, applicationId: interview.applicationId,
         text:
           `✅ ${candidate.fullName} suhbat vaqtini tasdiqladi: ${formatInterviewTime(slot.startsAt, interview.timezone)} (${vacancy.title}).` +
-          (interview.mode === 'ONLINE' && event?.meetUrl ? `\n🔗 Google Meet: ${event.meetUrl}` : '') +
+          (meetUrl ? `\n🔗 Havola: ${meetUrl}` : '') +
           (interview.mode === 'OFFLINE' && interview.location ? `\n📍 ${interview.location}` : ''),
       })
       .catch(() => undefined);
@@ -328,13 +327,6 @@ export class InterviewsService implements OnModuleInit {
     const parsed = parseMapLink(mapUrl);
     if (!parsed) throw new BadRequestException('Use an https link from Google Maps, Yandex Maps, 2GIS or OpenStreetMap');
     return { mapUrl: parsed.url, mapLat: parsed.lat, mapLng: parsed.lng };
-  }
-
-  /** Online interviews need the recruiter's Google account; offline ones do not. */
-  private async requireCalendarFor(user: Identity, mode: 'ONLINE' | 'OFFLINE') {
-    if (mode === 'ONLINE' && !(await this.google.isConnected(user.id))) {
-      throw new ConflictException('Connect your Google Calendar first (Profile → Google Calendar) to create Google Meet interviews');
-    }
   }
 
   private async proposed(

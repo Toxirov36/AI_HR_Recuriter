@@ -26,7 +26,7 @@ describe('interview proposal', () => {
     const [chat, text, options] = telegram.sendMessage.mock.calls[0];
     expect(chat).toBe('42');
     expect(text).toContain('Приглашаем вас на собеседование');
-    expect(text).toContain('Онлайн (Google Meet)');
+    expect(text).toContain('Онлайн');
     expect(text).toContain('Portfolio olib keling');
     expect(options.businessConnectionId).toBeUndefined();
     expect(JSON.stringify(options.replyMarkup)).toContain(`/interview/${'T'.repeat(32)}`);

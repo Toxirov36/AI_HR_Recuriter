@@ -145,12 +145,12 @@ const uz = {
   welcome: '👋 Assalomu alaykum, {name}!\n\nBu bot orqali vakansiyalarga ariza topshirishingiz mumkin. Quyidagi menyudan tanlang.',
   interviewProposal:
     '📅 Assalomu alaykum, {name}!\n\n«{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha sizni suhbatga taklif qilamiz.\n\nFormat: {format}\nDavomiyligi: {minutes} daqiqa{noteLine}\n\nO‘zingizga qulay vaqtni tanlang:',
-  interviewFormatOnline: 'Online (Google Meet)',
+  interviewFormatOnline: 'Online',
   interviewFormatOffline: 'Offline (shaxsan uchrashuv)',
   interviewChoose: '📅 Vaqtni tanlash',
   interviewConfirmed:
     '✅ Suhbat tasdiqlandi!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} daqiqa\n{where}',
-  interviewWhereOnline: '🔗 Google Meet: {url}',
+  interviewWhereOnline: '🔗 {url}',
   interviewWhereOffline: '📍 Manzil: {address}',
   interviewOpenMap: '🗺 Xaritada ochish',
   interviewCancelled: '❌ «{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha suhbat bekor qilindi. HR siz bilan bog‘lanadi.',
@@ -304,12 +304,12 @@ const ru: Record<BotMessageKey, string> = {
   welcome: '👋 Здравствуйте, {name}!\n\nЧерез этого бота можно подать заявку на вакансии. Выберите в меню ниже.',
   interviewProposal:
     '📅 Здравствуйте, {name}!\n\nПриглашаем вас на собеседование в «{company}» на вакансию «{vacancy}».\n\nФормат: {format}\nДлительность: {minutes} мин.{noteLine}\n\nВыберите удобное время:',
-  interviewFormatOnline: 'Онлайн (Google Meet)',
+  interviewFormatOnline: 'Онлайн',
   interviewFormatOffline: 'Офлайн (личная встреча)',
   interviewChoose: '📅 Выбрать время',
   interviewConfirmed:
     '✅ Собеседование подтверждено!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} мин.\n{where}',
-  interviewWhereOnline: '🔗 Google Meet: {url}',
+  interviewWhereOnline: '🔗 {url}',
   interviewWhereOffline: '📍 Адрес: {address}',
   interviewOpenMap: '🗺 Открыть на карте',
   interviewCancelled: '❌ Собеседование в «{company}» на вакансию «{vacancy}» отменено. HR свяжется с вами.',
@@ -461,12 +461,12 @@ const tg: Record<BotMessageKey, string> = {
   welcome: '👋 Салом, {name}!\n\nТавассути ин бот шумо метавонед ба вакансияҳо дархост диҳед. Аз менюи зерин интихоб кунед.',
   interviewProposal:
     '📅 Салом, {name}!\n\nШуморо ба мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» даъват мекунем.\n\nШакл: {format}\nДавомнокӣ: {minutes} дақиқа{noteLine}\n\nВақти қулайро интихоб кунед:',
-  interviewFormatOnline: 'Онлайн (Google Meet)',
+  interviewFormatOnline: 'Онлайн',
   interviewFormatOffline: 'Офлайн (вохӯрии ҳузурӣ)',
   interviewChoose: '📅 Интихоби вақт',
   interviewConfirmed:
     '✅ Мусоҳиба тасдиқ шуд!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} дақиқа\n{where}',
-  interviewWhereOnline: '🔗 Google Meet: {url}',
+  interviewWhereOnline: '🔗 {url}',
   interviewWhereOffline: '📍 Суроға: {address}',
   interviewOpenMap: '🗺 Дар харита кушодан',
   interviewCancelled: '❌ Мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» бекор карда шуд. HR бо шумо тамос мегирад.',

@@ -36,7 +36,6 @@
   -webkit-font-smoothing: antialiased;
   accent-color: var(--pine);
   caret-color: var(--pine);
-  scroll-behavior: smooth;
   scrollbar-color: var(--line) transparent;
 }
 .dark .sl-page {
@@ -1318,4 +1317,16 @@
     padding: 24px 18px;
     border-radius: 24px;
   }
+}
+
+/* Anchor targets stop below the sticky header, for the glide and for a plain hash jump alike */
+.sl-page [id='telegram'],
+.sl-page [id='features'],
+.sl-page [id='for-whom'],
+.sl-page [id='pricing'],
+.sl-page [id='faq'] {
+  scroll-margin-top: 88px;
+}
+.sl-page [tabindex='-1']:focus {
+  outline: none;
 }

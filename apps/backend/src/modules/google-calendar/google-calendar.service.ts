@@ -66,6 +66,13 @@ export class GoogleCalendarService {
     url.searchParams.set('access_type', 'offline');
     url.searchParams.set('prompt', 'consent');
     url.searchParams.set('state', state);
+    // The recruiter's own sign-in address skips the account chooser, so only the consent screen is left.
+    try {
+      const user = await this.db.user.findUnique({ where: { id: userId }, select: { email: true } });
+      if (user?.email) url.searchParams.set('login_hint', user.email);
+    } catch {
+      // The hint is only a convenience.
+    }
     return { url: url.toString() };
   }
 

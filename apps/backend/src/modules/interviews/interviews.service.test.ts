@@ -80,10 +80,11 @@ describe('scheduling an interview (HR)', () => {
     expect(result.delivery).toEqual({ telegramSent: true, emailSent: false });
   });
 
-  it('needs the recruiter’s Google account for online, not for offline', async () => {
+  it('schedules online and offline interviews without a Google account', async () => {
     const online = setup({ googleConnected: false });
-    await expect(online.service.create(user as never, 11, input('ONLINE'))).rejects.toThrow('Google Calendar');
-    expect(online.tx.interview.create).not.toHaveBeenCalled();
+    const proposal = await online.service.create(user as never, 11, input('ONLINE'));
+    expect(proposal.interview).toBeDefined();
+    expect(online.tx.interview.create).toHaveBeenCalled();
 
     const offline = setup({ googleConnected: false });
     const result = await offline.service.create(user as never, 11, input('OFFLINE'));
@@ -161,7 +162,7 @@ describe('the candidate’s page', () => {
     expect(db.interview.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 9, status: 'PROPOSED' }, data: expect.objectContaining({ status: 'CONFIRMED', confirmedSlotId: 2 }) }));
     expect(google.createEvent).toHaveBeenCalledWith(5, expect.objectContaining({ withMeet: true, attendeeEmail: 'ali@example.com' }));
     expect(notifications.sendInterviewConfirmation).toHaveBeenCalledWith(expect.objectContaining({ interview: expect.objectContaining({ meetUrl: 'https://meet.google.com/abc-defg-hij' }) }));
-    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('🔗 Google Meet: https://meet.google.com/abc-defg-hij') }));
+    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('🔗 Havola: https://meet.google.com/abc-defg-hij') }));
     expect(view.confirmed?.meetUrl).toBe('https://meet.google.com/abc-defg-hij');
   });
 
@@ -178,13 +179,25 @@ describe('the candidate’s page', () => {
     await expect(past.service.confirm(token, 77, '1.2.3.4')).rejects.toThrow('not found');
   });
 
-  it('releases the claim when the Meet link cannot be created', async () => {
+  it('falls back to a Jitsi room when the Meet link cannot be created', async () => {
     const { db, google, notifications, service } = setup();
     db.interview.findUnique.mockResolvedValue(stored());
     google.createEvent.mockRejectedValue(new GoogleCalendarNotConnectedError('revoked'));
-    await expect(service.confirm(token, 1, '1.2.3.4')).rejects.toThrow('calendar is not connected');
-    expect(db.interview.updateMany).toHaveBeenLastCalledWith({ where: { id: 9, status: 'CONFIRMED', confirmedSlotId: 1 }, data: { status: 'PROPOSED', confirmedSlotId: null, confirmedAt: null } });
-    expect(notifications.sendInterviewConfirmation).not.toHaveBeenCalled();
+    db.interview.update.mockResolvedValue(stored({ status: 'CONFIRMED', confirmedSlotId: 1 }));
+    await service.confirm(token, 1, '1.2.3.4');
+    const link = notifications.sendInterviewConfirmation.mock.calls[0][0].interview.meetUrl;
+    expect(link).toMatch(/^https:\/\/meet\.jit\.si\/shortlist-[a-f0-9]{18}$/);
+    expect(db.interview.update).toHaveBeenCalledWith(expect.objectContaining({ data: { meetUrl: link, googleEventId: null } }));
+    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining(link) }));
+  });
+
+  it('uses a Jitsi room without asking Google when the recruiter has no calendar connected', async () => {
+    const { db, google, notifications, service } = setup({ googleConnected: false });
+    db.interview.findUnique.mockResolvedValue(stored());
+    db.interview.update.mockResolvedValue(stored({ status: 'CONFIRMED', confirmedSlotId: 1 }));
+    await service.confirm(token, 1, '1.2.3.4');
+    expect(google.createEvent).not.toHaveBeenCalled();
+    expect(notifications.sendInterviewConfirmation.mock.calls[0][0].interview.meetUrl).toMatch(/^https:\/\/meet\.jit\.si\/shortlist-/);
   });
 
   it('confirms an offline interview even when the calendar entry fails', async () => {

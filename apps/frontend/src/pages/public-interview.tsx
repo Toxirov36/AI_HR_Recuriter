@@ -77,7 +77,7 @@ export function PublicInterviewPage() {
               {t('interviews.pageIntro', { company: interview.companyName, vacancy: interview.vacancyTitle, defaultValue: `${interview.companyName} invites you to an interview for ${interview.vacancyTitle}.` })}
             </p>
             <p className="mt-1 text-sm text-slate-500">
-              {interview.mode === 'ONLINE' ? t('interviews.online', 'Online (Google Meet)') : t('interviews.offline', 'Offline (in person)')} ·{' '}
+              {interview.mode === 'ONLINE' ? t('interviews.online', 'Online') : t('interviews.offline', 'Offline (in person)')} ·{' '}
               {t('interviews.durationNote', { minutes: interview.durationMinutes, timezone: interview.timezone, defaultValue: `${interview.durationMinutes} min · ${interview.timezone}` })}
             </p>
             {interview.mode === 'OFFLINE' && interview.location && (
@@ -107,7 +107,7 @@ export function PublicInterviewPage() {
                 </p>
                 {interview.mode === 'ONLINE' && interview.confirmed.meetUrl && (
                   <a className="mt-3 inline-flex items-center gap-2 rounded-lg bg-[color:var(--brand-solid)] px-4 py-2 font-semibold text-white" href={interview.confirmed.meetUrl} target="_blank" rel="noreferrer">
-                    <Video size={16} /> {t('interviews.joinMeet', 'Join Google Meet')}
+                    <Video size={16} /> {t('interviews.joinMeet', 'Join the meeting')}
                   </a>
                 )}
                 {interview.mode === 'OFFLINE' && interview.confirmed.location && (

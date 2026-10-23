@@ -25,7 +25,7 @@ function setup(interview: unknown = proposed(), language: string | null = 'uz') 
     telegramUserLanguage: { findUnique: vi.fn().mockResolvedValue(language ? { language } : null) },
   };
   const security = { limit: vi.fn(), config: { FRONTEND_ORIGIN: 'https://hrdai.uz' } };
-  const google = { createEvent: vi.fn().mockResolvedValue({ eventId: 'ev1', meetUrl: 'https://meet.google.com/abc-defg-hij' }), deleteEvent: vi.fn(), isConnected: vi.fn() };
+  const google = { createEvent: vi.fn().mockResolvedValue({ eventId: 'ev1', meetUrl: 'https://meet.google.com/abc-defg-hij' }), deleteEvent: vi.fn(), isConnected: vi.fn().mockResolvedValue(true) };
   const notifications = { sendInterviewConfirmation: vi.fn().mockResolvedValue({}), notifyOrganizer: vi.fn().mockResolvedValue(undefined) };
   const telegram = { answerCallbackQuery: vi.fn(), editMessageText: vi.fn().mockResolvedValue({ ok: true }) };
   const registry = new TelegramCallbackRegistry();
@@ -48,7 +48,7 @@ describe('time buttons in the bot chat', () => {
     expect(db.interview.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 9, status: 'PROPOSED' }, data: expect.objectContaining({ status: 'CONFIRMED', confirmedSlotId: 11 }) }));
     expect(google.createEvent).toHaveBeenCalledWith(5, expect.objectContaining({ withMeet: true, attendeeEmail: 'ali@example.com' }));
     expect(notifications.sendInterviewConfirmation).toHaveBeenCalledTimes(1);
-    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('🔗 Google Meet: https://meet.google.com/abc-defg-hij') }));
+    expect(notifications.notifyOrganizer).toHaveBeenCalledWith(expect.objectContaining({ text: expect.stringContaining('🔗 Havola: https://meet.google.com/abc-defg-hij') }));
     const picked = telegram.editMessageText.mock.calls[0];
     expect([picked[0], picked[1]]).toEqual([42, 5]);
     expect(picked[2]).toContain('vaqtini tanladingiz');
@@ -92,13 +92,12 @@ describe('time buttons in the bot chat', () => {
     }
   });
 
-  it('releases the claim and says the link could not be made when Meet fails', async () => {
-    const { service, google, db, telegram } = setup();
+  it('still confirms with a Jitsi room when Meet fails', async () => {
+    const { service, google, notifications, telegram } = setup();
     google.createEvent.mockRejectedValue(new BadGatewayException('no meet'));
     await service.handleTelegram(query('iv:9:11'));
-    expect(db.interview.updateMany).toHaveBeenLastCalledWith({ where: { id: 9, status: 'CONFIRMED', confirmedSlotId: 11 }, data: { status: 'PROPOSED', confirmedSlotId: null, confirmedAt: null } });
-    expect(telegram.answerCallbackQuery).toHaveBeenCalledWith('cb', botText('uz', 'interviewMeetFailed'), true);
-    expect(telegram.editMessageText).not.toHaveBeenCalled();
+    expect(notifications.sendInterviewConfirmation.mock.calls[0][0].interview.meetUrl).toMatch(/^https:\/\/meet\.jit\.si\/shortlist-/);
+    expect(telegram.answerCallbackQuery).not.toHaveBeenCalledWith('cb', botText('uz', 'interviewMeetFailed'), true);
   });
 
   it('limits how often one user can tap', async () => {

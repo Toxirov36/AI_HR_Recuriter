@@ -65,6 +65,55 @@ function useActiveSection(ids: readonly string[]) {
   return active;
 }
 
+/**
+ * Jump to a section of the page with a soft, unhurried glide (ease in and out, longer for longer distances).
+ * A wheel, touch or key press hands control back at once; reduced motion jumps straight there.
+ */
+function glideTo(event: React.MouseEvent<HTMLAnchorElement>, href: string, onDone?: () => void) {
+  const id = href.slice(1);
+  const target = document.getElementById(id);
+  if (!target || event.metaKey || event.ctrlKey || event.shiftKey || event.button !== 0) return;
+  event.preventDefault();
+  onDone?.();
+  const offset = parseFloat(getComputedStyle(target).scrollMarginTop) || 0;
+  const from = window.scrollY;
+  const to = Math.max(0, Math.round(target.getBoundingClientRect().top + from - offset));
+  const finish = () => {
+    window.history.replaceState(window.history.state, '', href);
+    target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  };
+  const distance = Math.abs(to - from);
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || distance < 4) {
+    window.scrollTo(0, to);
+    finish();
+    return;
+  }
+  const duration = Math.min(1200, 650 + distance * 0.22);
+  const start = performance.now();
+  let frame = 0;
+  const stop = () => {
+    cancelAnimationFrame(frame);
+    window.removeEventListener('wheel', stop);
+    window.removeEventListener('touchstart', stop);
+    window.removeEventListener('keydown', stop);
+  };
+  window.addEventListener('wheel', stop, { passive: true });
+  window.addEventListener('touchstart', stop, { passive: true });
+  window.addEventListener('keydown', stop);
+  const step = (now: number) => {
+    const t = Math.min(1, (now - start) / duration);
+    const eased = -(Math.cos(Math.PI * t) - 1) / 2;
+    window.scrollTo(0, from + (to - from) * eased);
+    if (t < 1) frame = requestAnimationFrame(step);
+    else {
+      stop();
+      finish();
+    }
+  };
+  frame = requestAnimationFrame(step);
+}
+
 const NAV = [
   { href: '#telegram', key: 'navTelegram' },
   { href: '#features', key: 'navFeatures' },
@@ -159,7 +208,12 @@ export function LandingPage() {
           </Link>
           <nav className="sl-nav" aria-label={t('landing.navigation')}>
             {NAV.map(({ href, key }) => (
-              <a key={href} href={href} aria-current={active === href.slice(1) ? 'location' : undefined}>
+              <a
+                key={href}
+                href={href}
+                aria-current={active === href.slice(1) ? 'location' : undefined}
+                onClick={(event) => glideTo(event, href)}
+              >
                 {t(`landing.${key}`)}
               </a>
             ))}
@@ -186,7 +240,7 @@ export function LandingPage() {
         {menuOpen && (
           <nav className="sl-mobile-nav" aria-label={t('landing.navigation')}>
             {NAV.map(({ href, key }) => (
-              <a key={href} href={href} onClick={() => setMenuOpen(false)}>
+              <a key={href} href={href} onClick={(event) => glideTo(event, href, () => setMenuOpen(false))}>
                 {t(`landing.${key}`)}
               </a>
             ))}
@@ -207,7 +261,7 @@ export function LandingPage() {
               <Link className="sl-button" to="/register">
                 {t('landing.startFree')} <ArrowRight size={18} aria-hidden="true" />
               </Link>
-              <a className="sl-link" href="#telegram">
+              <a className="sl-link" href="#telegram" onClick={(event) => glideTo(event, '#telegram')}>
                 {t('landing.seeFlow')}
               </a>
             </div>

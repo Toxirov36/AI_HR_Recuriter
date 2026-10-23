@@ -88,14 +88,20 @@ function SidebarNav({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="company-switch">
+      <Link
+        to="/profile"
+        className="company-switch"
+        aria-label={`${t('navigation.myProfile')}: ${companyName}`}
+        onPointerEnter={() => void preloadRoute('/profile')}
+        onFocus={() => void preloadRoute('/profile')}
+        onClick={() => onNavigate?.()}
+      >
         <span className="company-icon">{companyInitials}</span>
         <div className="company-switch-info">
           <strong>{companyName}</strong>
-          <small>{t('navigation.recruitingWorkspace')}</small>
         </div>
-        <ChevronRight size={15} className="company-chevron" />
-      </div>
+        <ChevronRight size={15} className="company-chevron" aria-hidden="true" />
+      </Link>
       <div className="nav-label">{t('navigation.workspace').toUpperCase()}</div>
       <nav>
         {links.map((l) => (
@@ -342,9 +348,11 @@ function AppShell() {
         </header>
         <main className="main-content">
           <Alert message={error} />
-          <ErrorBoundary resetKey={location.pathname}>
-            <AppRouter />
-          </ErrorBoundary>
+          <div key={location.pathname} className="page-transition">
+            <ErrorBoundary resetKey={location.pathname}>
+              <AppRouter />
+            </ErrorBoundary>
+          </div>
           <footer className="page-footer">
             <span>{t('navigation.brandTagline')}</span>
             <span>{t('navigation.evidenceLedRecruiting')}</span>

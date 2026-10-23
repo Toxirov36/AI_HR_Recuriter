@@ -118,7 +118,7 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
               {confirmed ? <Check size={14} /> : <Hourglass size={14} />} {statusText}
             </span>
             <span className="text-sm text-slate-600">
-              {active.mode === 'ONLINE' ? t('interviews.online', 'Online (Google Meet)') : t('interviews.offline', 'Offline (in person)')} ·{' '}
+              {active.mode === 'ONLINE' ? t('interviews.online', 'Online') : t('interviews.offline', 'Offline (in person)')} ·{' '}
               {t('interviews.minutes', { count: active.durationMinutes, defaultValue: `${active.durationMinutes} min` })}
             </span>
           </div>
@@ -151,7 +151,7 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
                   rel="noreferrer"
                   className="inline-flex items-center gap-2 rounded-xl bg-[color:var(--brand-solid)] px-4 py-2.5 text-sm font-semibold text-white no-underline shadow-sm transition-colors hover:bg-[color:var(--brand-solid-hover)]"
                 >
-                  <Video size={16} /> {t('interviews.joinMeet', 'Join Google Meet')}
+                  <Video size={16} /> {t('interviews.joinMeet', 'Join the meeting')}
                 </a>
                 <button
                   type="button"
