@@ -83,6 +83,11 @@ export function PublicInterviewPage() {
             {interview.mode === 'OFFLINE' && interview.location && (
               <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-700">
                 <MapPin size={15} /> {interview.location}
+                {interview.mapUrl && (
+                  <a className="ml-2 font-semibold text-[#1a5d4c] underline" href={interview.mapUrl} target="_blank" rel="noreferrer">
+                    {t('interviews.openMap', 'Open on map')}
+                  </a>
+                )}
               </p>
             )}
             {interview.note && <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{interview.note}</p>}
@@ -108,6 +113,11 @@ export function PublicInterviewPage() {
                 {interview.mode === 'OFFLINE' && interview.confirmed.location && (
                   <p className="mt-2 flex items-center gap-1.5">
                     <MapPin size={15} /> {interview.confirmed.location}
+                    {(interview.confirmed.mapUrl ?? interview.mapUrl) && (
+                      <a className="ml-2 font-semibold text-[#1a5d4c] underline" href={(interview.confirmed.mapUrl ?? interview.mapUrl) as string} target="_blank" rel="noreferrer">
+                        {t('interviews.openMap', 'Open on map')}
+                      </a>
+                    )}
                   </p>
                 )}
               </div>

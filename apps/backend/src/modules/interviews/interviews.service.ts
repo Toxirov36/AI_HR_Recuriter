@@ -5,6 +5,11 @@ import { hashToken, Security, type Identity } from '../../common/utils/security'
 import { AuditService } from '../audit/audit.service';
 import { GoogleCalendarNotConnectedError, GoogleCalendarService } from '../google-calendar/google-calendar.service';
 import { formatInterviewTime, NotificationService } from '../notifications/notification.service';
+import { TelegramApiService } from '../telegram/telegram-api.service';
+import { TelegramCallbackRegistry } from '../telegram/telegram-callback.registry';
+import { botText, DEFAULT_BOT_LANG, isBotLang, type BotMessageKey } from '../telegram/telegram-i18n';
+import type { TelegramCallbackQuery } from '../telegram/types/telegram.types';
+import { parseMapLink } from './map-link';
 import { buildSlots, MIN_LEAD_MS, type CreateInterviewInput, type RescheduleInterviewInput } from './interviews.schemas';
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{20,64}$/;
@@ -53,6 +58,7 @@ export class InterviewsService {
       // Moving to the interview stage here replaces the generic "you are invited" message with the real proposal.
       if (application.status === 'NEW' || application.status === 'REVIEWING') {
         const moved = await tx.application.updateMany({ where: { id: applicationId, companyId: user.companyId, status: application.status }, data: { status: 'INTERVIEW' } });
+    const map = this.mapFor(input.mode, input.mapUrl);
         if (moved.count) {
           await tx.applicationStageChange.create({
             data: { applicationId, fromStatus: application.status, toStatus: 'INTERVIEW', actorId: user.id, actorName: user.fullName },
@@ -99,6 +105,7 @@ export class InterviewsService {
     const token = randomBytes(24).toString('base64url');
     const interview = await this.db.$transaction(async (tx) => {
       await tx.interviewSlot.deleteMany({ where: { interviewId: id } });
+    const map = this.mapFor(mode, input.mapUrl, current);
       return tx.interview.update({
         where: { id },
         data: {
@@ -196,7 +203,7 @@ export class InterviewsService {
     await this.notifications
       .sendInterviewConfirmation({
         candidate, vacancy, companyName: company.name,
-        interview: { mode: interview.mode, durationMinutes: interview.durationMinutes, timezone: interview.timezone, startsAt: slot.startsAt, meetUrl: event?.meetUrl, location: interview.location },
+        interview: { mode: interview.mode, durationMinutes: interview.durationMinutes, timezone: interview.timezone, startsAt: slot.startsAt, meetUrl: event?.meetUrl, location: interview.location, mapUrl: interview.mapUrl, mapLat: interview.mapLat, mapLng: interview.mapLng },
       })
       .catch(() => undefined);
     await this.notifications
@@ -294,7 +301,27 @@ export class InterviewsService {
       note: interview.note,
       declined: Boolean(interview.declinedAt),
       slots: interview.status === 'PROPOSED' ? interview.slots.filter((slot) => slot.startsAt.getTime() >= now + MIN_LEAD_MS).map((slot) => ({ id: slot.id, startsAt: slot.startsAt })) : [],
-      confirmed: interview.status === 'CONFIRMED' && confirmedSlot ? { startsAt: confirmedSlot.startsAt, meetUrl: interview.meetUrl, location: interview.location } : null,
+      confirmed: interview.status === 'CONFIRMED' && confirmedSlot ? { startsAt: confirmedSlot.startsAt, meetUrl: interview.meetUrl, location: interview.location, mapUrl: interview.mapUrl ?? null } : null,
     };
   }
 }
+  /**
+   * Map link for an offline interview: undefined keeps the current one (reschedule), an empty value clears it, anything
+   * else must be an accepted https map link. Online interviews never carry one.
+   */
+  private mapFor(
+    mode: 'ONLINE' | 'OFFLINE',
+    mapUrl: string | undefined,
+    keep?: { mapUrl: string | null; mapLat: number | null; mapLng: number | null },
+  ) {
+    const none = { mapUrl: null, mapLat: null, mapLng: null };
+    if (mode !== 'OFFLINE') return none;
+    if (mapUrl === undefined) return keep ? { mapUrl: keep.mapUrl, mapLat: keep.mapLat, mapLng: keep.mapLng } : none;
+    if (!mapUrl.trim()) return none;
+    const parsed = parseMapLink(mapUrl);
+    if (!parsed) throw new BadRequestException('Use an https link from Google Maps, Yandex Maps, 2GIS or OpenStreetMap');
+    return { mapUrl: parsed.url, mapLat: parsed.lat, mapLng: parsed.lng };
+  }
+
+    mapUrl?: string | null;
+      mapUrl: interview.mapUrl ?? null,

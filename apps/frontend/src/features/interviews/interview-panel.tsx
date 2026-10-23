@@ -167,6 +167,11 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
           {active.mode === 'OFFLINE' && active.location && (
             <Row icon={<MapPin size={18} />}>
               <span className="font-medium">{active.location}</span>
+              {active.mapUrl && (
+                <a className="ml-3 text-sm font-semibold text-[#1a5d4c] underline" href={active.mapUrl} target="_blank" rel="noreferrer">
+                  {t('interviews.openMap', 'Open on map')}
+                </a>
+              )}
             </Row>
           )}
 

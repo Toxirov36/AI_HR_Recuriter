@@ -115,6 +115,33 @@ export class TelegramApiService {
     }
   }
 
+  /** A map pin with a title and address (shown as a venue card in the chat). */
+  async sendVenue(
+    chatId: string | number,
+    latitude: number,
+    longitude: number,
+    title: string,
+    address: string,
+    options?: { businessConnectionId?: string },
+  ): Promise<TelegramResponse<any>> {
+    if (!this.config.TELEGRAM_BOT_TOKEN) {
+      return { ok: false, description: 'Telegram bot token is not configured' };
+    }
+    const payload: Record<string, any> = { chat_id: chatId, latitude, longitude, title: title.slice(0, 100), address: address.slice(0, 200) };
+    if (options?.businessConnectionId) payload.business_connection_id = options.businessConnectionId;
+    try {
+      const response = await fetch(`${this.baseUrl}/sendVenue`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(15_000),
+      });
+      return (await response.json()) as TelegramResponse<any>;
+    } catch (err) {
+      return { ok: false, description: (err as Error).message };
+    }
+  }
+
   async answerCallbackQuery(callbackQueryId: string, text?: string, showAlert = false) {
     if (!this.config.TELEGRAM_BOT_TOKEN) {
       return { ok: false, description: 'Telegram bot token is not configured' };

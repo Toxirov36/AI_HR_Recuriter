@@ -9,6 +9,7 @@ const scheduleFields = {
   slots: z.array(slotTime).min(1).max(5),
   durationMinutes: z.number().int().min(15).max(180).default(30),
   location: z.string().trim().min(3).max(300).optional(),
+  mapUrl: z.string().trim().max(500).optional(),
   note: z.string().trim().max(500).optional(),
 };
 

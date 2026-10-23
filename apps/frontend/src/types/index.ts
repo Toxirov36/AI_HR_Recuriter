@@ -225,6 +225,7 @@ export type InterviewProposal = {
 };
 /** What the candidate's link page receives. */
 export type PublicInterview = {
+  mapUrl?: string | null;
   status: InterviewStatus;
   mode: InterviewMode;
   companyName: string;
@@ -235,7 +236,7 @@ export type PublicInterview = {
   note: string | null;
   declined: boolean;
   slots: { id: number; startsAt: string }[];
-  confirmed: { startsAt: string; meetUrl: string | null; location: string | null } | null;
+  confirmed: { startsAt: string; meetUrl: string | null; location: string | null; mapUrl?: string | null } | null;
 };
 export type GoogleCalendarStatus = { configured: boolean; connected: boolean; googleEmail: string | null };
 export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
@@ -248,3 +249,4 @@ export type DashboardData = {
   stages: { status: Stage; _count: number }[];
   recent: Application[];
 };
+  mapUrl?: string | null;

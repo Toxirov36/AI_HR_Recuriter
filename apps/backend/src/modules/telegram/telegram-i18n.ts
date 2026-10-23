@@ -151,6 +151,7 @@ const uz = {
     '✅ Suhbat tasdiqlandi!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} daqiqa\n{where}',
   interviewWhereOnline: '🔗 Google Meet: {url}',
   interviewWhereOffline: '📍 Manzil: {address}',
+  interviewOpenMap: '🗺 Xaritada ochish',
   interviewCancelled: '❌ «{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha suhbat bekor qilindi. HR siz bilan bog‘lanadi.',
   interviewSubjectProposal: 'Suhbatga taklif',
   interviewSubjectConfirmed: 'Suhbat tasdiqlandi',
@@ -308,6 +309,7 @@ const tg: Record<BotMessageKey, string> = {
   alreadyAppliedTitle: 'Дархости шумо ба вакансияи «{title}» аллакай қабул шудааст.',
   applyStorageOff: 'Қабули резюме тавассути Telegram танзим нашудааст. Дархостро дар сайт фиристед: {url}',
   applyConsent:
+  interviewOpenMap: '🗺 Открыть на карте',
     'Дархост ба вакансияи «{title}».\n\n{company} маълумоти шумо, номи профили Telegram ва резюмеро барои ба кор қабул кардан нигоҳ медорад (то {days} рӯз). Саволҳои санҷишӣ аз рӯи вазифа бо ёрии ИИ сохта мешаванд ва резюмеи шумо тавассути ИИ таҳлил карда мешавад; натиҷаҳо ба HR нишон дода мешаванд. Оё розӣ ҳастед, ки идома диҳем?',
   agree: 'Розӣ ҳастам',
   decline: 'Рад мекунам',
@@ -453,3 +455,4 @@ export const BOT_MESSAGE_KEYS = Object.keys(uz) as BotMessageKey[];
 export function matchesAnyLang(text: string, key: BotMessageKey): boolean {
   return BOT_LANGS.some((lang) => MESSAGES[lang][key] === text);
 }
+  interviewOpenMap: '🗺 Дар харита кушодан',

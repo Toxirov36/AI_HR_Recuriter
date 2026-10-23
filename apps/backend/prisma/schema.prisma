@@ -625,6 +625,10 @@ model Interview {
   @@index([companyId, status])
   @@index([applicationId])
 }
+  // Optional map link for offline interviews; the coordinates are read from the link when possible.
+  mapUrl String?
+  mapLat Float?
+  mapLng Float?
 model InterviewSlot {
   id Int @id @default(autoincrement())
   interviewId Int

@@ -36,6 +36,7 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
   const [slots, setSlots] = useState<string[]>([defaultSlotValue(24), defaultSlotValue(48)]);
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? 30));
   const [location, setLocation] = useState(existing?.location ?? '');
+  const [mapUrl, setMapUrl] = useState(existing?.mapUrl ?? '');
   const [note, setNote] = useState(existing?.note ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -65,7 +66,7 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
         mode,
         slots: filled.map((value) => new Date(value).toISOString()),
         durationMinutes: Number(duration),
-        ...(mode === 'OFFLINE' ? { location: location.trim() } : {}),
+        ...(mode === 'OFFLINE' ? { location: location.trim(), mapUrl: mapUrl.trim() } : {}),
         ...(note.trim() ? { note: note.trim() } : {}),
       };
       const proposal = existing
@@ -126,6 +127,20 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
               placeholder={t('interviews.addressPlaceholder', 'City, street, office, floor')}
               onChange={(event) => setLocation(event.target.value)}
             />
+          </Field>
+        )}
+        {mode === 'OFFLINE' && (
+          <Field label={t('interviews.mapUrl', 'Map link (optional)')} htmlFor="interview-map-url">
+            <Input
+              id="interview-map-url"
+              type="url"
+              inputMode="url"
+              value={mapUrl}
+              maxLength={500}
+              placeholder="https://maps.google.com/..."
+              onChange={(event) => setMapUrl(event.target.value)}
+            />
+            <small className="mt-1 block text-slate-500">{t('interviews.mapUrlHint', 'Share the place from Google Maps, Yandex Maps or 2GIS. The candidate gets a map pin with the confirmation.')}</small>
           </Field>
         )}
         <fieldset className="grid gap-3">

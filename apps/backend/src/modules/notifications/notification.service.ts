@@ -153,7 +153,7 @@ export class NotificationService {
     candidate: CandidateNotificationTarget;
     vacancy: VacancyContext;
     companyName: string;
-    interview: { mode: 'ONLINE' | 'OFFLINE'; durationMinutes: number; timezone: string; startsAt: Date; meetUrl?: string | null; location?: string | null };
+    interview: { mode: 'ONLINE' | 'OFFLINE'; durationMinutes: number; timezone: string; startsAt: Date; meetUrl?: string | null; location?: string | null; mapUrl?: string | null; mapLat?: number | null; mapLng?: number | null };
   }) {
     const { candidate, vacancy, companyName, interview } = params;
     const lang = await this.candidateLang(candidate);
@@ -161,7 +161,8 @@ export class NotificationService {
       interview.mode === 'ONLINE'
         ? botText(lang, 'interviewWhereOnline', { url: interview.meetUrl ?? '' })
         : botText(lang, 'interviewWhereOffline', { address: interview.location ?? '' });
-    return this.deliver(candidate, {
+    const mapLink = interview.mode === 'OFFLINE' && interview.mapUrl ? { url: interview.mapUrl, label: botText(lang, 'interviewOpenMap') } : undefined;
+    const delivered = await this.deliver(candidate, {
       lang,
       text: botText(lang, 'interviewConfirmed', {
         company: companyName,
@@ -186,6 +187,23 @@ export class NotificationService {
       text: botText(lang, 'interviewCancelled', { company: companyName, vacancy: vacancy.title }),
       subject: `${botText(lang, 'interviewSubjectCancelled')}: ${vacancy.title} — ${companyName}`,
       eventType: 'INTERVIEW_CANCELLED_SENT',
+    // A map pin goes only where Telegram delivered the confirmation; the email carries the link.
+    if (delivered.telegramSent && interview.mode === 'OFFLINE' && interview.mapLat != null && interview.mapLng != null) {
+      await this.sendVenue(candidate, interview.mapLat, interview.mapLng, companyName, interview.location ?? vacancy.title);
+    }
+    return delivered;
+  }
+
+  private async sendVenue(candidate: CandidateNotificationTarget, lat: number, lng: number, title: string, address: string) {
+    if (!candidate.telegramUserId) return;
+    try {
+      const direct = await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address);
+      if (direct.ok === true) return;
+      const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
+      if (businessConnectionId) await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address, { businessConnectionId });
+    } catch (err) {
+      this.logger.warn(`Interview map pin failed for candidateId=${candidate.id}: ${(err as Error).message}`);
+    }
       eventLabel: (channels) => `Suhbat bekor qilingani yuborildi (${channels}) — ${vacancy.title}`,
       failureKind: 'Suhbat bekor qilinishi',
     });
