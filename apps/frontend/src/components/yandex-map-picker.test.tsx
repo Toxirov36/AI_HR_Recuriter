@@ -117,3 +117,31 @@ describe('map picker', () => {
     expect(await screen.findByText(/map is not available/i)).toBeInTheDocument();
   });
 });
+
+describe('my location button', () => {
+  const stubGeolocation = (impl: (ok: (position: unknown) => void, fail: () => void) => void) =>
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: { getCurrentPosition: vi.fn(impl) } });
+  afterEach(() => Reflect.deleteProperty(navigator, 'geolocation'));
+
+  it('puts the pin where the HR is and reports the coordinates', async () => {
+    vi.stubEnv('VITE_YANDEX_MAPS_KEY', '');
+    stubGeolocation((ok) => ok({ coords: { latitude: 41.2666371, longitude: 69.2607512 } }));
+    const onChange = vi.fn();
+    render(<YandexMapPicker point={null} onChange={onChange} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'My location' }));
+    expect(onChange).toHaveBeenCalledWith({ lat: 41.266637, lng: 69.260751 });
+    expect(osm.markers).toHaveLength(1);
+  });
+
+  it('explains what to do when the location is refused, and leaves the map usable', async () => {
+    vi.stubEnv('VITE_YANDEX_MAPS_KEY', '');
+    stubGeolocation((_ok, fail) => fail());
+    const onChange = vi.fn();
+    render(<YandexMapPicker point={null} onChange={onChange} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'My location' }));
+    expect(await screen.findByText(/Could not get your location/)).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+    act(() => osm.onClick!({ latlng: { lat: 41.3, lng: 69.2 } }));
+    expect(onChange).toHaveBeenCalledWith({ lat: 41.3, lng: 69.2 });
+  });
+});

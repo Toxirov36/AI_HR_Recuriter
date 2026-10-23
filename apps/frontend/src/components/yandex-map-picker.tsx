@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, X } from 'lucide-react';
+import { LocateFixed, MapPin, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export type MapPoint = { lat: number; lng: number };
@@ -94,7 +94,7 @@ const mountYandex: Mount = async (container, start, onPick, language) => {
       if (marker) map.removeChild(marker);
       marker = null;
     },
-    center: (point) => map.update?.({ location: { center: [point.lng, point.lat], duration: 200 } }),
+    center: (point) => map.update?.({ location: { center: [point.lng, point.lat], zoom: 16, duration: 200 } }),
     destroy: () => map.destroy?.(),
   };
 };
@@ -127,7 +127,7 @@ const mountOsm: Mount = async (container, start, onPick) => {
       if (marker) marker.remove();
       marker = null;
     },
-    center: (point) => map.setView([point.lat, point.lng], Math.max(map.getZoom(), 15)),
+    center: (point) => map.setView([point.lat, point.lng], Math.max(map.getZoom(), 16)),
     destroy: () => {
       window.clearTimeout(resize);
       map.remove();
@@ -146,6 +146,8 @@ export function YandexMapPicker({ point, onChange }: { point: MapPoint | null; o
   const onChangeRef = useRef(onChange);
   const initial = useRef(point);
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [locating, setLocating] = useState(false);
+  const [locateError, setLocateError] = useState(false);
   onChangeRef.current = onChange;
 
   useEffect(() => {
@@ -188,13 +190,50 @@ export function YandexMapPicker({ point, onChange }: { point: MapPoint | null; o
     }
   }, [point?.lat, point?.lng, status]);
 
+  /** Puts the pin where the HR is now, using the browser's location (it asks for permission). */
+  function locateMe() {
+    setLocateError(false);
+    if (!navigator.geolocation) {
+      setLocateError(true);
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const next = { lat: round(position.coords.latitude), lng: round(position.coords.longitude) };
+        engine.current?.place(next);
+        engine.current?.center(next);
+        onChange(next);
+      },
+      () => {
+        setLocating(false);
+        setLocateError(true);
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
+  }
+
   return (
     <div className="grid gap-2">
       {status === 'error' && <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-600">{t('interviews.mapUnavailable', 'The map is not available right now.')}</p>}
       <div className="relative overflow-hidden rounded-xl border border-slate-200" hidden={status === 'error'}>
         <div ref={container} className="h-[260px] w-full cursor-crosshair bg-slate-100" role="application" aria-label={t('interviews.mapPick', 'Pick the place on the map')} />
         {status === 'loading' && <span className="absolute inset-0 grid place-items-center text-sm text-slate-500">{t('interviews.mapLoading', 'Loading the map…')}</span>}
+        {status === 'ready' && (
+          <button
+            type="button"
+            className="absolute right-3 top-3 z-[500] grid h-10 w-10 place-items-center rounded-xl bg-white text-slate-700 shadow-md hover:bg-slate-50 disabled:opacity-60"
+            aria-label={t('interviews.mapLocate', 'My location')}
+            title={t('interviews.mapLocate', 'My location')}
+            disabled={locating}
+            onClick={locateMe}
+          >
+            <LocateFixed size={18} aria-hidden="true" />
+          </button>
+        )}
       </div>
+      {locateError && <p className="text-sm text-red-700">{t('interviews.mapLocateFailed', 'Could not get your location. Allow location access in the browser, or click the map.')}</p>}
       <div className="flex items-center justify-between gap-2 text-sm text-slate-600">
         <span className="inline-flex items-center gap-1.5">
           <MapPin size={14} aria-hidden="true" />
