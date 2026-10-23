@@ -64,9 +64,9 @@ describe('schedule interview dialog', () => {
     // An existing offline interview opens the dialog in offline mode (Radix selects need a real browser to drive).
     render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} existing={interview({ mode: 'OFFLINE' })} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: 'Send to candidate' }));
-    expect(await screen.findByText('Enter the address of the meeting.')).toBeVisible();
+    expect(await screen.findByText('Pick the place on the map or enter an address.')).toBeVisible();
     expect(send).not.toHaveBeenCalled();
-    fireEvent.change(screen.getByLabelText('Address'), { target: { value: 'Tashkent, Amir Temur 1' } });
+    fireEvent.change(screen.getByLabelText('Address (optional)'), { target: { value: 'Tashkent, Amir Temur 1' } });
     fireEvent.click(screen.getByRole('button', { name: 'Send to candidate' }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     expect(vi.mocked(send).mock.calls[0][0]).toBe('/interviews/9/schedule');

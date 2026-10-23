@@ -1,11 +1,11 @@
-import { useMemo, useState, type CSSProperties } from 'react';
-import { DayPicker } from 'react-day-picker';
-import { ru, uz } from 'react-day-picker/locale';
+import { useMemo, useState } from 'react';
+import { format } from 'date-fns';
+import { enUS, ru, uz } from 'react-day-picker/locale';
 import { CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Calendar } from './calendar';
 import { FormSelect } from './form-select';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import 'react-day-picker/style.css';
 
 const pad = (value: number) => String(value).padStart(2, '0');
 
@@ -17,8 +17,6 @@ const TIMES = Array.from({ length: 15 * 4 }, (_, i) => {
 
 // react-day-picker ships no Tajik calendar; Russian (also Cyrillic) is the closest.
 const locales = { uz, ru, tg: ru } as const;
-
-const accent = { '--rdp-accent-color': '#1a5d4c', '--rdp-accent-background-color': '#e3f1ec', '--rdp-day-height': '38px', '--rdp-day-width': '38px' } as CSSProperties;
 
 type Props = {
   /** "YYYY-MM-DDTHH:mm" in the browser's local time, or '' for nothing chosen. */
@@ -37,7 +35,7 @@ export function DateTimePicker({ value, onChange, language = 'en', placeholder =
   const date = useMemo(() => (datePart ? new Date(`${datePart}T00:00:00`) : undefined), [datePart]);
   const time = timePart?.slice(0, 5) || '10:00';
   const timeOptions = (TIMES.includes(time) ? TIMES : [...TIMES, time].sort()).map((option) => ({ value: option, label: option }));
-  const label = date ? new Intl.DateTimeFormat(language, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }).format(date) : placeholder;
+  const label = date ? format(date, 'EEE, d MMMM yyyy', { locale: locales[language as keyof typeof locales] ?? enUS }) : placeholder;
   const startOfToday = new Date(new Date().setHours(0, 0, 0, 0));
 
   function pick(next?: Date) {
@@ -59,8 +57,8 @@ export function DateTimePicker({ value, onChange, language = 'en', placeholder =
             <span className={cn('truncate', !date && 'text-slate-400')}>{label}</span>
           </button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-auto p-3" style={accent}>
-          <DayPicker
+        <PopoverContent align="start" className="w-auto p-3">
+          <Calendar
             mode="single"
             selected={date}
             defaultMonth={date ?? startOfToday}

@@ -58,8 +58,10 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
       setError(t('interviews.errorTimes', 'Add at least one time in the future.'));
       return;
     }
-    if (mode === 'OFFLINE' && location.trim().length < 3) {
-      setError(t('interviews.errorAddress', 'Enter the address of the meeting.'));
+    // The map pin is enough; a typed address is an optional label for it.
+    const place = location.trim() || (point ? `${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}` : '');
+    if (mode === 'OFFLINE' && place.length < 3) {
+      setError(t('interviews.errorAddress', 'Pick the place on the map or enter an address.'));
       return;
     }
     setBusy(true);
@@ -68,7 +70,7 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
         mode,
         slots: filled.map((value) => new Date(value).toISOString()),
         durationMinutes: Number(duration),
-        ...(mode === 'OFFLINE' ? { location: location.trim(), mapUrl: mapUrl.trim() } : {}),
+        ...(mode === 'OFFLINE' ? { location: place, mapUrl: mapUrl.trim() } : {}),
         ...(note.trim() ? { note: note.trim() } : {}),
       };
       const proposal = existing
