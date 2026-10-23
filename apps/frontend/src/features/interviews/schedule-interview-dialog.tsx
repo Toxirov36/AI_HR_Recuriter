@@ -143,23 +143,6 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
             />
           </div>
         )}
-        {mode === 'OFFLINE' && (
-          <Field label={t('interviews.mapUrl', 'Map link (optional)')} htmlFor="interview-map-url">
-            <Input
-              id="interview-map-url"
-              type="url"
-              inputMode="url"
-              value={mapUrl}
-              maxLength={500}
-              placeholder="https://maps.google.com/..."
-              onChange={(event) => {
-                setMapUrl(event.target.value);
-                setPoint(pointFromMapUrl(event.target.value));
-              }}
-            />
-            <small className="mt-1 block text-slate-500">{t('interviews.mapUrlHint', 'Share the place from Google Maps, Yandex Maps or 2GIS. The candidate gets a map pin with the confirmation.')}</small>
-          </Field>
-        )}
         <fieldset className="grid gap-3">
           <legend className="mb-1 text-sm font-semibold text-slate-800">{t('interviews.slots', 'Proposed times')}</legend>
           {slots.map((slot, index) => (

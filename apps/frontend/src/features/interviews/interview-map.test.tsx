@@ -9,6 +9,11 @@ import { InterviewPanel } from './interview-panel';
 import { ScheduleInterviewDialog } from './schedule-interview-dialog';
 
 vi.mock('../../lib/api', () => ({ send: vi.fn(), api: vi.fn(), ApiError: class ApiError extends Error {} }));
+vi.mock('leaflet/dist/leaflet.css', () => ({}));
+vi.mock('leaflet', () => {
+  const map: any = { setView: () => map, on: () => undefined, invalidateSize: () => undefined, getZoom: () => 12, remove: () => undefined };
+  return { default: { map: () => map, tileLayer: () => ({ addTo: () => undefined }), divIcon: (o: unknown) => o, marker: () => ({ addTo() { return this; }, setLatLng() {}, remove() {} }) } };
+});
 
 let interviews: Interview[] = [];
 vi.mock('../../components/ui', async (importOriginal) => {
@@ -36,24 +41,50 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   cleanup();
+  vi.unstubAllEnvs();
+  delete (window as any).ymaps3;
   await changeLanguage('uz');
 });
 
-describe('map link for offline interviews', () => {
-  it('sends the map link with the address, prefilled when rescheduling', async () => {
+describe('map for offline interviews', () => {
+  it('prefills the pin from an earlier link and sends the link unchanged on reschedule', async () => {
     vi.mocked(send).mockResolvedValue({ interview: interview(), delivery: { telegramSent: true, emailSent: false }, shareUrl: 'https://hrdai.uz/interview/abc' });
-    render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} existing={interview({ mapUrl: 'https://yandex.uz/maps/?ll=69.2797%2C41.3111' })} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
-    const field = screen.getByLabelText('Map link (optional)');
-    expect(field).toHaveValue('https://yandex.uz/maps/?ll=69.2797%2C41.3111');
-    fireEvent.change(field, { target: { value: ' https://www.google.com/maps/@41.3111,69.2797,17z ' } });
+    const link = 'https://yandex.uz/maps/?ll=69.2797%2C41.3111&pt=69.2797%2C41.3111&z=17&l=map';
+    render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} existing={interview({ mapUrl: link })} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
+    expect(screen.getByText('41.31110, 69.27970')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Map link (optional)')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Send to candidate' }));
     await waitFor(() => expect(send).toHaveBeenCalled());
-    expect((vi.mocked(send).mock.calls[0][1] as any).mapUrl).toBe('https://www.google.com/maps/@41.3111,69.2797,17z');
+    expect((vi.mocked(send).mock.calls[0][1] as any).mapUrl).toBe(link);
   });
 
-  it('is not offered, and not sent, for an online interview', () => {
+  it('is not offered for an online interview', () => {
     render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
-    expect(screen.queryByLabelText('Map link (optional)')).toBeNull();
+    expect(screen.queryByRole('application', { name: 'Pick the place on the map' })).toBeNull();
+  });
+
+  it('sends the link made from the clicked pin; removing the pin clears it', async () => {
+    vi.stubEnv('VITE_YANDEX_MAPS_KEY', 'test-key');
+    const listeners: Array<{ onClick: (object: unknown, event: { coordinates: [number, number] }) => void }> = [];
+    class Layer {}
+    class YMap { addChild() {} removeChild() {} update() {} destroy() {} }
+    class YMapListener { constructor(props: any) { listeners.push(props); } }
+    class YMapMarker { constructor(public props: any) {} update() {} }
+    (window as any).ymaps3 = { ready: Promise.resolve(), YMap, YMapDefaultSchemeLayer: Layer, YMapDefaultFeaturesLayer: Layer, YMapListener, YMapMarker };
+    vi.mocked(send).mockResolvedValue({ interview: interview(), delivery: { telegramSent: true, emailSent: false }, shareUrl: 'https://hrdai.uz/interview/abc' });
+
+    render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} existing={interview()} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
+    await waitFor(() => expect(listeners).toHaveLength(1));
+    act(() => listeners[0].onClick({}, { coordinates: [69.2797, 41.3111] }));
+    expect(screen.getByText('41.31110, 69.27970')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Remove pin/ }));
+    expect(screen.queryByText('41.31110, 69.27970')).toBeNull();
+    act(() => listeners[0].onClick({}, { coordinates: [69.2797, 41.3111] }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send to candidate' }));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    expect((vi.mocked(send).mock.calls[0][1] as any).mapUrl).toContain('pt=69.2797%2C41.3111');
   });
 
   it('shows an open-on-map link in the HR panel and on the candidate page', async () => {
@@ -73,40 +104,5 @@ describe('map link for offline interviews', () => {
     const links = await screen.findAllByRole('link', { name: 'Open on map' });
     expect(links.length).toBeGreaterThan(0);
     links.forEach((link) => expect(link).toHaveAttribute('href', 'https://yandex.uz/maps/-/CCUx'));
-  });
-});
-
-describe('picking the place on the map in the dialog', () => {
-  afterEach(() => {
-    vi.unstubAllEnvs();
-    delete (window as any).ymaps3;
-  });
-
-  it('fills the map link from the clicked pin and sends it', async () => {
-    vi.stubEnv('VITE_YANDEX_MAPS_KEY', 'test-key');
-    const listeners: Array<{ onClick: (object: unknown, event: { coordinates: [number, number] }) => void }> = [];
-    class Layer {}
-    class YMap { addChild() {} removeChild() {} update() {} destroy() {} }
-    class YMapListener { constructor(props: any) { listeners.push(props); } }
-    class YMapMarker { constructor(public props: any) {} update() {} }
-    (window as any).ymaps3 = { ready: Promise.resolve(), YMap, YMapDefaultSchemeLayer: Layer, YMapDefaultFeaturesLayer: Layer, YMapListener, YMapMarker };
-    vi.mocked(send).mockResolvedValue({ interview: interview(), delivery: { telegramSent: true, emailSent: false }, shareUrl: 'https://hrdai.uz/interview/abc' });
-
-    render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} existing={interview()} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
-    await waitFor(() => expect(listeners).toHaveLength(1));
-    act(() => listeners[0].onClick({}, { coordinates: [69.2797, 41.3111] }));
-    const field = screen.getByLabelText('Map link (optional)') as HTMLInputElement;
-    expect(field.value).toContain('yandex.uz/maps');
-    expect(field.value).toContain('pt=69.2797%2C41.3111');
-
-    // Removing the pin clears the link; placing it again restores it.
-    fireEvent.click(screen.getByRole('button', { name: /Remove pin/ }));
-    expect(field.value).toBe('');
-    act(() => listeners[0].onClick({}, { coordinates: [69.2797, 41.3111] }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'Send to candidate' }));
-    await waitFor(() => expect(send).toHaveBeenCalled());
-    expect((vi.mocked(send).mock.calls[0][1] as any).mapUrl).toContain('pt=69.2797%2C41.3111');
-
   });
 });

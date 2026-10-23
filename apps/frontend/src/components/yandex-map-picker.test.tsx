@@ -3,36 +3,53 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { changeLanguage } from '../i18n';
 import { pointFromMapUrl, YandexMapPicker, yandexMapLink } from './yandex-map-picker';
 
-const listeners: Array<{ onClick: (object: unknown, event: { coordinates: [number, number] }) => void }> = [];
-const markers: Array<{ props: { coordinates: number[] } }> = [];
+const osm = vi.hoisted(() => ({ created: 0, fail: false, onClick: null as null | ((event: { latlng: { lat: number; lng: number } }) => void), markers: [] as any[] }));
+vi.mock('leaflet/dist/leaflet.css', () => ({}));
+vi.mock('leaflet', () => {
+  const L = {
+    map: () => {
+      if (osm.fail) throw new Error('osm down');
+      osm.created += 1;
+      const map: any = {};
+      map.setView = () => map;
+      map.on = (_event: string, handler: any) => { osm.onClick = handler; };
+      map.invalidateSize = () => {};
+      map.getZoom = () => 12;
+      map.remove = () => {};
+      return map;
+    },
+    tileLayer: () => ({ addTo: () => undefined }),
+    divIcon: (options: unknown) => options,
+    marker: (latlng: [number, number]) => {
+      const marker: any = { latlng, addTo: () => { osm.markers.push(marker); return marker; }, setLatLng: (next: [number, number]) => { marker.latlng = next; }, remove: () => {} };
+      return marker;
+    },
+  };
+  return { default: L };
+});
 
-function installFakeMaps() {
+const yandexClicks: Array<{ onClick: (object: unknown, event: { coordinates: [number, number] }) => void }> = [];
+function installFakeYandex() {
   class Layer {}
-  class YMap {
-    children: unknown[] = [];
-    addChild(child: unknown) { this.children.push(child); }
-    removeChild(child: unknown) { this.children = this.children.filter((item) => item !== child); }
-    update() {}
-    destroy() {}
-  }
-  class YMapListener { constructor(props: any) { listeners.push(props); } }
-  class YMapMarker {
-    props: any;
-    constructor(props: any) { this.props = props; markers.push(this as any); }
-    update(next: any) { this.props = { ...this.props, ...next }; }
-  }
+  class YMap { addChild() {} removeChild() {} update() {} destroy() {} }
+  class YMapListener { constructor(props: any) { yandexClicks.push(props); } }
+  class YMapMarker { constructor(public props: any) {} update() {} }
   (window as any).ymaps3 = { ready: Promise.resolve(), YMap, YMapDefaultSchemeLayer: Layer, YMapDefaultFeaturesLayer: Layer, YMapListener, YMapMarker };
 }
 
 beforeEach(async () => {
   await changeLanguage('en');
-  listeners.length = 0;
-  markers.length = 0;
+  yandexClicks.length = 0;
+  osm.created = 0;
+  osm.fail = false;
+  osm.onClick = null;
+  osm.markers.length = 0;
 });
 afterEach(async () => {
   cleanup();
   vi.unstubAllEnvs();
   delete (window as any).ymaps3;
+  document.querySelectorAll('script[src*="api-maps.yandex.ru"]').forEach((script) => script.remove());
   await changeLanguage('uz');
 });
 
@@ -51,26 +68,29 @@ describe('map link helpers', () => {
   });
 });
 
-describe('YandexMapPicker', () => {
-  it('falls back to a message, without loading anything, when no key is configured', () => {
+describe('map picker', () => {
+  it('uses OpenStreetMap, without touching Yandex, when no Yandex key is configured', async () => {
     vi.stubEnv('VITE_YANDEX_MAPS_KEY', '');
-    render(<YandexMapPicker point={null} onChange={vi.fn()} />);
-    expect(screen.getByText(/map is not available/i)).toBeInTheDocument();
+    const onChange = vi.fn();
+    render(<YandexMapPicker point={null} onChange={onChange} />);
+    await waitFor(() => expect(osm.onClick).not.toBeNull());
     expect(document.querySelector('script[src*="api-maps.yandex.ru"]')).toBeNull();
+    act(() => osm.onClick!({ latlng: { lat: 41.311134, lng: 69.279712 } }));
+    expect(onChange).toHaveBeenCalledWith({ lat: 41.311134, lng: 69.279712 });
+    expect(osm.markers).toHaveLength(1);
   });
 
-  it('places a pin where the HR clicks and reports the coordinates, and can remove it', async () => {
+  it('uses Yandex when it works: a click places a pin and reports the coordinates, which can be removed', async () => {
     vi.stubEnv('VITE_YANDEX_MAPS_KEY', 'test-key');
-    installFakeMaps();
+    installFakeYandex();
     const onChange = vi.fn();
     const { rerender } = render(<YandexMapPicker point={null} onChange={onChange} />);
-    await waitFor(() => expect(listeners).toHaveLength(1));
+    await waitFor(() => expect(yandexClicks).toHaveLength(1));
+    expect(osm.created).toBe(0);
     expect(screen.getByText('Click the map to place a pin')).toBeInTheDocument();
 
-    act(() => listeners[0].onClick({}, { coordinates: [69.279712, 41.311134] }));
+    act(() => yandexClicks[0].onClick({}, { coordinates: [69.279712, 41.311134] }));
     expect(onChange).toHaveBeenCalledWith({ lat: 41.311134, lng: 69.279712 });
-    expect(markers).toHaveLength(1);
-    expect(markers[0].props.coordinates).toEqual([69.279712, 41.311134]);
 
     rerender(<YandexMapPicker point={{ lat: 41.311134, lng: 69.279712 }} onChange={onChange} />);
     expect(screen.getByText('41.31113, 69.27971')).toBeInTheDocument();
@@ -78,7 +98,7 @@ describe('YandexMapPicker', () => {
     expect(onChange).toHaveBeenLastCalledWith(null);
   });
 
-  it('shows the fallback message when the map script cannot load', async () => {
+  it('falls back to OpenStreetMap when the Yandex script is refused (wrong domain or key)', async () => {
     vi.stubEnv('VITE_YANDEX_MAPS_KEY', 'test-key');
     render(<YandexMapPicker point={null} onChange={vi.fn()} />);
     const script = await waitFor(() => {
@@ -87,6 +107,13 @@ describe('YandexMapPicker', () => {
       return found as HTMLScriptElement;
     });
     act(() => script.onerror?.(new Event('error')));
+    await waitFor(() => expect(osm.created).toBe(1));
+  });
+
+  it('says so only when no map can be shown at all', async () => {
+    vi.stubEnv('VITE_YANDEX_MAPS_KEY', '');
+    osm.fail = true;
+    render(<YandexMapPicker point={null} onChange={vi.fn()} />);
     expect(await screen.findByText(/map is not available/i)).toBeInTheDocument();
   });
 });
