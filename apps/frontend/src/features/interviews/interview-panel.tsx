@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarClock, CalendarDays, Check, Copy, Hourglass, MapPin, Video } from 'lucide-react';
+import { CalendarClock, CalendarDays, Check, Copy, Hourglass, MapPin, Video, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { send } from '../../lib/api';
 import {
@@ -171,12 +171,20 @@ export function InterviewPanel({ applicationId, status, onChanged }: Props) {
           )}
 
           <div className="mt-2 flex flex-wrap gap-3 border-t border-slate-200 pt-5">
-            <Button type="button" variant="outline" onClick={() => setDialog('reschedule')}>
-              {t('interviews.reschedule', 'Propose new times')}
-            </Button>
-            <Button type="button" variant="outline" onClick={() => setCancelOpen(true)}>
-              {t('interviews.cancel', 'Cancel interview')}
-            </Button>
+            <button
+              type="button"
+              onClick={() => setDialog('reschedule')}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#1a5d4c] bg-white px-4 py-2.5 text-sm font-semibold text-[#1a5d4c] shadow-sm transition-colors hover:bg-emerald-50"
+            >
+              <CalendarClock size={16} /> {t('interviews.reschedule', 'Propose new times')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setCancelOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl border border-red-300 bg-white px-4 py-2.5 text-sm font-semibold text-red-700 shadow-sm transition-colors hover:bg-red-50"
+            >
+              <X size={16} /> {t('interviews.cancel', 'Cancel interview')}
+            </button>
           </div>
         </div>
       )}
