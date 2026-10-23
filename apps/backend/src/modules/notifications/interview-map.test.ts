@@ -8,9 +8,9 @@ const vacancy = { id: 5, title: 'SMM Lead' };
 const when = new Date('2026-11-02T09:00:00Z');
 const offline = { mode: 'OFFLINE' as const, durationMinutes: 45, timezone: 'Asia/Tashkent', startsAt: when, location: 'Amir Temur 1' };
 
-function setup() {
+function setup(business: { id: string } | null = null) {
   const db: any = {
-    telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue({ id: 'biz1' }), findMany: vi.fn().mockResolvedValue([]) },
+    telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue(business), findMany: vi.fn().mockResolvedValue([]) },
     telegramUserLanguage: { findUnique: vi.fn().mockResolvedValue({ language: 'uz' }) },
     candidateEvent: { create: vi.fn().mockResolvedValue({}) },
   };
@@ -42,6 +42,24 @@ describe('offline interview confirmation with a map', () => {
     await none.service.sendInterviewConfirmation({ candidate, vacancy, companyName: 'Acme', interview: offline });
     expect(none.telegram.sendMessage.mock.calls[0][2].replyMarkup).toBeUndefined();
     expect(none.telegram.sendVenue).not.toHaveBeenCalled();
+  });
+
+  it('goes out from the HR’s own account, text and pin, when Business is connected', async () => {
+    const { telegram, service } = setup({ id: 'biz1' });
+    const result = await service.sendInterviewConfirmation({ candidate, vacancy, companyName: 'Acme', interview: { ...offline, mapUrl: 'https://yandex.uz/maps/?ll=69.2797%2C41.3111', mapLat: 41.3111, mapLng: 69.2797 } });
+    expect(telegram.sendMessage).toHaveBeenCalledTimes(1);
+    expect(telegram.sendMessage.mock.calls[0][2]).toEqual({ businessConnectionId: 'biz1' });
+    expect(telegram.sendVenue).toHaveBeenCalledWith('42', 41.3111, 69.2797, 'Acme', 'Amir Temur 1', { businessConnectionId: 'biz1' });
+    expect(result.telegramSent).toBe(true);
+  });
+
+  it('falls back to the bot chat when the Business chat does not deliver', async () => {
+    const { telegram, service } = setup({ id: 'biz1' });
+    telegram.sendMessage.mockResolvedValueOnce({ ok: false });
+    const result = await service.sendInterviewConfirmation({ candidate, vacancy, companyName: 'Acme', interview: offline });
+    expect(telegram.sendMessage).toHaveBeenCalledTimes(2);
+    expect(telegram.sendMessage.mock.calls[1][2]).not.toHaveProperty('businessConnectionId');
+    expect(result.telegramSent).toBe(true);
   });
 
   it('never sends a pin for an online interview, or when Telegram did not deliver', async () => {

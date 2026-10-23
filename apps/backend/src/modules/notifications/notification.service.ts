@@ -182,6 +182,7 @@ export class NotificationService {
         where,
       }),
       link: mapLink,
+      preferBusiness: true,
       subject: `${botText(lang, 'interviewSubjectConfirmed')}: ${vacancy.title} — ${companyName}`,
       eventType: 'INTERVIEW_CONFIRMATION_SENT',
       eventLabel: (channels) => `Suhbat tasdiqlandi, nomzodga yuborildi (${channels}) — ${vacancy.title}`,
@@ -189,18 +190,23 @@ export class NotificationService {
     });
     // A map pin goes only where Telegram delivered the confirmation; the email carries the link.
     if (delivered.telegramSent && interview.mode === 'OFFLINE' && interview.mapLat != null && interview.mapLng != null) {
-      await this.sendVenue(candidate, interview.mapLat, interview.mapLng, companyName, interview.location ?? vacancy.title);
+      await this.sendVenue(candidate, interview.mapLat, interview.mapLng, companyName, interview.location ?? vacancy.title, delivered.viaBusiness);
     }
     return delivered;
   }
 
-  private async sendVenue(candidate: CandidateNotificationTarget, lat: number, lng: number, title: string, address: string) {
+  private async sendVenue(candidate: CandidateNotificationTarget, lat: number, lng: number, title: string, address: string, viaBusiness = false) {
     if (!candidate.telegramUserId) return;
     try {
+      // The pin follows the confirmation: from the HR's own account when the text went that way.
+      const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
+      if (viaBusiness && businessConnectionId) {
+        const own = await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address, { businessConnectionId });
+        if (own.ok === true) return;
+      }
       const direct = await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address);
       if (direct.ok === true) return;
-      const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
-      if (businessConnectionId) await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address, { businessConnectionId });
+      if (businessConnectionId && !viaBusiness) await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address, { businessConnectionId });
     } catch (err) {
       this.logger.warn(`Interview map pin failed for candidateId=${candidate.id}: ${(err as Error).message}`);
     }
@@ -270,34 +276,49 @@ export class NotificationService {
       link?: { url: string; label: string };
       /** Extra inline-button rows, for the bot chat only (callbacks do not work in Business chats or email). */
       extraRows?: Array<Array<{ text: string; callback_data: string }>>;
+      /** Send from the HR's own Telegram account (Business chat) when it is connected, the bot chat otherwise. */
+      preferBusiness?: boolean;
       eventType: string;
       eventLabel: (channels: string) => string;
       failureKind: string;
     },
-  ): Promise<{ telegramSent: boolean; emailSent: boolean }> {
+  ): Promise<{ telegramSent: boolean; emailSent: boolean; viaBusiness?: boolean }> {
     const { text, link } = message;
     const textWithLink = link ? `${text}\n\n👉 ${link.url}` : text;
     let telegramSent = false;
     let emailSent = false;
+    let viaBusiness = false;
 
     if (candidate.telegramUserId) {
       try {
+        let delivered = false;
+        if (message.preferBusiness) {
+          const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
+          if (businessConnectionId) {
+            const own = await this.telegramApi.sendMessage(candidate.telegramUserId, textWithLink, { businessConnectionId });
+            delivered = own.ok === true;
+            viaBusiness = delivered;
+          }
+        }
         // 1) The bot chat: works for anyone who has ever opened the bot (Telegram refuses the message otherwise).
         const rows = [
           ...(link && link.url.startsWith('https://') ? [[{ text: link.label, url: link.url }]] : []),
           ...(message.extraRows ?? []),
         ];
-        const direct = await this.telegramApi.sendMessage(candidate.telegramUserId, text, {
-          replyMarkup: rows.length ? { inline_keyboard: rows } : undefined,
-        });
-        let delivered = direct.ok === true;
-        if (delivered && link && !link.url.startsWith('https://')) await this.telegramApi.sendMessage(candidate.telegramUserId, link.url);
+        const direct = delivered
+          ? undefined
+          : await this.telegramApi.sendMessage(candidate.telegramUserId, text, {
+              replyMarkup: rows.length ? { inline_keyboard: rows } : undefined,
+            });
+        delivered = delivered || direct?.ok === true;
+        if (direct?.ok === true && link && !link.url.startsWith('https://')) await this.telegramApi.sendMessage(candidate.telegramUserId, link.url);
         // 2) Otherwise the HR's Telegram Business chat (needs reply access and a chat within the last 24 hours).
-        if (!delivered) {
+        if (!delivered && !message.preferBusiness) {
           const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
           if (businessConnectionId) {
-            const viaBusiness = await this.telegramApi.sendMessage(candidate.telegramUserId, textWithLink, { businessConnectionId });
-            delivered = viaBusiness.ok === true;
+            const fallback = await this.telegramApi.sendMessage(candidate.telegramUserId, textWithLink, { businessConnectionId });
+            delivered = fallback.ok === true;
+            viaBusiness = delivered;
           }
         }
         telegramSent = delivered;
@@ -326,7 +347,7 @@ export class NotificationService {
         .create({ data: { companyId: candidate.companyId, candidateId: candidate.id, type: message.eventType, label: message.eventLabel(channels) } })
         .catch((err: Error) => this.logger.warn(`Failed to log candidateEvent: ${err.message}`));
     }
-    return { telegramSent, emailSent };
+    return viaBusiness ? { telegramSent, emailSent, viaBusiness } : { telegramSent, emailSent };
   }
 
   /**

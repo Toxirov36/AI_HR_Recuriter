@@ -5450,14 +5450,34 @@ input.combobox-input-field:focus {
     margin: 10mm 12mm;
   }
 
-  /* Hide everything on the page */
-  body * {
-    visibility: hidden !important;
+  /* The app is hidden; the dossier modal is portalled to <body> and printed as a plain page. */
+  body > #root {
+    display: none !important;
   }
 
-  /* Make sure the modal overlays and web chrome do not render */
-  .no-print,
   .dossier-modal-overlay,
+  .dossier-modal-window,
+  .dossier-modal-window * {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  .dossier-modal-overlay {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    background: none !important;
+    backdrop-filter: none !important;
+  }
+
+  .dossier-modal-window {
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .no-print,
   nav,
   header,
   aside,
@@ -5466,16 +5486,8 @@ input.combobox-input-field:focus {
     display: none !important;
   }
 
-  /* Make only the printable dossier visible and properly positioned */
-  #printable-dossier,
-  #printable-dossier * {
-    visibility: visible !important;
-  }
-
   #printable-dossier {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
+    position: static !important;
     width: 100% !important;
     max-width: 100% !important;
     min-height: auto !important;

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { Printer, X, Download, ShieldCheck, Mail, Phone, Calendar, Sparkles, Building2, User, Award, CheckCircle2, AlertCircle, HelpCircle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Application, Candidate } from '../types';
@@ -18,8 +19,6 @@ export function CandidateDossierModal({
   candidate: candidateProp,
 }: CandidateDossierModalProps) {
   const { t } = useTranslation();
-  if (!open) return null;
-
   // Agar application ID mavjud bo'lsa, to'liq talablar va ma'lumotlarni yuklaymiz
   const { data: fetchedApp } = useData<Application>(
     open && initialApp?.id ? `/applications/${initialApp.id}` : '',
@@ -28,7 +27,7 @@ export function CandidateDossierModal({
 
   // Use either the candidate passed in or extract from application
   const candidate = candidateProp || application?.candidate;
-  if (!candidate) return null;
+  if (!open || !candidate) return null;
 
   const evidence = application?.analysis ? getEvidenceSummary(application.analysis) : null;
   const parsed = candidate.parsedResume;
@@ -42,7 +41,8 @@ export function CandidateDossierModal({
     window.print();
   };
 
-  return (
+  // Portalled to <body> so the print stylesheet can hide the app (#root) and leave only the sheet.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto dossier-modal-overlay">
       <div className="bg-slate-100 rounded-2xl shadow-2xl border border-slate-300 w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden my-auto dossier-modal-window">
         {/* Modal Top Control Bar (Hidden during printing) */}
@@ -575,6 +575,7 @@ export function CandidateDossierModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
