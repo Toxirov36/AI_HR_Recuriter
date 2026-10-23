@@ -70,6 +70,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           SUPPORT_TELEGRAM_URL: ${{ vars.SUPPORT_TELEGRAM_URL }}
+          YANDEX_MAPS_KEY: ${{ vars.YANDEX_MAPS_KEY }}
         run: |
           set -euo pipefail
           registry="ghcr.io/${GITHUB_REPOSITORY,,}"
@@ -78,6 +79,7 @@ jobs:
             docker build --label "org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY" \
               --label "org.opencontainers.image.revision=$GITHUB_SHA" \
               --build-arg "VITE_SUPPORT_TELEGRAM_URL=${SUPPORT_TELEGRAM_URL:-}" \
+              --build-arg "VITE_YANDEX_MAPS_KEY=${YANDEX_MAPS_KEY:-}" \
               -f "apps/$service/Dockerfile" -t "$registry-$service:$GITHUB_SHA" .
             if [[ "$service" == backend ]]; then
               docker run --rm --entrypoint node "$registry-$service:$GITHUB_SHA" -e \

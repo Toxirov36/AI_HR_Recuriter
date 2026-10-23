@@ -7,6 +7,7 @@ COPY packages packages
 RUN npm ci --ignore-scripts
 COPY apps/frontend apps/frontend
 ARG VITE_SUPPORT_TELEGRAM_URL=""
+ARG VITE_YANDEX_MAPS_KEY=""
 RUN npm run build -w apps/frontend
 FROM nginx:1.28-alpine
 COPY apps/frontend/nginx.conf /etc/nginx/conf.d/default.conf

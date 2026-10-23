@@ -1,3 +1,4 @@
+import { pointFromMapUrl, YandexMapPicker, yandexMapLink, type MapPoint } from '../../components/yandex-map-picker';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -37,6 +38,7 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
   const [duration, setDuration] = useState(String(existing?.durationMinutes ?? 30));
   const [location, setLocation] = useState(existing?.location ?? '');
   const [mapUrl, setMapUrl] = useState(existing?.mapUrl ?? '');
+  const [point, setPoint] = useState<MapPoint | null>(pointFromMapUrl(existing?.mapUrl));
   const [note, setNote] = useState(existing?.note ?? '');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -130,6 +132,18 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
           </Field>
         )}
         {mode === 'OFFLINE' && (
+          <div className="grid gap-2">
+            <span className="text-sm font-semibold text-slate-800">{t('interviews.mapPick', 'Pick the place on the map')}</span>
+            <YandexMapPicker
+              point={point}
+              onChange={(next) => {
+                setPoint(next);
+                setMapUrl(next ? yandexMapLink(next) : '');
+              }}
+            />
+          </div>
+        )}
+        {mode === 'OFFLINE' && (
           <Field label={t('interviews.mapUrl', 'Map link (optional)')} htmlFor="interview-map-url">
             <Input
               id="interview-map-url"
@@ -138,7 +152,10 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
               value={mapUrl}
               maxLength={500}
               placeholder="https://maps.google.com/..."
-              onChange={(event) => setMapUrl(event.target.value)}
+              onChange={(event) => {
+                setMapUrl(event.target.value);
+                setPoint(pointFromMapUrl(event.target.value));
+              }}
             />
             <small className="mt-1 block text-slate-500">{t('interviews.mapUrlHint', 'Share the place from Google Maps, Yandex Maps or 2GIS. The candidate gets a map pin with the confirmation.')}</small>
           </Field>
