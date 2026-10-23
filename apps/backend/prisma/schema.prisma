@@ -192,6 +192,11 @@ model Vacancy {
   description String
   status VacancyStatus @default(ACTIVE)
   department String?
+  // Pay shown to candidates: a range or one bound, in UZS or USD, or "negotiable".
+  salaryFrom Int?
+  salaryTo Int?
+  salaryCurrency String?
+  salaryNegotiable Boolean @default(false)
   fieldId Int?
   field VacancyField? @relation(fields: [fieldId, companyId], references: [id, companyId])
   location String?

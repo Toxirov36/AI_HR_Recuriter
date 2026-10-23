@@ -13,12 +13,18 @@ export const requirementSchema = z
 
 export type RequirementDto = z.infer<typeof requirementSchema>;
 
+const salaryAmount = z.number().int().min(0).max(2_000_000_000).nullable().optional();
+
 export const vacancySchema = z
   .object({
     title: text(200),
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
     department: optionalMeta(100),
+    salaryFrom: salaryAmount,
+    salaryTo: salaryAmount,
+    salaryCurrency: z.enum(['UZS', 'USD']).nullable().optional(),
+    salaryNegotiable: z.boolean().optional(),
     location: optionalMeta(100),
     workModel: optionalMeta(50),
     employmentType: optionalMeta(50),
@@ -31,7 +37,8 @@ export const vacancySchema = z
     hhEmploymentId: z.string().trim().max(40).nullable().optional(),
     hhScheduleId: z.string().trim().max(40).nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => value.salaryFrom == null || value.salaryTo == null || value.salaryTo >= value.salaryFrom, { path: ['salaryTo'], message: 'The upper pay must not be lower than the lower pay' });
 
 export type VacancyDto = z.infer<typeof vacancySchema>;
 export type CreateVacancyDto = VacancyDto;

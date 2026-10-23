@@ -71,12 +71,18 @@ export const requirement = z
   })
   .strict();
 
+const salaryAmount = z.number().int().min(0).max(2_000_000_000).nullable().optional();
+
 export const vacancy = z
   .object({
     title: text(200),
     description: text(15000),
     status: z.enum(['DRAFT', 'ACTIVE', 'CLOSED']).default('ACTIVE'),
     department: z.string().trim().max(100).nullable().optional().transform((value) => value === '' ? null : value),
+    salaryFrom: salaryAmount,
+    salaryTo: salaryAmount,
+    salaryCurrency: z.enum(['UZS', 'USD']).nullable().optional(),
+    salaryNegotiable: z.boolean().optional(),
     location: z.string().trim().max(100).nullable().optional().transform((value) => value === '' ? null : value),
     workModel: z.string().trim().max(50).nullable().optional().transform((value) => value === '' ? null : value),
     employmentType: z.string().trim().max(50).nullable().optional().transform((value) => value === '' ? null : value),
@@ -89,7 +95,8 @@ export const vacancy = z
     hhEmploymentId: z.string().trim().max(40).nullable().optional(),
     hhScheduleId: z.string().trim().max(40).nullable().optional(),
   })
-  .strict();
+  .strict()
+  .refine((value) => value.salaryFrom == null || value.salaryTo == null || value.salaryTo >= value.salaryFrom, { path: ['salaryTo'], message: 'The upper pay must not be lower than the lower pay' });
 
 export const candidate = z
   .object({

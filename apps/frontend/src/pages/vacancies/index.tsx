@@ -55,6 +55,7 @@ import { useAuth } from '../../features/auth';
 import { VacancyGenerator } from '../../features/create-vacancy';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import { PublicationModal } from './publication-modal';
+import { groupAmount, parseAmount, salaryLabel } from '../../lib/salary';
 
 type HhFields = { areas: Array<{ id: string; name: string }>; roles: Array<{ id: string; name: string }>; experiences: Array<{ id: string; name: string }>; employments: Array<{ id: string; name: string }>; schedules: Array<{ id: string; name: string }> };
 
@@ -86,7 +87,10 @@ export function VacancyForm({
   const initialMeta = parseDescriptionMeta(value?.description || '');
 
   const [title, setTitle] = useState(value?.title ?? '');
-  const [department, setDepartment] = useState(value?.department ?? initialMeta.department);
+  const [salaryFrom, setSalaryFrom] = useState(groupAmount(value?.salaryFrom));
+  const [salaryTo, setSalaryTo] = useState(groupAmount(value?.salaryTo));
+  const [salaryCurrency, setSalaryCurrency] = useState<'UZS' | 'USD'>(value?.salaryCurrency === 'USD' ? 'USD' : 'UZS');
+  const [salaryNegotiable, setSalaryNegotiable] = useState(Boolean(value?.salaryNegotiable));
   const [location, setLocation] = useState(value?.location ?? initialMeta.location);
   const [workModel, setWorkModel] = useState(value?.workModel ?? initialMeta.workModel);
   const [employmentType, setEmploymentType] = useState(value?.employmentType ?? initialMeta.employmentType);
@@ -129,7 +133,10 @@ export function VacancyForm({
         {
           title: title.trim(),
           description: cleanDesc,
-          department: department.trim() || null,
+          salaryNegotiable,
+          salaryFrom: salaryNegotiable ? null : parseAmount(salaryFrom),
+          salaryTo: salaryNegotiable ? null : parseAmount(salaryTo),
+          salaryCurrency: salaryNegotiable ? null : salaryCurrency,
           location: location.trim() || null,
           workModel: workModel || null,
           employmentType: employmentType || null,
@@ -224,22 +231,6 @@ export function VacancyForm({
                 />
               </div>
 
-              <div className="form-group">
-                <label className="form-label" htmlFor="field-dept">
-                  {t('vacancies.labelDepartment')}
-                </label>
-                <input
-                  id="field-dept"
-                  name="department"
-                  aria-label={t('vacancies.labelDepartment')}
-                  value={department}
-                  onChange={(e) => setDepartment(e.target.value)}
-                  maxLength={100}
-                  placeholder={t('vacancies.optionalPlaceholder')}
-                  className="form-control-input"
-                />
-              </div>
-
               {/* Row 2 */}
               <div className="form-group">
                 <label className="form-label" htmlFor="field-loc">
@@ -255,6 +246,52 @@ export function VacancyForm({
                   placeholder={t('vacancies.optionalPlaceholder')}
                   className="form-control-input"
                 />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <span className="form-label" id="field-salary-label">{t('vacancies.labelSalary')}</span>
+                <div className="flex flex-wrap items-center gap-3" role="group" aria-labelledby="field-salary-label">
+                  <input
+                    id="field-salary-from"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    aria-label={t('vacancies.salaryFrom')}
+                    placeholder={t('vacancies.salaryFrom')}
+                    value={salaryFrom}
+                    disabled={salaryNegotiable}
+                    onChange={(e) => setSalaryFrom(groupAmount(e.target.value))}
+                    maxLength={14}
+                    className="form-control-input min-w-0 flex-1"
+                  />
+                  <input
+                    id="field-salary-to"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    aria-label={t('vacancies.salaryTo')}
+                    placeholder={t('vacancies.salaryTo')}
+                    value={salaryTo}
+                    disabled={salaryNegotiable}
+                    onChange={(e) => setSalaryTo(groupAmount(e.target.value))}
+                    maxLength={14}
+                    className="form-control-input min-w-0 flex-1"
+                  />
+                  <div className="w-[120px] shrink-0">
+                    <FormSelect
+                      id="field-salary-currency"
+                      ariaLabel={t('vacancies.salaryCurrency')}
+                      value={salaryCurrency}
+                      onChange={(next) => setSalaryCurrency(next === 'USD' ? 'USD' : 'UZS')}
+                      options={[
+                        { value: 'UZS', label: t('vacancies.currencyUzs') },
+                        { value: 'USD', label: t('vacancies.currencyUsd') },
+                      ]}
+                    />
+                  </div>
+                </div>
+                <label className="mt-2 flex w-fit cursor-pointer items-center gap-2 text-sm font-medium text-slate-700">
+                  <input type="checkbox" checked={salaryNegotiable} onChange={(e) => setSalaryNegotiable(e.target.checked)} />
+                  {t('vacancies.salaryNegotiable')}
+                </label>
               </div>
 
               <div className="form-group">
@@ -476,7 +513,6 @@ export function VacancyForm({
                 setRequirements(draft.requirements);
                 const parsed = parseDescriptionMeta(draft.description);
                 setDescription(parsed.description);
-                if (parsed.department) setDepartment(parsed.department);
                 if (parsed.location) setLocation(parsed.location);
                 if (parsed.workModel) setWorkModel(parsed.workModel);
                 if (parsed.employmentType) setEmploymentType(parsed.employmentType);
@@ -508,7 +544,7 @@ export function VacancyForm({
 }
 
 interface VacancyMeta {
-  department: string;
+  salary: string | null;
   location: string;
   workModel: string;
   seniority: string;
@@ -517,13 +553,13 @@ interface VacancyMeta {
   cleanDescription: string;
 }
 
-function getVacancyMeta(v: Vacancy): VacancyMeta {
+function getVacancyMeta(v: Vacancy, words: Parameters<typeof salaryLabel>[1]): VacancyMeta {
   const parsed = parseDescriptionMeta(v.description || '');
 
   const openedDate = new Date(v.createdAt).toLocaleDateString();
 
   return {
-    department: v.department ?? parsed.department,
+    salary: salaryLabel(v, words),
     location: v.location ?? parsed.location,
     workModel: v.workModel ?? parsed.workModel,
     seniority: v.seniority ?? parsed.seniority,
@@ -535,6 +571,13 @@ function getVacancyMeta(v: Vacancy): VacancyMeta {
 
 export function Vacancies() {
   const { t } = useTranslation();
+  const salaryWords = {
+    negotiable: t('vacancies.salaryNegotiable'),
+    from: t('vacancies.salaryFromWord'),
+    to: t('vacancies.salaryToWord'),
+    uzs: t('vacancies.currencyUzs'),
+    usd: t('vacancies.currencyUsd'),
+  };
   const [params, setParams] = useSearchParams();
   const [editing, setEditing] = useState<Vacancy | null>(null);
   const [deletingVacancy, setDeletingVacancy] = useState<Vacancy | null>(null);
@@ -699,7 +742,7 @@ export function Vacancies() {
           {filteredItems.length ? (
             <div className="vacancies-cards-grid">
               {filteredItems.map((v) => {
-                const meta = getVacancyMeta(v);
+                const meta = getVacancyMeta(v, salaryWords);
                 const appCount = v._count?.applications ?? 0;
                 return (
                   <Card className="vacancy-clean-card group" key={v.id}>
@@ -721,7 +764,7 @@ export function Vacancies() {
                     </div>
 
                     <div className="vacancy-card-meta-line">
-                      {[meta.department, meta.location, meta.workModel].map((item) => item || t('vacancies.notSpecified')).join(' · ')}
+                      {[meta.salary, meta.location, meta.workModel].map((item) => item || t('vacancies.notSpecified')).join(' · ')}
                     </div>
 
                     <p className="vacancy-card-blurb">{meta.cleanDescription || v.description}</p>

@@ -56,6 +56,10 @@ export type Vacancy = {
   description: string;
   status: string;
   department?: string | null;
+  salaryFrom?: number | null;
+  salaryTo?: number | null;
+  salaryCurrency?: 'UZS' | 'USD' | null;
+  salaryNegotiable?: boolean;
   location?: string | null;
   workModel?: string | null;
   employmentType?: string | null;

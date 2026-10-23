@@ -36,6 +36,16 @@ export const candidateListSelect = {
   _count: { select: { applications: true } },
 } as const;
 
+/** "Negotiable" clears the amounts; amounts without a currency are in UZS; a currency without amounts is dropped. */
+export function normalizeSalary<T extends { salaryFrom?: number | null; salaryTo?: number | null; salaryCurrency?: string | null; salaryNegotiable?: boolean }>(fields: T): T {
+  // A save that does not mention pay (older clients, partial updates) leaves it untouched.
+  if (!['salaryFrom', 'salaryTo', 'salaryCurrency', 'salaryNegotiable'].some((key) => key in fields)) return fields;
+  if (fields.salaryNegotiable) return { ...fields, salaryFrom: null, salaryTo: null, salaryCurrency: null };
+  const hasAmount = fields.salaryFrom != null || fields.salaryTo != null;
+  if (!hasAmount) return { ...fields, salaryCurrency: null };
+  return { ...fields, salaryCurrency: fields.salaryCurrency ?? 'UZS' };
+}
+
 @Injectable()
 export class RecruitingService {
   constructor(
@@ -200,7 +210,8 @@ export class RecruitingService {
   }
 
   async saveVacancy(companyId: number, id: number | null, data: z.infer<typeof vacancy>) {
-    const { requirements, confirmMetadataReview, ...fields } = data;
+    const { requirements, confirmMetadataReview, ...rest } = data;
+    const fields = normalizeSalary(rest);
     if (id === null)
       return this.db.vacancy.create({
         data: { ...fields, companyId, requirements: { create: requirements } },

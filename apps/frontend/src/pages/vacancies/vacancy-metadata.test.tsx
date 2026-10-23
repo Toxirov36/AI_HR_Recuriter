@@ -22,8 +22,29 @@ describe('vacancy metadata', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Vakansiya yaratish' }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     const payload = send.mock.calls[0][1];
-    expect(payload).toMatchObject({ description: 'Bemorlarga stomatologik yordam ko‘rsatish', department: null, location: null, workModel: null, employmentType: null, seniority: null });
+    expect(payload).toMatchObject({ description: 'Bemorlarga stomatologik yordam ko‘rsatish', salaryFrom: null, salaryTo: null, salaryNegotiable: false, location: null, workModel: null, employmentType: null, seniority: null });
     expect(payload.description).not.toContain('Department:');
+  });
+
+  it('sends the pay HR types, grouped digits and all, and "negotiable" clears it', async () => {
+    render(<VacancyForm value={null} close={vi.fn()} saved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText('Vakansiya nomi'), { target: { value: 'Backend dasturchi' } });
+    fireEvent.change(screen.getByLabelText('Batafsil tavsif'), { target: { value: 'NestJS bilan servislar yozish' } });
+    const from = screen.getByLabelText('Dan') as HTMLInputElement;
+    fireEvent.change(from, { target: { value: '5000000' } });
+    expect(from.value).toBe('5 000 000');
+    fireEvent.change(screen.getByLabelText('Gacha'), { target: { value: '8 000 000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Vakansiya yaratish' }));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    expect(send.mock.calls[0][1]).toMatchObject({ salaryFrom: 5_000_000, salaryTo: 8_000_000, salaryCurrency: 'UZS', salaryNegotiable: false });
+    expect(send.mock.calls[0][1]).not.toHaveProperty('department');
+
+    send.mockClear();
+    fireEvent.click(screen.getByLabelText('Kelishiladi'));
+    expect(from).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Vakansiya yaratish' }));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    expect(send.mock.calls[0][1]).toMatchObject({ salaryFrom: null, salaryTo: null, salaryCurrency: null, salaryNegotiable: true });
   });
 
   it('extracts only the exact legacy prefix and leaves other prose alone', () => {
