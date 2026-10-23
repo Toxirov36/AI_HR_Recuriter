@@ -38,6 +38,7 @@ export class VacancyAssessmentService {
       questions: parsed?.success ? parsed.data.questions : null,
       approvedAt: state === 'APPROVED' ? vacancy.assessmentApprovedAt : null,
       customQuestions: customQuestionsOf(vacancy.customQuestions),
+      aiInterview: { enabled: Boolean(vacancy.aiInterviewEnabled), focus: vacancy.interviewFocus ?? '' },
     };
   }
 
@@ -99,6 +100,7 @@ export class VacancyAssessmentService {
       data: {
         assessmentQuestions: { questions: edit.questions } as unknown as Prisma.InputJsonValue,
         customQuestions: edit.customQuestions as unknown as Prisma.InputJsonValue,
+        ...(edit.aiInterview ? { aiInterviewEnabled: edit.aiInterview.enabled, interviewFocus: edit.aiInterview.focus || null } : {}),
         assessmentApprovedAt: null,
         assessmentEditVersion: { increment: 1 },
       },

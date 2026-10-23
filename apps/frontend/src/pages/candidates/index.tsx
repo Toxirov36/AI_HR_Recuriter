@@ -4,6 +4,7 @@ import { Link, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   ArrowUpRight,
+  ChevronDown,
   Plus,
   Search,
   Pencil,
@@ -23,6 +24,9 @@ import { ParseProgress, type ParseStatusResponse } from '../../components/parse-
 import { exportCandidatesToCsv } from '../../lib/export';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
   Alert,
   AlertDialog,
   AlertDialogAction,
@@ -435,6 +439,7 @@ export function CandidateDetail() {
   const [actionError, setActionError] = useState('');
   const [editing, setEditing] = useState(false);
   const [dossierOpen, setDossierOpen] = useState(false);
+  const [resumeOpen, setResumeOpen] = useState(false);
   const [anonymizeOpen, setAnonymizeOpen] = useState(false);
   const [mergeCandidate, setMergeCandidate] = useState<NonNullable<typeof duplicates>[number] | null>(null);
   const [parseProgress, setParseProgress] = useState<ParseStatusResponse | null>(null);
@@ -795,23 +800,22 @@ export function CandidateDetail() {
               </section>
               <section className="panel padded">
                 <div className="panel-heading flush">
-                  <div>
-                    <h2>
-                      <Sparkles size={19} /> {t('candidates.structuredResumeTitle')}
-                    </h2>
-                    <p>{t('candidates.structuredResumeDesc')}</p>
-                  </div>
-                </div>
-                {!user?.aiConfigured && (
-                  <div className="my-2">
-                    <Alert message={t('candidates.aiNotConfigured')} />
-                  </div>
-                )}
-                {c.publicSubmittedAt && !c.aiConsentAt && (
-                  <p className="mt-2 text-sm text-amber-700">{t('candidates.noAiConsentNotice')}</p>
-                )}
+                  <button
+                    type="button"
+                    className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                    aria-expanded={resumeOpen}
+                    onClick={() => setResumeOpen((current) => !current)}
+                  >
+                    <ChevronDown size={18} className={`mt-1.5 shrink-0 text-slate-500 transition-transform duration-200 ${resumeOpen ? 'rotate-180' : ''}`} />
+                    <div>
+                      <h2>
+                        <Sparkles size={19} /> {t('candidates.structuredResumeTitle')}
+                      </h2>
+                      <p>{t('candidates.structuredResumeDesc')}</p>
+                    </div>
+                  </button>
                 <Button
-                  className="bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
+                  className="shrink-0 bg-[#245e4f] hover:bg-[#1b4338] text-white flex items-center gap-1.5"
                   disabled={!user?.aiConfigured || !c.resumeText || Boolean(busy) || Boolean(c.publicSubmittedAt && !c.aiConsentAt)}
                   onClick={() => void parseResume()}
                 >
@@ -822,6 +826,15 @@ export function CandidateDetail() {
                       ? t('candidates.parseAgain')
                       : t('candidates.parseResumeAi')}
                 </Button>
+                </div>
+                {!user?.aiConfigured && (
+                  <div className="my-2">
+                    <Alert message={t('candidates.aiNotConfigured')} />
+                  </div>
+                )}
+                {c.publicSubmittedAt && !c.aiConsentAt && (
+                  <p className="mt-2 text-sm text-amber-700">{t('candidates.noAiConsentNotice')}</p>
+                )}
                 {parseProgress && (
                   <div className="mt-4">
                     <ParseProgress
@@ -830,43 +843,54 @@ export function CandidateDetail() {
                     />
                   </div>
                 )}
-                {c.parsedResume ? (
-                  <div className="parsed-profile">
-                    <p>{c.parsedResume.summary}</p>
-                    <Separator className="my-4" />
-                    <h3>{t('candidateDossier.skills')}</h3>
-                    <div className="requirement-tags">
-                      {c.parsedResume.skills.map((s, i) => (
-                        <span key={i}>{s}</span>
-                      ))}
-                    </div>
-                    <Separator className="my-4" />
-                    <h3>{t('candidateDossier.experience')}</h3>
-                    {c.parsedResume.experience.map((x, i) => (
-                      <article key={i}>
-                        <strong>{x.title || t('candidates.roleNotStated')}</strong>
-                        <small>{[x.company, x.period].filter(Boolean).join(' · ')}</small>
-                        <p>{x.description}</p>
-                      </article>
-                    ))}
-                    <Separator className="my-4" />
-                    <h3>{t('candidateDossier.education')}</h3>
-                    {c.parsedResume.education.map((x, i) => (
-                      <p key={i}>
-                        {[x.qualification, x.institution, x.period].filter(Boolean).join(' · ')}
-                      </p>
-                    ))}
-                    <Separator className="my-4" />
-                    <h3>{t('candidateDossier.languages')}</h3>
-                    <p>{c.parsedResume.languages.join(', ') || t('candidates.notStated')}</p>
-                  </div>
-                ) : (
-                  <div className="quiet-note">
-                    {c.resumeText
-                      ? t('candidates.cvReadyPrompt')
-                      : t('candidates.uploadCvPrompt')}
-                  </div>
-                )}
+                <Accordion
+                  type="single"
+                  collapsible
+                  value={resumeOpen ? 'resume' : ''}
+                  onValueChange={(value) => setResumeOpen(value === 'resume')}
+                >
+                  <AccordionItem value="resume" className="border-b-0">
+                    <AccordionContent className="pb-0">
+                    {c.parsedResume ? (
+                      <div className="parsed-profile">
+                        <p>{c.parsedResume.summary}</p>
+                        <Separator className="my-4" />
+                        <h3>{t('candidateDossier.skills')}</h3>
+                        <div className="requirement-tags">
+                          {c.parsedResume.skills.map((s, i) => (
+                            <span key={i}>{s}</span>
+                          ))}
+                        </div>
+                        <Separator className="my-4" />
+                        <h3>{t('candidateDossier.experience')}</h3>
+                        {c.parsedResume.experience.map((x, i) => (
+                          <article key={i}>
+                            <strong>{x.title || t('candidates.roleNotStated')}</strong>
+                            <small>{[x.company, x.period].filter(Boolean).join(' · ')}</small>
+                            <p>{x.description}</p>
+                          </article>
+                        ))}
+                        <Separator className="my-4" />
+                        <h3>{t('candidateDossier.education')}</h3>
+                        {c.parsedResume.education.map((x, i) => (
+                          <p key={i}>
+                            {[x.qualification, x.institution, x.period].filter(Boolean).join(' · ')}
+                          </p>
+                        ))}
+                        <Separator className="my-4" />
+                        <h3>{t('candidateDossier.languages')}</h3>
+                        <p>{c.parsedResume.languages.join(', ') || t('candidates.notStated')}</p>
+                      </div>
+                    ) : (
+                      <div className="quiet-note">
+                        {c.resumeText
+                          ? t('candidates.cvReadyPrompt')
+                          : t('candidates.uploadCvPrompt')}
+                      </div>
+                    )}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </section>
             </div>
             {c.events && c.events.length > 0 && (

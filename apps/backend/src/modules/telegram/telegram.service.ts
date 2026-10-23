@@ -13,7 +13,9 @@ import { TelegramJoinService } from './telegram-join.service';
 import { TelegramLanguageService } from './telegram-language.service';
 import { TelegramMyApplicationsService } from './telegram-my-applications.service';
 import { TelegramMenuService } from './telegram-menu.service';
-import { botText, isBotLang } from './telegram-i18n';
+import { TelegramCallbackRegistry } from './telegram-callback.registry';
+import { BOT_LANG_LABELS, botText, isBotLang } from './telegram-i18n';
+import { markChosen } from './telegram-chosen';
 import { TelegramAdminService } from './telegram-admin.service';
 import type {
   TelegramCallbackQuery,
@@ -37,6 +39,7 @@ export class TelegramService {
     @Optional() @Inject(TelegramLanguageService) private languages?: TelegramLanguageService,
     @Optional() @Inject(TelegramMyApplicationsService) private myApplications?: TelegramMyApplicationsService,
     @Optional() @Inject(TelegramMenuService) private menu?: TelegramMenuService,
+    @Optional() @Inject(TelegramCallbackRegistry) private callbacks?: TelegramCallbackRegistry,
   ) {}
 
   /** First contact with the candidate bot: ask for a language, then resume the deep link they opened. */
@@ -48,12 +51,30 @@ export class TelegramService {
     return true;
   }
 
+  /** A voice message, photo or sticker in the middle of an application: say what the bot expects instead of staying silent. */
+  private async replyNonText(message: TelegramDirectMessage) {
+    if (!this.languages || !message?.from || message.chat?.type !== 'private') return;
+    try {
+      const userId = String(message.from.id);
+      const [joining, applying] = await Promise.all([
+        this.db.telegramJoinSession.findUnique({ where: { telegramUserId: userId }, select: { expiresAt: true } }),
+        this.db.telegramApplySession.findUnique({ where: { telegramUserId: userId }, select: { expiresAt: true } }),
+      ]);
+      const active = [joining, applying].some((session) => session && session.expiresAt > new Date());
+      if (!active) return;
+      await this.telegramApi.sendMessage(message.chat.id, botText(await this.languages.get(userId), 'nonTextReply'));
+    } catch {
+      // The hint is a courtesy; never fail the webhook over it.
+    }
+  }
+
   private async handleLanguageChoice(query: TelegramCallbackQuery, code: string) {
     if (!this.languages || !isBotLang(code)) return;
     const userId = String(query.from.id);
     const chatId = query.message?.chat.id ?? query.from.id;
     const pending = await this.languages.choose(userId, code);
     await this.telegramApi.answerCallbackQuery(query.id, botText(code, 'languageChanged'));
+    await markChosen(this.telegramApi, query, BOT_LANG_LABELS[code]);
     if (!pending) {
       await this.menu?.sendMenu(chatId, userId);
       return;
@@ -112,7 +133,10 @@ export class TelegramService {
       const contactHandled = await this.applyService?.handleContact(message);
       if (contactHandled) return;
     }
-    if (!message?.text) return;
+    if (!message?.text) {
+      await this.replyNonText(message);
+      return;
+    }
     const text = message.text.trim();
     if (/^\/language(@\w+)?$/i.test(text) && this.languages && message.from && message.chat.type === 'private') {
       await this.languages.ask(message.chat.id, String(message.from.id));
@@ -384,6 +408,7 @@ export class TelegramService {
       return;
     }
     if (await this.menu?.handleCallback(query)) return;
+    if (await this.callbacks?.dispatch(query)) return;
     if (data === 'my:apps') {
       await this.telegramApi.answerCallbackQuery(query.id);
       await this.myApplications?.show(query.message?.chat.id ?? query.from.id, String(query.from.id));

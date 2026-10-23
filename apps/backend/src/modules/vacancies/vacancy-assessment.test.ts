@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ConflictException } from '@nestjs/common';
 import { VacancyAssessmentService } from './vacancy-assessment.service';
-import { approvedAssessment, assessmentState } from '../ai/utils/assessment-approval';
+import { approvedAssessment, approvedInterview, assessmentState } from '../ai/utils/assessment-approval';
 import { getDefaultAssessmentForVacancy } from '../ai/utils/assessment-helper';
+import { assessmentEditSchema } from '../ai/schemas/assessment.schema';
 
 const assessment = getDefaultAssessmentForVacancy('Backend Developer');
 const actor = { id: 1, companyId: 3, fullName: 'Hr Admin', role: 'ADMIN', email: null } as never;
@@ -91,7 +92,6 @@ describe('HR written questions', () => {
   const edit = { questions: assessment.questions, customQuestions: ['Nega aynan bizning kompaniya?', 'Qancha maosh kutasiz?'] };
 
   it('validates up to five open questions and defaults to none', async () => {
-    const { assessmentEditSchema } = await import('../ai/schemas/assessment.schema');
     expect(assessmentEditSchema.parse({ questions: assessment.questions }).customQuestions).toEqual([]);
     expect(assessmentEditSchema.safeParse({ ...edit, customQuestions: Array.from({ length: 6 }, (_, i) => `Savol raqami ${i}`) }).success).toBe(false);
     expect(assessmentEditSchema.safeParse({ ...edit, customQuestions: ['qisqa'] }).success).toBe(true);
@@ -113,5 +113,41 @@ describe('HR written questions', () => {
     expect(approvedWrittenQuestions({ ...vacancy, assessmentApprovedAt: new Date() })).toEqual(edit.customQuestions);
     expect(approvedWrittenQuestions({ ...vacancy, assessmentApprovedAt: null })).toEqual([]);
     expect(approvedWrittenQuestions({ ...vacancy, assessmentApprovedAt: new Date(), assessmentRevision: 1 })).toEqual([]);
+  });
+});
+
+describe('AI interview setting', () => {
+  const edit = { questions: assessment.questions, customQuestions: [] as string[] };
+
+  it('is off with no focus unless HR sets it, and the focus is trimmed and capped', () => {
+    expect(assessmentEditSchema.parse(edit).aiInterview).toEqual({ enabled: false, focus: '' });
+    expect(assessmentEditSchema.parse({ ...edit, aiInterview: { enabled: true, focus: '  Reels va analitika  ' } }).aiInterview).toEqual({ enabled: true, focus: 'Reels va analitika' });
+    expect(assessmentEditSchema.safeParse({ ...edit, aiInterview: { enabled: true, focus: 'x'.repeat(501) } }).success).toBe(false);
+  });
+
+  it('is saved with the test (withdrawing the approval) and returned in the view', async () => {
+    const { db, service } = setup({ assessmentQuestions: assessment, assessmentRevision: 2, assessmentApprovedAt: new Date(), aiInterviewEnabled: true, interviewFocus: 'Reels' });
+    const view = await service.save(actor, 5, assessmentEditSchema.parse({ ...edit, aiInterview: { enabled: true, focus: 'Reels' } }));
+    expect(db.vacancy.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ aiInterviewEnabled: true, interviewFocus: 'Reels', assessmentApprovedAt: null }),
+    }));
+    expect(view.aiInterview).toEqual({ enabled: true, focus: 'Reels' });
+  });
+
+  it('clears an empty focus and leaves the setting alone when the edit does not mention it', async () => {
+    const { db, service } = setup({ assessmentQuestions: assessment, assessmentRevision: 2, assessmentApprovedAt: null });
+    await service.save(actor, 5, assessmentEditSchema.parse({ ...edit, aiInterview: { enabled: true, focus: '' } }));
+    expect(db.vacancy.updateMany).toHaveBeenLastCalledWith(expect.objectContaining({ data: expect.objectContaining({ aiInterviewEnabled: true, interviewFocus: null }) }));
+    await service.save(actor, 5, { questions: assessment.questions, customQuestions: [] } as never);
+    const data = db.vacancy.updateMany.mock.calls.at(-1)![0].data;
+    expect(data).not.toHaveProperty('aiInterviewEnabled');
+  });
+
+  it('only an approved test carries the interview to candidates', () => {
+    const vacancy = { revision: 2, assessmentQuestions: assessment, assessmentRevision: 2, aiInterviewEnabled: true, interviewFocus: ' Reels ' };
+    expect(approvedInterview({ ...vacancy, assessmentApprovedAt: null })).toEqual({ enabled: false, focus: null });
+    expect(approvedInterview({ ...vacancy, assessmentApprovedAt: new Date() })).toEqual({ enabled: true, focus: 'Reels' });
+    expect(approvedInterview({ ...vacancy, assessmentApprovedAt: new Date(), aiInterviewEnabled: false })).toEqual({ enabled: false, focus: null });
+    expect(approvedInterview({ ...vacancy, assessmentApprovedAt: new Date(), revision: 3 })).toEqual({ enabled: false, focus: null });
   });
 });

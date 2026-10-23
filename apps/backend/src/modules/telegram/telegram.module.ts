@@ -11,6 +11,8 @@ import { TelegramJoinService } from './telegram-join.service';
 import { TelegramLanguageService } from './telegram-language.service';
 import { TelegramMyApplicationsService } from './telegram-my-applications.service';
 import { TelegramMenuService } from './telegram-menu.service';
+import { TelegramAiInterviewService } from './telegram-ai-interview.service';
+import { TelegramCallbackRegistry } from './telegram-callback.registry';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { AuditModule } from '../audit/audit.module';
 import { ExternalRecruitingModule } from '../external-recruiting/external-recruiting.module';
@@ -33,9 +35,11 @@ import { TelegramAdminService } from './telegram-admin.service';
     TelegramLanguageService,
     TelegramMyApplicationsService,
     TelegramMenuService,
+    TelegramAiInterviewService,
+    TelegramCallbackRegistry,
     TelegramAdminService,
     GeminiProvider,
   ],
-  exports: [TelegramService, TelegramApiService],
+  exports: [TelegramService, TelegramApiService, TelegramCallbackRegistry],
 })
 export class TelegramModule {}

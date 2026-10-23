@@ -192,4 +192,41 @@ export class TelegramApiService {
       return { ok: false, description: (err as Error).message };
     }
   }
+
+  /** Shows "typing…" for a few seconds while the bot works on a reply. Best effort: failures are ignored. */
+  async sendChatAction(chatId: string | number, action: 'typing' | 'upload_document' = 'typing') {
+    if (!this.config.TELEGRAM_BOT_TOKEN) return;
+    try {
+      await fetch(`${this.baseUrl}/sendChatAction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, action }),
+        signal: AbortSignal.timeout(5_000),
+      });
+    } catch {
+      // The indicator is cosmetic.
+    }
+  }
+
+  /** Sends a text file (for example an interview transcript) as a document. */
+  async sendDocument(
+    chatId: string | number,
+    file: { name: string; content: string },
+    options?: { caption?: string; parseMode?: string },
+  ): Promise<TelegramResponse<any>> {
+    if (!this.config.TELEGRAM_BOT_TOKEN) {
+      return { ok: false, description: 'Telegram bot token is not configured' };
+    }
+    const form = new FormData();
+    form.set('chat_id', String(chatId));
+    form.set('document', new Blob([file.content], { type: 'text/plain; charset=utf-8' }), file.name);
+    if (options?.caption) form.set('caption', options.caption.slice(0, 1000));
+    if (options?.parseMode) form.set('parse_mode', options.parseMode);
+    try {
+      const response = await fetch(`${this.baseUrl}/sendDocument`, { method: 'POST', body: form, signal: AbortSignal.timeout(20_000) });
+      return (await response.json()) as TelegramResponse<any>;
+    } catch (err) {
+      return { ok: false, description: (err as Error).message };
+    }
+  }
 }

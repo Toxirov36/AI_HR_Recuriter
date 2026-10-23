@@ -28,7 +28,7 @@ const uz = {
   alreadyAppliedTitle: '«{title}» vakansiyasiga arizangiz allaqachon qabul qilingan.',
   applyStorageOff: 'Telegram orqali CV qabul qilish sozlanmagan. Saytda ariza yuboring: {url}',
   applyConsent:
-    '«{title}» vakansiyasiga ariza.\n\n{company} ma’lumotlaringiz, Telegram profilingizdagi ism va CVni ishga qabul qilish uchun saqlaydi ({days} kungacha). Lavozimga mos test savollari AI yordamida yaratiladi va CVingiz AI orqali tahlil qilinadi; natijalar HRga ko‘rsatiladi. Davom etishga rozimisiz?',
+    '«{title}» vakansiyasiga ariza.\n\n{company} ma’lumotlaringiz, Telegram profilingizdagi ism va CVni ishga qabul qilish uchun saqlaydi ({days} kungacha). Lavozimga mos test savollari AI yordamida yaratiladi va CVingiz AI orqali tahlil qilinadi; natijalar HRga ko‘rsatiladi. Vakansiyada AI suhbat yoqilgan bo‘lsa, suhbat javoblaringiz ham AI yordamida baholanadi. Davom etishga rozimisiz?',
   agree: 'Roziman',
   decline: 'Rad etaman',
   applySessionExpired: 'Ariza sessiyasi tugagan. E’lon havolasini qayta oching.',
@@ -82,7 +82,7 @@ const uz = {
   joinInvalidLink: 'Bu havola yaroqsiz yoki ariza qabul qilish to‘xtatilgan.',
   joinStorageOff: 'Hozircha Telegram orqali ariza qabul qilinmayapti. Keyinroq urinib ko‘ring.',
   joinConsent:
-    '{company} ga ariza.\n\n{company} ma’lumotlaringiz, ismingiz, telefon raqamingiz va CVni ishga qabul qilish uchun saqlaydi ({days} kungacha). Tanlangan lavozimga mos test savollari AI yordamida yaratiladi va CVingiz AI orqali tahlil qilinadi; natijalar HRga ko‘rsatiladi. Davom etishga rozimisiz?',
+    '{company} ga ariza.\n\n{company} ma’lumotlaringiz, ismingiz, telefon raqamingiz va CVni ishga qabul qilish uchun saqlaydi ({days} kungacha). Tanlangan lavozimga mos test savollari AI yordamida yaratiladi va CVingiz AI orqali tahlil qilinadi; natijalar HRga ko‘rsatiladi. Vakansiyada AI suhbat yoqilgan bo‘lsa, suhbat javoblaringiz ham AI yordamida baholanadi. Davom etishga rozimisiz?',
   joinSessionExpired: 'Ariza sessiyasi tugagan. Havolani qayta oching.',
   nameInvalid: 'Iltimos, ism va familiyangizni to‘liq yozing (masalan: Aziz Karimov).',
   phoneInvalidJoin:
@@ -159,6 +159,22 @@ const uz = {
   interviewNoteLine: '\nIzoh: {note}',
   interviewInvited:
     '🎉 Assalomu alaykum, {name}!\n\nSizni «{company}» kompaniyasining «{vacancy}» vakansiyasi bo‘yicha suhbat bosqichiga taklif etamiz! HR mutaxassisi suhbat vaqti va formatini tez orada yuboradi.',
+  aiInterviewIntro: '🤝 <b>Oxirgi bosqich: AI bilan qisqa suhbat</b>\n\n~5 daqiqa, {max} tagacha savol. Savollarga matn bilan javob bering. Xohlasangiz, o‘tkazib yuborishingiz mumkin.',
+  aiInterviewSkip: '⏭ O‘tkazib yuborish',
+  aiInterviewTextOnly: 'Iltimos, javobni matn bilan yozing.',
+  aiInterviewBusy: 'Bir soniya, javobingizni o‘ylayapman…',
+  aiInterviewInvalid: 'Javob juda qisqa yoki juda uzun (1500 belgigacha). Qayta yozing.',
+  aiInterviewDone: '✅ Suhbat uchun rahmat! Natijalar HRga yuboriladi.',
+  aiInterviewSkipped: 'Suhbat o‘tkazib yuborildi.',
+  interviewNoneFit: '↩️ Boshqa vaqt kerak',
+  interviewPicked: '✅ Siz {when} vaqtini tanladingiz. Tasdiq xabari yuboriladi.',
+  interviewDeclinedThanks: 'Rahmat! HR sizga yangi vaqtlarni yuboradi.',
+  interviewButtonStale: 'Bu taklif eskirgan yoki allaqachon javob berilgan.',
+  interviewButtonNotYours: 'Bu taklif sizga tegishli emas.',
+  interviewMeetFailed: 'Uchrashuv havolasi yaratilmadi. Birozdan keyin qayta urinib ko‘ring.',
+  interviewTooMany: 'Juda ko‘p urinish. Birozdan keyin qayta urinib ko‘ring.',
+  yourAnswer: 'Javobingiz: {letter}',
+  nonTextReply: 'Iltimos, matn yozing yoki tugmalardan foydalaning.',
 };
 
 export type BotMessageKey = keyof typeof uz;
@@ -170,7 +186,7 @@ const ru: Record<BotMessageKey, string> = {
   alreadyAppliedTitle: 'Ваша заявка на вакансию «{title}» уже принята.',
   applyStorageOff: 'Приём резюме через Telegram не настроен. Отправьте заявку на сайте: {url}',
   applyConsent:
-    'Заявка на вакансию «{title}».\n\n{company} сохранит ваши данные, имя из профиля Telegram и резюме для подбора персонала (до {days} дн.). Тестовые вопросы по должности создаются с помощью ИИ, а ваше резюме анализируется ИИ; результаты увидит HR. Вы согласны продолжить?',
+    'Заявка на вакансию «{title}».\n\n{company} сохранит ваши данные, имя из профиля Telegram и резюме для подбора персонала (до {days} дн.). Тестовые вопросы по должности создаются с помощью ИИ, а ваше резюме анализируется ИИ; результаты увидит HR. Если в вакансии включено собеседование с ИИ, ваши ответы на нём тоже оцениваются ИИ. Вы согласны продолжить?',
   agree: 'Согласен',
   decline: 'Отказываюсь',
   applySessionExpired: 'Сессия заявки истекла. Откройте ссылку на вакансию ещё раз.',
@@ -224,7 +240,7 @@ const ru: Record<BotMessageKey, string> = {
   joinInvalidLink: 'Эта ссылка недействительна или приём заявок остановлен.',
   joinStorageOff: 'Сейчас заявки через Telegram не принимаются. Попробуйте позже.',
   joinConsent:
-    'Заявка в {company}.\n\n{company} сохранит ваши данные, имя, номер телефона и резюме для подбора персонала (до {days} дн.). Тестовые вопросы по выбранной должности создаются с помощью ИИ, а ваше резюме анализируется ИИ; результаты увидит HR. Вы согласны продолжить?',
+    'Заявка в {company}.\n\n{company} сохранит ваши данные, имя, номер телефона и резюме для подбора персонала (до {days} дн.). Тестовые вопросы по выбранной должности создаются с помощью ИИ, а ваше резюме анализируется ИИ; результаты увидит HR. Если в вакансии включено собеседование с ИИ, ваши ответы на нём тоже оцениваются ИИ. Вы согласны продолжить?',
   joinSessionExpired: 'Сессия заявки истекла. Откройте ссылку ещё раз.',
   nameInvalid: 'Пожалуйста, напишите имя и фамилию полностью (например: Азиз Каримов).',
   phoneInvalidJoin:
@@ -293,6 +309,7 @@ const ru: Record<BotMessageKey, string> = {
     '✅ Собеседование подтверждено!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} мин.\n{where}',
   interviewWhereOnline: '🔗 Google Meet: {url}',
   interviewWhereOffline: '📍 Адрес: {address}',
+  interviewOpenMap: '🗺 Открыть на карте',
   interviewCancelled: '❌ Собеседование в «{company}» на вакансию «{vacancy}» отменено. HR свяжется с вами.',
   interviewSubjectProposal: 'Приглашение на собеседование',
   interviewSubjectConfirmed: 'Собеседование подтверждено',
@@ -300,6 +317,22 @@ const ru: Record<BotMessageKey, string> = {
   interviewNoteLine: '\nКомментарий: {note}',
   interviewInvited:
     '🎉 Здравствуйте, {name}!\n\nПриглашаем вас на этап собеседования в «{company}» на вакансию «{vacancy}»! Специалист HR скоро пришлёт время и формат встречи.',
+  aiInterviewIntro: '🤝 <b>Последний этап: короткое собеседование с ИИ</b>\n\n~5 минут, до {max} вопросов. Отвечайте текстом. При желании можно пропустить.',
+  aiInterviewSkip: '⏭ Пропустить',
+  aiInterviewTextOnly: 'Пожалуйста, напишите ответ текстом.',
+  aiInterviewBusy: 'Секунду, обдумываю ваш ответ…',
+  aiInterviewInvalid: 'Ответ слишком короткий или слишком длинный (до 1500 символов). Напишите ещё раз.',
+  aiInterviewDone: '✅ Спасибо за собеседование! Результаты будут переданы HR.',
+  aiInterviewSkipped: 'Собеседование пропущено.',
+  interviewNoneFit: '↩️ Нужно другое время',
+  interviewPicked: '✅ Вы выбрали {when}. Подтверждение будет отправлено.',
+  interviewDeclinedThanks: 'Спасибо! HR пришлёт вам новое время.',
+  interviewButtonStale: 'Это приглашение устарело или на него уже ответили.',
+  interviewButtonNotYours: 'Это приглашение адресовано не вам.',
+  interviewMeetFailed: 'Не удалось создать ссылку на встречу. Попробуйте чуть позже.',
+  interviewTooMany: 'Слишком много попыток. Попробуйте чуть позже.',
+  yourAnswer: 'Ваш ответ: {letter}',
+  nonTextReply: 'Пожалуйста, напишите текстом или воспользуйтесь кнопками.',
 };
 
 const tg: Record<BotMessageKey, string> = {
@@ -309,8 +342,7 @@ const tg: Record<BotMessageKey, string> = {
   alreadyAppliedTitle: 'Дархости шумо ба вакансияи «{title}» аллакай қабул шудааст.',
   applyStorageOff: 'Қабули резюме тавассути Telegram танзим нашудааст. Дархостро дар сайт фиристед: {url}',
   applyConsent:
-  interviewOpenMap: '🗺 Открыть на карте',
-    'Дархост ба вакансияи «{title}».\n\n{company} маълумоти шумо, номи профили Telegram ва резюмеро барои ба кор қабул кардан нигоҳ медорад (то {days} рӯз). Саволҳои санҷишӣ аз рӯи вазифа бо ёрии ИИ сохта мешаванд ва резюмеи шумо тавассути ИИ таҳлил карда мешавад; натиҷаҳо ба HR нишон дода мешаванд. Оё розӣ ҳастед, ки идома диҳем?',
+    'Дархост ба вакансияи «{title}».\n\n{company} маълумоти шумо, номи профили Telegram ва резюмеро барои ба кор қабул кардан нигоҳ медорад (то {days} рӯз). Саволҳои санҷишӣ аз рӯи вазифа бо ёрии ИИ сохта мешаванд ва резюмеи шумо тавассути ИИ таҳлил карда мешавад; натиҷаҳо ба HR нишон дода мешаванд. Агар дар вакансия мусоҳибаи ИИ фаъол бошад, ҷавобҳои шумо дар мусоҳиба низ бо ёрии ИИ баҳо дода мешаванд. Оё розӣ ҳастед, ки идома диҳем?',
   agree: 'Розӣ ҳастам',
   decline: 'Рад мекунам',
   applySessionExpired: 'Сессияи дархост ба охир расид. Истиноди эълонро дубора кушоед.',
@@ -364,7 +396,7 @@ const tg: Record<BotMessageKey, string> = {
   joinInvalidLink: 'Ин истинод дуруст нест ё қабули дархост боздошта шудааст.',
   joinStorageOff: 'Ҳоло дархост тавассути Telegram қабул намешавад. Баъдтар кӯшиш кунед.',
   joinConsent:
-    'Дархост ба {company}.\n\n{company} маълумоти шумо, ном, рақами телефон ва резюмеро барои ба кор қабул кардан нигоҳ медорад (то {days} рӯз). Саволҳои санҷишӣ аз рӯи вазифаи интихобшуда бо ёрии ИИ сохта мешаванд ва резюмеи шумо тавассути ИИ таҳлил карда мешавад; натиҷаҳо ба HR нишон дода мешаванд. Оё розӣ ҳастед, ки идома диҳем?',
+    'Дархост ба {company}.\n\n{company} маълумоти шумо, ном, рақами телефон ва резюмеро барои ба кор қабул кардан нигоҳ медорад (то {days} рӯз). Саволҳои санҷишӣ аз рӯи вазифаи интихобшуда бо ёрии ИИ сохта мешаванд ва резюмеи шумо тавассути ИИ таҳлил карда мешавад; натиҷаҳо ба HR нишон дода мешаванд. Агар дар вакансия мусоҳибаи ИИ фаъол бошад, ҷавобҳои шумо дар мусоҳиба низ бо ёрии ИИ баҳо дода мешаванд. Оё розӣ ҳастед, ки идома диҳем?',
   joinSessionExpired: 'Сессияи дархост ба охир расид. Истинодро дубора кушоед.',
   nameInvalid: 'Лутфан, ном ва насаби худро пурра нависед (масалан: Азиз Каримов).',
   phoneInvalidJoin:
@@ -433,6 +465,7 @@ const tg: Record<BotMessageKey, string> = {
     '✅ Мусоҳиба тасдиқ шуд!\n\n«{company}» — «{vacancy}»\n🗓 {when} ({timezone})\n⏱ {minutes} дақиқа\n{where}',
   interviewWhereOnline: '🔗 Google Meet: {url}',
   interviewWhereOffline: '📍 Суроға: {address}',
+  interviewOpenMap: '🗺 Дар харита кушодан',
   interviewCancelled: '❌ Мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» бекор карда шуд. HR бо шумо тамос мегирад.',
   interviewSubjectProposal: 'Даъват ба мусоҳиба',
   interviewSubjectConfirmed: 'Мусоҳиба тасдиқ шуд',
@@ -440,6 +473,22 @@ const tg: Record<BotMessageKey, string> = {
   interviewNoteLine: '\nИзоҳ: {note}',
   interviewInvited:
     '🎉 Салом, {name}!\n\nШуморо ба марҳилаи мусоҳиба дар ширкати «{company}» барои вакансияи «{vacancy}» даъват мекунем! Мутахассиси HR ба зудӣ вақт ва шакли вохӯриро мефиристад.',
+  aiInterviewIntro: '🤝 <b>Марҳилаи охирин: мусоҳибаи кӯтоҳ бо ИИ</b>\n\n~5 дақиқа, то {max} савол. Ба саволҳо бо матн ҷавоб диҳед. Агар хоҳед, гузаштан мумкин аст.',
+  aiInterviewSkip: '⏭ Гузаштан',
+  aiInterviewTextOnly: 'Лутфан, ҷавобро бо матн нависед.',
+  aiInterviewBusy: 'Як лаҳза, ҷавоби шуморо фикр мекунам…',
+  aiInterviewInvalid: 'Ҷавоб хеле кӯтоҳ ё хеле дароз аст (то 1500 аломат). Дубора нависед.',
+  aiInterviewDone: '✅ Ташаккур барои мусоҳиба! Натиҷаҳо ба HR фиристода мешаванд.',
+  aiInterviewSkipped: 'Мусоҳиба гузаронида шуд.',
+  interviewNoneFit: '↩️ Вақти дигар лозим аст',
+  interviewPicked: '✅ Шумо вақти {when}-ро интихоб кардед. Тасдиқ фиристода мешавад.',
+  interviewDeclinedThanks: 'Ташаккур! HR ба шумо вақтҳои нав мефиристад.',
+  interviewButtonStale: 'Ин даъват кӯҳна шудааст ё ба он аллакай ҷавоб дода шудааст.',
+  interviewButtonNotYours: 'Ин даъват ба шумо тааллуқ надорад.',
+  interviewMeetFailed: 'Истиноди вохӯрӣ сохта нашуд. Каме баъдтар дубора кӯшиш кунед.',
+  interviewTooMany: 'Кӯшишҳо хеле зиёд. Каме баъдтар дубора кӯшиш кунед.',
+  yourAnswer: 'Ҷавоби шумо: {letter}',
+  nonTextReply: 'Лутфан, бо матн нависед ё аз тугмаҳо истифода баред.',
 };
 
 const MESSAGES: Record<BotLang, Record<BotMessageKey, string>> = { uz, ru, tg };
@@ -455,4 +504,3 @@ export const BOT_MESSAGE_KEYS = Object.keys(uz) as BotMessageKey[];
 export function matchesAnyLang(text: string, key: BotMessageKey): boolean {
   return BOT_LANGS.some((lang) => MESSAGES[lang][key] === text);
 }
-  interviewOpenMap: '🗺 Дар харита кушодан',

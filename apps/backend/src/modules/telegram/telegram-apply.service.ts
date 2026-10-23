@@ -18,10 +18,13 @@ import {
 import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/telegram.types';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { TelegramLanguageService } from './telegram-language.service';
-import { approvedWrittenQuestions, customQuestionsOf } from '../ai/utils/assessment-approval';
+import { approvedInterview, approvedWrittenQuestions, customQuestionsOf } from '../ai/utils/assessment-approval';
+import { TelegramAiInterviewService, type InterviewRun } from './telegram-ai-interview.service';
+import { storedInterviewOf, type StoredInterview } from '../ai/schemas/interview.schema';
 import { textAiProvider } from '../../config/app.config';
 import { writtenNotesInstructions, writtenNotesSchema, type WrittenAnswerItem } from '../ai/schemas/written-notes.schema';
-import { botText, DEFAULT_BOT_LANG, type BotMessageKey } from './telegram-i18n';
+import { botText, DEFAULT_BOT_LANG, type BotLang, type BotMessageKey } from './telegram-i18n';
+import { markChosen } from './telegram-chosen';
 
 const MAX_CV_BYTES = 10 * 1024 * 1024;
 const escapeTelegramHtml = (text: string) => text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -40,6 +43,7 @@ export class TelegramApplyService {
     @Optional() @Inject(GeminiProvider) geminiProvider?: GeminiProvider,
     @Optional() @Inject(TelegramScreeningAlertService) private alerts?: TelegramScreeningAlertService,
     @Optional() @Inject(TelegramLanguageService) private languages?: TelegramLanguageService,
+    @Optional() @Inject(TelegramAiInterviewService) private interviewer?: TelegramAiInterviewService,
   ) {
     const candidate =
       geminiProvider ??
@@ -184,6 +188,7 @@ export class TelegramApplyService {
       if (privacyAction[2] === 'no') {
         const removed = await this.db.telegramApplySession.deleteMany({ where: { telegramUserId: userId, vacancyId: session.vacancyId, step: 'PRIVACY' } });
         await this.telegram.answerCallbackQuery(query.id, removed.count ? tr('applyCancelled') : tr('stepDone'));
+        if (removed.count) await markChosen(this.telegram, query, tr('decline'));
         if (removed.count) await this.telegram.sendMessage(chatId, tr('noConsent'));
         return;
       }
@@ -205,6 +210,11 @@ export class TelegramApplyService {
           customQuestions: assessment ? approvedWrittenQuestions(session.vacancy) : [],
           writtenAnswers: [],
           writtenIndex: 0,
+          interviewEnabled: Boolean(assessment) && Boolean(this.interviewer?.available) && approvedInterview(session.vacancy).enabled,
+          interviewFocus: assessment ? approvedInterview(session.vacancy).focus : null,
+          interviewTurns: Prisma.DbNull,
+          interviewTurn: 0,
+          interviewResult: Prisma.DbNull,
           currentQuestionIndex: 0,
           answers: [],
         },
@@ -214,6 +224,7 @@ export class TelegramApplyService {
         return;
       }
       await this.telegram.answerCallbackQuery(query.id);
+      await markChosen(this.telegram, query, tr('agree'));
       if (!assessment) {
         await this.telegram.sendMessage(chatId, tr('testNotApproved'));
         return;
@@ -226,6 +237,17 @@ export class TelegramApplyService {
 
     if (/^apply:\d+:ai:(yes|no)$/.test(data)) {
       await this.telegram.answerCallbackQuery(query.id, tr('oldButton'), true);
+      return;
+    }
+
+    // AI interview: "skip" button
+    if (data === `apply:${session.vacancyId}:ivskip`) {
+      if (session.step !== 'INTERVIEW' || !this.interviewer) {
+        await this.telegram.answerCallbackQuery(query.id, tr('stepDone'));
+        return;
+      }
+      await this.telegram.answerCallbackQuery(query.id);
+      await this.interviewer.skip(session, await this.interviewRun(session, chatId, tr));
       return;
     }
 
@@ -276,10 +298,11 @@ export class TelegramApplyService {
       const claimed = await this.db.telegramApplySession.updateMany({
         where: { telegramUserId: userId, vacancyId: session.vacancyId, step: 'ASSESSMENT', currentQuestionIndex: session.currentQuestionIndex },
         data: {
-          step: nextIndex === assessment.data.questions.length ? (written.length ? 'WRITTEN' : 'CONTACT_PHONE') : 'ASSESSMENT',
+          step: nextIndex === assessment.data.questions.length ? (written.length ? 'WRITTEN' : session.interviewEnabled ? 'INTERVIEW' : 'CONTACT_PHONE') : 'ASSESSMENT',
           currentQuestionIndex: nextIndex,
           answers: updatedAnswers as any,
           ...(nextIndex === assessment.data.questions.length && written.length ? { writtenIndex: 0, writtenAnswers: [] } : {}),
+          ...(nextIndex === assessment.data.questions.length && !written.length && session.interviewEnabled ? { interviewTurns: [], interviewTurn: 0 } : {}),
         },
       });
       if (!claimed.count) {
@@ -287,6 +310,7 @@ export class TelegramApplyService {
         return;
       }
       await this.telegram.answerCallbackQuery(query.id, tr('answerAccepted'));
+      await markChosen(this.telegram, query, tr('yourAnswer', { letter: String.fromCharCode(65 + choiceIdx) }));
 
       if (nextIndex < assessment.data.questions.length) {
         await this.sendQuestion(chatId, session.vacancyId, assessment.data.questions, nextIndex, tr);
@@ -325,6 +349,12 @@ export class TelegramApplyService {
           );
           await this.telegram.sendMessage(chatId, tr('writtenIntro', { count: written.length }));
           await this.sendWrittenQuestion(chatId, written, 0, tr);
+        } else if (session.interviewEnabled) {
+          await this.telegram.sendMessage(chatId,
+            tr('applyScore', { score: result.score, correct: result.correctCount, hard: result.hardSkillScore, soft: result.softSkillScore }).trim(),
+            { parseMode: 'HTML' },
+          );
+          await this.beginInterview(session, chatId, tr);
         } else {
           await this.telegram.sendMessage(chatId,
             tr('quizResultAskPhone', { score: result.score, correct: result.correctCount, hard: result.hardSkillScore, soft: result.softSkillScore }),
@@ -422,11 +452,19 @@ export class TelegramApplyService {
       const last = answers.length >= questions.length;
       const claimed = await this.db.telegramApplySession.updateMany({
         where: { telegramUserId: userId, step: 'WRITTEN', writtenIndex: session.writtenIndex },
-        data: last ? { step: 'CONTACT_PHONE', writtenIndex: answers.length, writtenAnswers: answers } : { writtenIndex: answers.length, writtenAnswers: answers },
+        data: last
+          ? { step: session.interviewEnabled ? 'INTERVIEW' : 'CONTACT_PHONE', writtenIndex: answers.length, writtenAnswers: answers, ...(session.interviewEnabled ? { interviewTurns: [], interviewTurn: 0 } : {}) }
+          : { writtenIndex: answers.length, writtenAnswers: answers },
       });
       if (!claimed.count) return true;
-      if (last) await this.telegram.sendMessage(message.chat.id, tr('writtenDoneAskPhone'), { parseMode: 'HTML' });
+      if (last && session.interviewEnabled) await this.beginInterview(session, message.chat.id, tr);
+      else if (last) await this.telegram.sendMessage(message.chat.id, tr('writtenDoneAskPhone'), { parseMode: 'HTML' });
       else await this.sendWrittenQuestion(message.chat.id, questions, answers.length, tr);
+      return true;
+    }
+
+    if (session.step === 'INTERVIEW') {
+      if (this.interviewer) await this.interviewer.handleText(session, message.text.trim(), await this.interviewRun(session, message.chat.id, tr));
       return true;
     }
 
@@ -563,6 +601,8 @@ export class TelegramApplyService {
       ? writtenQuestions.map((question, index) => ({ question, answer: writtenGiven[index] }))
       : null;
 
+    const interviewResult = storedInterviewOf(session.interviewResult);
+
     // Score the exact questions shown to this applicant, even if the vacancy was edited.
     const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
     const rawAnswers = (session.answers as Array<{ questionId: number; selectedIndex: number }>) || [];
@@ -616,12 +656,14 @@ export class TelegramApplyService {
           assessmentScore: assessmentResult?.score ?? null,
           assessmentResult: assessmentResult ? (assessmentResult as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
           ...(writtenItems ? { writtenAnswers: writtenItems as unknown as Prisma.InputJsonValue } : {}),
+          ...(interviewResult ? { aiInterview: interviewResult as unknown as Prisma.InputJsonValue } : {}),
         },
         update: {
           aiConsentGranted: true,
           assessmentScore: assessmentResult?.score ?? null,
           assessmentResult: assessmentResult ? (assessmentResult as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
           ...(writtenItems ? { writtenAnswers: writtenItems as unknown as Prisma.InputJsonValue } : {}),
+          ...(interviewResult ? { aiInterview: interviewResult as unknown as Prisma.InputJsonValue } : {}),
         },
       });
 
@@ -713,6 +755,53 @@ export class TelegramApplyService {
     );
   }
 
+  /** Only used to name the session row type for the interview helpers. */
+  private sessionForInterview(userId: string) {
+    return this.db.telegramApplySession.findUnique({ where: { telegramUserId: userId } });
+  }
+
+  private async beginInterview(session: ApplySession, chatId: number, tr: (key: BotMessageKey, params?: Record<string, string | number>) => string) {
+    if (!this.interviewer) return;
+    await this.interviewer.start(await this.interviewRun(session, chatId, tr));
+  }
+
+  private async interviewRun(session: ApplySession, chatId: number, tr: (key: BotMessageKey, params?: Record<string, string | number>) => string): Promise<InterviewRun> {
+    const userId = session.telegramUserId;
+    const lang: BotLang = (await this.languages?.get(userId)) ?? DEFAULT_BOT_LANG;
+    const vacancy = await this.db.vacancy.findFirst({
+      where: { id: session.vacancyId, companyId: session.companyId },
+      select: { title: true, description: true, requirements: { select: { name: true } } },
+    });
+    const answers = (session.answers as Array<{ questionId: number; selectedIndex: number }> | null) ?? [];
+    const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
+    const result = assessment.success && answers.length === assessment.data.questions.length ? calculateAssessmentScore(assessment.data.questions, answers) : null;
+    return {
+      flow: 'apply',
+      userId,
+      chatId,
+      lang,
+      tr,
+      ctx: {
+        vacancyTitle: vacancy?.title ?? '',
+        vacancyDescription: vacancy?.description,
+        requirements: vacancy?.requirements.map((requirement) => requirement.name) ?? [],
+        focus: session.interviewFocus,
+        testSummary: result ? `Multiple-choice test: ${result.score}%` : null,
+      },
+      skipCallback: `apply:${session.vacancyId}:ivskip`,
+      complete: (stored) => this.completeInterview(session, stored, chatId, tr),
+    };
+  }
+
+  /** The interview is over (its result is on the session until the application exists): ask for the phone next. */
+  private async completeInterview(session: ApplySession, _stored: StoredInterview, chatId: number, tr: (key: BotMessageKey, params?: Record<string, string | number>) => string) {
+    const moved = await this.db.telegramApplySession.updateMany({
+      where: { telegramUserId: session.telegramUserId, step: 'INTERVIEW' },
+      data: { step: 'CONTACT_PHONE' },
+    });
+    if (moved.count) await this.telegram.sendMessage(chatId, tr('writtenDoneAskPhone'), { parseMode: 'HTML' });
+  }
+
   /** Asks the AI for one short note per written answer; HR still reads the answers. Failures only skip the notes. */
   async summarizeWrittenAnswers(companyId: number, applicationId: number) {
     try {
@@ -793,3 +882,5 @@ export class TelegramApplyService {
     });
   }
 }
+
+type ApplySession = NonNullable<Awaited<ReturnType<TelegramApplyService['sessionForInterview']>>>;

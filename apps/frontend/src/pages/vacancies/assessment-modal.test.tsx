@@ -69,3 +69,36 @@ describe('AssessmentModal', () => {
     expect(calls.some((call) => call.method === 'POST' && call.url.endsWith('/assessment/generate'))).toBe(true);
   });
 });
+
+describe('AssessmentModal AI interview setting', () => {
+  const calls: Array<{ url: string; method: string; body?: any }> = [];
+  beforeEach(async () => {
+    await changeLanguage('en');
+    calls.length = 0;
+    vi.stubGlobal('fetch', vi.fn((url: string, init: RequestInit = {}) => {
+      const method = (init.method ?? 'GET').toUpperCase();
+      calls.push({ url, method, body: init.body ? JSON.parse(String(init.body)) : undefined });
+      return json({ state: 'PENDING', questions, approvedAt: null, customQuestions: [], aiInterview: { enabled: false, focus: '' } });
+    }));
+  });
+  afterEach(async () => {
+    cleanup();
+    vi.unstubAllGlobals();
+    await changeLanguage('uz');
+  });
+
+  it('is off by default, shows the focus box once switched on, and saves both with the test', async () => {
+    render(<AssessmentModal vacancy={vacancy} close={() => undefined} />);
+    const toggle = await screen.findByLabelText('Turn on the AI interview for this vacancy');
+    expect(toggle).not.toBeChecked();
+    expect(screen.queryByLabelText('What the AI should focus on (optional)')).toBeNull();
+
+    fireEvent.click(toggle);
+    expect(screen.getByText('You have unsaved changes')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('What the AI should focus on (optional)'), { target: { value: '  Reels va analitika ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Approve' }));
+    await waitFor(() => expect(calls.some((call) => call.url.endsWith('/assessment/approve'))).toBe(true));
+    const put = calls.find((call) => call.method === 'PUT');
+    expect(put?.body.aiInterview).toEqual({ enabled: true, focus: 'Reels va analitika' });
+  });
+});

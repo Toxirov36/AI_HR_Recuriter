@@ -73,6 +73,12 @@ export class RetentionService {
       await tx.resume.deleteMany({
         where: { candidateId, companyId },
       });
+
+      // 3. Free-text answers the candidate gave in the bot (written answers and the AI interview transcript)
+      await tx.application.updateMany({
+        where: { candidateId, companyId },
+        data: { writtenAnswers: Prisma.DbNull, aiInterview: Prisma.DbNull },
+      });
     });
 
     // Record audit event

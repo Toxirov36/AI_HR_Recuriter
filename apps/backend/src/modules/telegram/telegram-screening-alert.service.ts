@@ -2,10 +2,8 @@ import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nest
 import { Database } from '../../database/prisma.service';
 import { getConfig } from '../../config/app.config';
 import { TelegramApiService } from './telegram-api.service';
-
-function escapeHtml(value: string) {
-  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+import { storedInterviewOf } from '../ai/schemas/interview.schema';
+import { buildHrCard, hrCardKeyboard, transcriptText } from './telegram-hr-card';
 
 @Injectable()
 export class TelegramScreeningAlertService implements OnModuleInit, OnModuleDestroy {
@@ -65,16 +63,26 @@ export class TelegramScreeningAlertService implements OnModuleInit, OnModuleDest
           await this.db.telegramScreeningAlert.update({ where: { id: alert.id }, data: { status: 'CANCELLED', lastError: 'HR chat notifications disabled' } });
           continue;
         }
-        const contact = [app.candidate.phone, app.candidate.email].filter(Boolean).join(' / ') || 'Kiritilmagan';
-        const message = `🎯 <b>Testdan o‘tgan nomzod</b>\n\n` +
-          `👤 ${escapeHtml(app.candidate.fullName)}\n` +
-          `💼 ${escapeHtml(app.vacancy.title)}\n` +
-          `📞 ${escapeHtml(contact)}\n` +
-          `📊 Umumiy: <b>${result.score}%</b> · Hard: ${result.hardSkillScore ?? 0}% · Soft: ${result.softSkillScore ?? 0}%\n\n` +
-          `HR ko‘rib chiqishi: ${this.config.FRONTEND_ORIGIN}/applications/${app.id}`;
-        const sent = await this.telegram.sendMessage(alert.chatId, message, { parseMode: 'HTML' });
+        const viewUrl = `${this.config.FRONTEND_ORIGIN}/applications/${app.id}`;
+        const interview = storedInterviewOf((app as { aiInterview?: unknown }).aiInterview);
+        const message = buildHrCard({
+          candidate: app.candidate,
+          vacancyTitle: app.vacancy.title,
+          test: { score: result.score ?? 0, hardSkillScore: result.hardSkillScore, softSkillScore: result.softSkillScore },
+          interview,
+          viewUrl,
+        });
+        const sent = await this.telegram.sendMessage(alert.chatId, message, { parseMode: 'HTML', replyMarkup: hrCardKeyboard(app.id, viewUrl) });
         if (sent.ok) {
           await this.db.telegramScreeningAlert.update({ where: { id: alert.id }, data: { status: 'SENT', sentAt: new Date(), lastError: null } });
+          // The full transcript for HR; the card itself is already delivered, so a failure here is only logged.
+          if (interview?.turns.length) {
+            try {
+              await this.telegram.sendDocument(alert.chatId, { name: `suhbat-${app.id}.txt`, content: transcriptText(interview, app.candidate.fullName) }, { caption: 'AI suhbat transkripti' });
+            } catch (error) {
+              this.logger.warn(`Interview transcript not sent for application ${app.id}: ${(error as Error).message}`);
+            }
+          }
         } else {
           const attempts = alert.attempts + 1;
           await this.db.telegramScreeningAlert.update({

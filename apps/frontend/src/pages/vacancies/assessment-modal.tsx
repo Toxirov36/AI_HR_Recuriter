@@ -12,6 +12,8 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
   const [view, setView] = useState<AssessmentView | null>(null);
   const [draft, setDraft] = useState<AssessmentQuestion[]>([]);
   const [custom, setCustom] = useState<string[]>([]);
+  const [interviewOn, setInterviewOn] = useState(false);
+  const [interviewFocus, setInterviewFocus] = useState('');
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -21,6 +23,8 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
     setView(next);
     setDraft(next.questions ?? []);
     setCustom(next.customQuestions ?? []);
+    setInterviewOn(next.aiInterview?.enabled ?? false);
+    setInterviewFocus(next.aiInterview?.focus ?? '');
     setDirty(false);
   }, []);
 
@@ -43,7 +47,7 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
   }
 
   const cleanCustom = custom.map((text) => text.trim()).filter(Boolean);
-  const saveDraft = () => send<AssessmentView>(base, { questions: draft, customQuestions: cleanCustom }, 'PUT');
+  const saveDraft = () => send<AssessmentView>(base, { questions: draft, customQuestions: cleanCustom, aiInterview: { enabled: interviewOn, focus: interviewFocus.trim() } }, 'PUT');
 
   function change(index: number, patch: Partial<AssessmentQuestion>) {
     setDraft((current) => current.map((question, i) => (i === index ? { ...question, ...patch } : question)));
@@ -178,6 +182,46 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
               >
                 <Plus size={15} /> {t('vacancies.customQuestionAdd')}
               </button>
+            )}
+          </section>
+        )}
+
+        {hasDraft && (
+          <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4" aria-label={t('vacancies.aiInterviewTitle')}>
+            <div>
+              <h3 className="text-sm font-semibold">{t('vacancies.aiInterviewTitle')}</h3>
+              <p className="muted small">{t('vacancies.aiInterviewHint')}</p>
+            </div>
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-slate-800">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-[#1a5d4c]"
+                checked={interviewOn}
+                onChange={(event) => {
+                  setInterviewOn(event.target.checked);
+                  setDirty(true);
+                }}
+              />
+              {t('vacancies.aiInterviewToggle')}
+            </label>
+            {interviewOn && (
+              <div className="space-y-1.5">
+                <label htmlFor="ai-interview-focus" className="text-sm font-medium text-slate-700">
+                  {t('vacancies.aiInterviewFocusLabel')}
+                </label>
+                <Textarea
+                  id="ai-interview-focus"
+                  className="min-h-0 text-sm"
+                  rows={2}
+                  maxLength={500}
+                  placeholder={t('vacancies.aiInterviewFocusPlaceholder')}
+                  value={interviewFocus}
+                  onChange={(event) => {
+                    setInterviewFocus(event.target.value);
+                    setDirty(true);
+                  }}
+                />
+              </div>
             )}
           </section>
         )}

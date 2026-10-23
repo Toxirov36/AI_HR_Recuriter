@@ -33,3 +33,9 @@ export function customQuestionsOf(value: unknown): string[] {
 export function approvedWrittenQuestions(vacancy: AssessmentFields & { customQuestions?: unknown }): string[] {
   return assessmentState(vacancy) === 'APPROVED' ? customQuestionsOf(vacancy.customQuestions) : [];
 }
+
+/** The AI chat interview HR switched on; like the written questions it only counts once the test is approved. */
+export function approvedInterview(vacancy: AssessmentFields & { aiInterviewEnabled?: boolean | null; interviewFocus?: string | null }): { enabled: boolean; focus: string | null } {
+  const enabled = Boolean(vacancy.aiInterviewEnabled) && assessmentState(vacancy) === 'APPROVED';
+  return { enabled, focus: enabled ? vacancy.interviewFocus?.trim() || null : null };
+}

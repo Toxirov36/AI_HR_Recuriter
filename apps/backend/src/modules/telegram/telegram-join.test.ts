@@ -21,7 +21,7 @@ function setup(session: Record<string, unknown> | null, extra: Record<string, un
     company: { findFirst: vi.fn().mockResolvedValue({ id: 3, name: 'Acme', retentionDays: 180 }) },
     vacancy: { findMany: vi.fn().mockResolvedValue([]), findFirst: vi.fn() },
     candidate: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ id: 7 }) },
-    application: { findUnique: vi.fn().mockResolvedValue(null), upsert: vi.fn().mockResolvedValue({ id: 9 }), updateMany: vi.fn() },
+    application: { findUnique: vi.fn().mockResolvedValue(null), findFirst: vi.fn().mockResolvedValue({ assessmentResult: null, assessmentScore: null }), upsert: vi.fn().mockResolvedValue({ id: 9 }), updateMany: vi.fn() },
     resume: { create: vi.fn().mockResolvedValue({ id: 11 }), update: vi.fn() },
     candidateEvent: { create: vi.fn() },
     telegramBusinessConnection: { findMany: vi.fn().mockResolvedValue([]) },

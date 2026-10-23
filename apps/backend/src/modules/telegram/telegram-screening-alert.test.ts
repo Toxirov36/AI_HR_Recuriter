@@ -22,7 +22,7 @@ describe('Telegram screening alerts', () => {
     const service = new TelegramScreeningAlertService(db as never, telegram as never);
     await service.dispatch();
     expect(db.telegramBusinessConnection.findFirst).toHaveBeenCalledWith({ where: expect.objectContaining({ companyId: 3, screeningAlertsEnabled: true, user: expect.objectContaining({ companyId: 3, isActive: true }) }), select: { id: true } });
-    expect(telegram.sendMessage).toHaveBeenCalledWith('100', expect.stringContaining('70%'), { parseMode: 'HTML' });
+    expect(telegram.sendMessage).toHaveBeenCalledWith('100', expect.stringContaining('70%'), expect.objectContaining({ parseMode: 'HTML', replyMarkup: expect.anything() }));
     expect(telegram.sendMessage.mock.calls[0][1]).toContain('Ali &lt;Valiyev&gt;');
     expect(db.telegramScreeningAlert.update).toHaveBeenCalledWith({ where: { id: 1 }, data: expect.objectContaining({ status: 'SENT' }) });
   });

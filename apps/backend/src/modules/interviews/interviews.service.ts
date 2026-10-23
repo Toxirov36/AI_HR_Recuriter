@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { BadGatewayException, BadRequestException, ConflictException, GoneException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadGatewayException, BadRequestException, ConflictException, GoneException, HttpException, Inject, Injectable, Logger, NotFoundException, OnModuleInit, Optional } from '@nestjs/common';
 import { Database } from '../../database/prisma.service';
 import { hashToken, Security, type Identity } from '../../common/utils/security';
 import { AuditService } from '../audit/audit.service';
@@ -22,7 +22,7 @@ const applicationInclude = {
 } as const;
 
 @Injectable()
-export class InterviewsService {
+export class InterviewsService implements OnModuleInit {
   private readonly logger = new Logger(InterviewsService.name);
 
   constructor(
@@ -31,7 +31,13 @@ export class InterviewsService {
     @Inject(GoogleCalendarService) private google: GoogleCalendarService,
     @Inject(NotificationService) private notifications: NotificationService,
     @Inject(AuditService) private audit: AuditService,
+    @Optional() @Inject(TelegramCallbackRegistry) private registry?: TelegramCallbackRegistry,
+    @Optional() @Inject(TelegramApiService) private telegram?: TelegramApiService,
   ) {}
+
+  onModuleInit() {
+    this.registry?.register('iv:', (query) => this.handleTelegram(query));
+  }
 
   // --- HR side ---
 
@@ -52,13 +58,13 @@ export class InterviewsService {
     if (active) throw new ConflictException('An interview is already scheduled. Reschedule or cancel it first');
     await this.requireCalendarFor(user, input.mode);
     const slots = this.slots(input.slots, input.durationMinutes);
+    const map = this.mapFor(input.mode, input.mapUrl);
 
     const token = randomBytes(24).toString('base64url');
     const interview = await this.db.$transaction(async (tx) => {
       // Moving to the interview stage here replaces the generic "you are invited" message with the real proposal.
       if (application.status === 'NEW' || application.status === 'REVIEWING') {
         const moved = await tx.application.updateMany({ where: { id: applicationId, companyId: user.companyId, status: application.status }, data: { status: 'INTERVIEW' } });
-    const map = this.mapFor(input.mode, input.mapUrl);
         if (moved.count) {
           await tx.applicationStageChange.create({
             data: { applicationId, fromStatus: application.status, toStatus: 'INTERVIEW', actorId: user.id, actorName: user.fullName },
@@ -73,6 +79,7 @@ export class InterviewsService {
           mode: input.mode,
           durationMinutes: input.durationMinutes,
           location: input.mode === 'OFFLINE' ? input.location : null,
+          ...map,
           note: input.note || null,
           tokenHash: hashToken(token),
           slots: { create: slots },
@@ -98,6 +105,7 @@ export class InterviewsService {
     if (mode === 'OFFLINE' && !location) throw new BadRequestException('Address is required for an offline interview');
     await this.requireCalendarFor(user, mode);
     const slots = this.slots(input.slots, input.durationMinutes);
+    const map = this.mapFor(mode, input.mapUrl, current);
 
     // A confirmed time is being replaced, so its calendar event must go.
     if (current.googleEventId) await this.google.deleteEvent(current.organizerId, current.googleEventId);
@@ -105,7 +113,6 @@ export class InterviewsService {
     const token = randomBytes(24).toString('base64url');
     const interview = await this.db.$transaction(async (tx) => {
       await tx.interviewSlot.deleteMany({ where: { interviewId: id } });
-    const map = this.mapFor(mode, input.mapUrl, current);
       return tx.interview.update({
         where: { id },
         data: {
@@ -114,6 +121,7 @@ export class InterviewsService {
           status: 'PROPOSED',
           durationMinutes: input.durationMinutes,
           location,
+          ...map,
           note: input.note || null,
           tokenHash: hashToken(token),
           confirmedSlotId: null, confirmedAt: null, meetUrl: null, googleEventId: null, declinedAt: null, declineNote: null,
@@ -155,7 +163,11 @@ export class InterviewsService {
 
   async confirm(token: string, slotId: number, ip?: string) {
     await this.security.limit(`interview-confirm:${ip ?? 'unknown'}`, 10, 600);
-    const interview = await this.byToken(token);
+    return this.confirmSlot(await this.byToken(token), slotId);
+  }
+
+  /** Confirms one proposed time, whether the candidate picked it on the token page or with a bot button. */
+  private async confirmSlot(interview: LoadedInterview, slotId: number) {
     if (interview.status === 'CANCELLED') throw new GoneException('This interview was cancelled');
     if (interview.status === 'CONFIRMED') throw new ConflictException('A time is already confirmed');
     const slot = interview.slots.find((candidate) => candidate.id === slotId);
@@ -220,7 +232,10 @@ export class InterviewsService {
 
   async decline(token: string, note: string | undefined, ip?: string) {
     await this.security.limit(`interview-decline:${ip ?? 'unknown'}`, 10, 600);
-    const interview = await this.byToken(token);
+    return this.declineInterview(await this.byToken(token), note);
+  }
+
+  private async declineInterview(interview: LoadedInterview, note: string | undefined) {
     if (interview.status === 'CANCELLED') throw new GoneException('This interview was cancelled');
     if (interview.status === 'CONFIRMED') throw new ConflictException('A time is already confirmed');
     await this.db.interview.updateMany({ where: { id: interview.id, status: 'PROPOSED' }, data: { declinedAt: new Date(), declineNote: note || null } });
@@ -234,6 +249,59 @@ export class InterviewsService {
     return this.viewOf({ ...interview, declinedAt: new Date() });
   }
 
+  // --- the candidate's one-tap answer in the bot ---
+
+  private async langOf(userId: string) {
+    const row = await this.db.telegramUserLanguage.findUnique({ where: { telegramUserId: userId }, select: { language: true } }).catch(() => null);
+    return isBotLang(row?.language) ? row.language : DEFAULT_BOT_LANG;
+  }
+
+  /** "iv:<interviewId>:<slotId>" confirms that slot; slot 0 is "none of these times work". */
+  async handleTelegram(query: TelegramCallbackQuery) {
+    if (!this.telegram) return;
+    const match = /^iv:(\d+):(\d+)$/.exec(query.data ?? '');
+    if (!match) return;
+    const userId = String(query.from.id);
+    const lang = await this.langOf(userId);
+    const t = (key: BotMessageKey, params?: Record<string, string | number>) => botText(lang, key, params);
+    const answer = (text?: string, alert = false) => this.telegram!.answerCallbackQuery(query.id, text, alert);
+    try {
+      await this.security.limit(`interview-tg:${userId}`, 20, 600);
+    } catch {
+      await answer(t('interviewTooMany'), true);
+      return;
+    }
+    const interview = await this.db.interview.findUnique({
+      where: { id: Number(match[1]) },
+      include: { slots: { orderBy: { startsAt: 'asc' } }, application: { include: applicationInclude } },
+    });
+    // Only the candidate this interview is for may answer it.
+    if (!interview || interview.application.candidate.telegramUserId !== userId) {
+      await answer(t('interviewButtonNotYours'), true);
+      return;
+    }
+    const slotId = Number(match[2]);
+    try {
+      let text: string;
+      if (slotId === 0) {
+        await this.declineInterview(interview, undefined);
+        text = t('interviewDeclinedThanks');
+      } else {
+        await this.confirmSlot(interview, slotId);
+        const slot = interview.slots.find((candidate) => candidate.id === slotId)!;
+        text = t('interviewPicked', { when: formatInterviewTime(slot.startsAt, interview.timezone) });
+      }
+      await answer(text);
+      const chatId = query.message?.chat?.id;
+      const messageId = query.message?.message_id;
+      if (chatId && messageId) await this.telegram.editMessageText(chatId, messageId, text);
+    } catch (error) {
+      if (error instanceof BadGatewayException) await answer(t('interviewMeetFailed'), true);
+      else if (error instanceof HttpException) await answer(t('interviewButtonStale'), true);
+      else throw error;
+    }
+  }
+
   // --- helpers ---
 
   private slots(starts: string[], durationMinutes: number) {
@@ -244,6 +312,24 @@ export class InterviewsService {
     }
   }
 
+  /**
+   * Map link for an offline interview: undefined keeps the current one (reschedule), an empty value clears it, anything
+   * else must be an accepted https map link. Online interviews never carry one.
+   */
+  private mapFor(
+    mode: 'ONLINE' | 'OFFLINE',
+    mapUrl: string | undefined,
+    keep?: { mapUrl: string | null; mapLat: number | null; mapLng: number | null },
+  ) {
+    const none = { mapUrl: null, mapLat: null, mapLng: null };
+    if (mode !== 'OFFLINE') return none;
+    if (mapUrl === undefined) return keep ? { mapUrl: keep.mapUrl, mapLat: keep.mapLat, mapLng: keep.mapLng } : none;
+    if (!mapUrl.trim()) return none;
+    const parsed = parseMapLink(mapUrl);
+    if (!parsed) throw new BadRequestException('Use an https link from Google Maps, Yandex Maps, 2GIS or OpenStreetMap');
+    return { mapUrl: parsed.url, mapLat: parsed.lat, mapLng: parsed.lng };
+  }
+
   /** Online interviews need the recruiter's Google account; offline ones do not. */
   private async requireCalendarFor(user: Identity, mode: 'ONLINE' | 'OFFLINE') {
     if (mode === 'ONLINE' && !(await this.google.isConnected(user.id))) {
@@ -252,7 +338,7 @@ export class InterviewsService {
   }
 
   private async proposed(
-    interview: { id: number; mode: 'ONLINE' | 'OFFLINE'; durationMinutes: number; note: string | null; tokenHash: string },
+    interview: { id: number; mode: 'ONLINE' | 'OFFLINE'; durationMinutes: number; note: string | null; tokenHash: string; timezone?: string; slots?: Array<{ id: number; startsAt: Date }> },
     application: { candidate: { id: number; fullName: string; email: string | null; phone: string | null; telegramUserId: string | null; companyId: number }; vacancy: { id: number; title: string }; company: { name: string } },
     token: string,
   ) {
@@ -262,6 +348,11 @@ export class InterviewsService {
       .catch(() => ({ telegramSent: false, emailSent: false }));
     // The link is shown to HR once so they can send it themselves if neither channel worked.
     return { interview: safe, delivery, shareUrl: `${this.security.config.FRONTEND_ORIGIN}/interview/${token}` };
+  }
+
+  /** Only names the type of an interview loaded with its slots and application. */
+  private loadForType(id: number) {
+    return this.db.interview.findUnique({ where: { id }, include: { slots: { orderBy: { startsAt: 'asc' } }, application: { include: applicationInclude } } });
   }
 
   private async byToken(token: string) {
@@ -281,6 +372,7 @@ export class InterviewsService {
     durationMinutes: number;
     timezone: string;
     location: string | null;
+    mapUrl?: string | null;
     note: string | null;
     meetUrl: string | null;
     declinedAt: Date | null;
@@ -298,6 +390,7 @@ export class InterviewsService {
       durationMinutes: interview.durationMinutes,
       timezone: interview.timezone,
       location: interview.location,
+      mapUrl: interview.mapUrl ?? null,
       note: interview.note,
       declined: Boolean(interview.declinedAt),
       slots: interview.status === 'PROPOSED' ? interview.slots.filter((slot) => slot.startsAt.getTime() >= now + MIN_LEAD_MS).map((slot) => ({ id: slot.id, startsAt: slot.startsAt })) : [],
@@ -305,23 +398,5 @@ export class InterviewsService {
     };
   }
 }
-  /**
-   * Map link for an offline interview: undefined keeps the current one (reschedule), an empty value clears it, anything
-   * else must be an accepted https map link. Online interviews never carry one.
-   */
-  private mapFor(
-    mode: 'ONLINE' | 'OFFLINE',
-    mapUrl: string | undefined,
-    keep?: { mapUrl: string | null; mapLat: number | null; mapLng: number | null },
-  ) {
-    const none = { mapUrl: null, mapLat: null, mapLng: null };
-    if (mode !== 'OFFLINE') return none;
-    if (mapUrl === undefined) return keep ? { mapUrl: keep.mapUrl, mapLat: keep.mapLat, mapLng: keep.mapLng } : none;
-    if (!mapUrl.trim()) return none;
-    const parsed = parseMapLink(mapUrl);
-    if (!parsed) throw new BadRequestException('Use an https link from Google Maps, Yandex Maps, 2GIS or OpenStreetMap');
-    return { mapUrl: parsed.url, mapLat: parsed.lat, mapLng: parsed.lng };
-  }
 
-    mapUrl?: string | null;
-      mapUrl: interview.mapUrl ?? null,
+type LoadedInterview = NonNullable<Awaited<ReturnType<InterviewsService['loadForType']>>>;

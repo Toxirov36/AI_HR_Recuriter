@@ -34,6 +34,7 @@ import { getEvidenceSummary } from '../../lib/match-score';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import { InterviewPanel } from '../../features/interviews/interview-panel';
 import { WrittenAnswersPanel } from '../../components/written-answers';
+import { AiInterviewPanel } from '../../components/ai-interview-panel';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import {
   Alert,
@@ -44,6 +45,10 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
   AlertDialogTitle,
   Badge,
   Button,
@@ -64,6 +69,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   Empty,
+  FilterAccordion,
   Input,
   label,
   Loading,
@@ -637,26 +643,16 @@ export function Pipeline() {
       </section>
 
       <section className="pipeline-filterbar" aria-label="Pipeline filters">
-        <Select value={selectedVacancy} onValueChange={(value) => updateParams({ vacancyId: value === 'all' ? null : value, page: null })}>
-          <SelectTrigger
-            value={selectedVacancy}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-none hover:border-slate-300 focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
-            aria-label={t('pipeline.filterVacancy', 'Filter by vacancy')}
-          >
-            <SelectValue placeholder={t('pipeline.allVacancies', 'All vacancies')} />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            <div className="p-2">
-              <input aria-label={t('pipeline.searchVacancy')} className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm focus-visible:outline-[#1a5d4c]" placeholder={t('pipeline.searchVacancy')} value={vacancySearch} onChange={(event) => setVacancySearch(event.target.value)} onKeyDown={(event) => event.stopPropagation()} />
-            </div>
-            <SelectItem value="all">{t('pipeline.allVacancies', 'All vacancies')}</SelectItem>
-            {vacanciesList.map((vacancy) => (
-              <SelectItem key={vacancy.id} value={String(vacancy.id)}>
-                {vacancy.title}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterAccordion
+          value={selectedVacancy}
+          onChange={(value) => updateParams({ vacancyId: value === 'all' ? null : value, page: null })}
+          ariaLabel={t('pipeline.filterVacancy', 'Filter by vacancy')}
+          options={[
+            { value: 'all', label: t('pipeline.allVacancies', 'All vacancies') },
+            ...vacanciesList.map((vacancy) => ({ value: String(vacancy.id), label: vacancy.title })),
+          ]}
+          search={{ value: vacancySearch, onChange: setVacancySearch, placeholder: t('pipeline.searchVacancy') }}
+        />
 
         <div className="relative flex items-center w-full">
           <Search size={16} className="absolute left-3 text-slate-400 pointer-events-none" aria-hidden="true" />
@@ -684,23 +680,15 @@ export function Pipeline() {
           )}
         </div>
 
-        <Select value={selectedStage} onValueChange={(val) => updateParams({ stage: val === 'all' ? null : val, page: null })}>
-          <SelectTrigger
-            value={selectedStage}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white text-sm text-slate-900 shadow-none hover:border-slate-300 focus:border-[#1a5d4c] focus:ring-2 focus:ring-[#1a5d4c]/15"
-            aria-label={t('pipeline.filterStage', 'Filter by stage')}
-          >
-            <SelectValue placeholder={t('pipeline.allStages', 'All stages')} />
-          </SelectTrigger>
-          <SelectContent className="max-h-72">
-            <SelectItem value="all">{t('pipeline.allStages', 'All stages')}</SelectItem>
-            {stages.map((stage) => (
-              <SelectItem key={stage} value={stage}>
-                {getStageLabel(stage, t)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <FilterAccordion
+          value={selectedStage}
+          onChange={(value) => updateParams({ stage: value === 'all' ? null : value, page: null })}
+          ariaLabel={t('pipeline.filterStage', 'Filter by stage')}
+          options={[
+            { value: 'all', label: t('pipeline.allStages', 'All stages') },
+            ...stages.map((stage) => ({ value: stage, label: getStageLabel(stage, t) })),
+          ]}
+        />
         <div className="pipeline-view-toggle" role="group" aria-label="View mode">
           <button
             type="button"
@@ -969,6 +957,7 @@ export function ApplicationDetail() {
   const [actionError, setError] = useState('');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [dossierOpen, setDossierOpen] = useState(false);
+  const [evidenceOpen, setEvidenceOpen] = useState(true);
   const aiBlocked = Boolean(a?.candidate.publicSubmittedAt && !a?.candidate.aiConsentAt);
 
   async function analyzeCv() {
@@ -1116,96 +1105,117 @@ export function ApplicationDetail() {
               <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 mb-4">Test ishlamagan. Arizani qo‘lda ko‘rib chiqing.</p>
             )}
             {a.assessmentScore != null && (
-              <section className="panel padded mb-4 bg-emerald-50/20 border-emerald-200">
-                <div className="flex items-center justify-between mb-3 border-b border-emerald-200 pb-2.5">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={18} className="text-emerald-600" />
-                    <div>
-                      <h2 className="text-base font-bold text-slate-900 leading-tight">
-                        {t('applications.assessmentTitle', 'AI Saralash Testi Natijalari (Telegram Assessment)')}
-                      </h2>
-                      <p className="text-xs text-slate-500">
-                        {t('applications.assessmentSubtitle', 'Nomzod bot orqali topshirgan saralash testi.')}
-                      </p>
+              <Accordion type="single" collapsible className="panel mb-4 border-emerald-200 bg-emerald-50/20">
+                <AccordionItem value="assessment" className="border-b-0">
+                  <AccordionTrigger className="px-5 py-4 hover:no-underline sm:px-6">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center justify-between gap-3 pr-3 text-left">
+                      <div className="flex items-center gap-2.5">
+                        <Sparkles size={18} className="shrink-0 text-emerald-600" />
+                        <div>
+                          <h2 className="text-base font-bold leading-tight text-slate-900">
+                            {t('applications.assessmentTitle', 'AI Saralash Testi Natijalari (Telegram Assessment)')}
+                          </h2>
+                          <p className="mt-0.5 text-xs font-normal text-slate-500">
+                            {t('applications.assessmentSubtitle', 'Nomzod bot orqali topshirgan saralash testi.')}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                        Ball: {a.assessmentScore}% · {a.assessmentResult?.passed !== false ? 'O‘tgan (>=70%)' : 'O‘tmagan'}
+                      </span>
                     </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-                    Ball: {a.assessmentScore}% · {a.assessmentResult?.passed !== false ? 'O‘tgan (>=70%)' : 'O‘tmagan'}
-                  </span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-xs">
-                  <div className="p-3 bg-white rounded-xl border border-slate-200">
-                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">Umumiy natija</span>
-                    <strong className="text-emerald-800 text-base font-bold">
-                      {a.assessmentScore}% ({a.assessmentResult?.correctCount ?? Math.round((a.assessmentScore / 10))}/10 to‘g‘ri)
-                    </strong>
-                  </div>
-                  <div className="p-3 bg-white rounded-xl border border-slate-200">
-                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">💡 Hard Skills</span>
-                    <strong className="text-slate-800 text-base font-bold">
-                      {a.assessmentResult?.hardSkillScore ?? '-'}%
-                    </strong>
-                  </div>
-                  <div className="p-3 bg-white rounded-xl border border-slate-200">
-                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">🤝 Soft Skills</span>
-                    <strong className="text-slate-800 text-base font-bold">
-                      {a.assessmentResult?.softSkillScore ?? '-'}%
-                    </strong>
-                  </div>
-                </div>
-                {a.assessmentResult?.answers?.length ? (
-                  <div className="border border-slate-200 rounded-xl overflow-hidden text-xs bg-white">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-slate-50 text-slate-700 text-left border-b border-slate-200">
-                          <th className="p-2.5 font-semibold w-12 text-center">#</th>
-                          <th className="p-2.5 font-semibold w-32">Yo‘nalish</th>
-                          <th className="p-2.5 font-semibold w-28">Natija</th>
-                          <th className="p-2.5 font-semibold">Tanlangan javob</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {a.assessmentResult.answers.map((ans, idx) => (
-                          <tr key={idx} className={ans.isCorrect ? 'hover:bg-emerald-50/20' : 'hover:bg-rose-50/20'}>
-                            <td className="p-2.5 text-center font-mono font-medium text-slate-500">{idx + 1}</td>
-                            <td className="p-2.5 font-medium">
-                              {ans.type === 'HARD_SKILL' ? '💡 Hard Skill' : '🤝 Soft Skill'}
-                            </td>
-                            <td className="p-2.5">
-                              {ans.isCorrect ? (
-                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                  ✓ To‘g‘ri
-                                </span>
-                              ) : (
-                                <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
-                                  ✗ Noto‘g‘ri
-                                </span>
-                              )}
-                            </td>
-                            <td className="p-2.5 text-slate-700">
-                              Variant {String.fromCharCode(65 + ans.selectedIndex)}
-                              {!ans.isCorrect && (
-                                <span className="text-slate-400 ml-1.5">(To‘g‘ri variant: {String.fromCharCode(65 + ans.correctIndex)})</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-            {a.writtenAnswers?.length ? <WrittenAnswersPanel items={a.writtenAnswers} /> : null}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </section>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-5 pb-5 pt-1 sm:px-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-xs">
+                      <div className="p-3 bg-white rounded-xl border border-slate-200">
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Umumiy natija</span>
+                        <strong className="text-emerald-800 text-base font-bold">
+                          {a.assessmentScore}% ({a.assessmentResult?.correctCount ?? Math.round((a.assessmentScore / 10))}/10 to‘g‘ri)
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-white rounded-xl border border-slate-200">
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">💡 Hard Skills</span>
+                        <strong className="text-slate-800 text-base font-bold">
+                          {a.assessmentResult?.hardSkillScore ?? '-'}%
+                        </strong>
+                      </div>
+                      <div className="p-3 bg-white rounded-xl border border-slate-200">
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">🤝 Soft Skills</span>
+                        <strong className="text-slate-800 text-base font-bold">
+                          {a.assessmentResult?.softSkillScore ?? '-'}%
+                        </strong>
+                      </div>
+                    </div>
+                    {a.assessmentResult?.answers?.length ? (
+                      <div className="border border-slate-200 rounded-xl overflow-hidden text-xs bg-white">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-slate-50 text-slate-700 text-left border-b border-slate-200">
+                              <th className="p-2.5 font-semibold w-12 text-center">#</th>
+                              <th className="p-2.5 font-semibold w-32">Yo‘nalish</th>
+                              <th className="p-2.5 font-semibold w-28">Natija</th>
+                              <th className="p-2.5 font-semibold">Tanlangan javob</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {a.assessmentResult.answers.map((ans, idx) => (
+                              <tr key={idx} className={ans.isCorrect ? 'hover:bg-emerald-50/20' : 'hover:bg-rose-50/20'}>
+                                <td className="p-2.5 text-center font-mono font-medium text-slate-500">{idx + 1}</td>
+                                <td className="p-2.5 font-medium">
+                                  {ans.type === 'HARD_SKILL' ? '💡 Hard Skill' : '🤝 Soft Skill'}
+                                </td>
+                                <td className="p-2.5">
+                                  {ans.isCorrect ? (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                      ✓ To‘g‘ri
+                                    </span>
+                                  ) : (
+                                    <span className="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-rose-100 text-rose-800 border border-rose-200">
+                                      ✗ Noto‘g‘ri
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="p-2.5 text-slate-700">
+                                  Variant {String.fromCharCode(65 + ans.selectedIndex)}
+                                  {!ans.isCorrect && (
+                                    <span className="text-slate-400 ml-1.5">(To‘g‘ri variant: {String.fromCharCode(65 + ans.correctIndex)})</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             )}
+            {a.writtenAnswers?.length ? <WrittenAnswersPanel items={a.writtenAnswers} /> : null}
+            {a.aiInterview ? <AiInterviewPanel interview={a.aiInterview} testScore={a.assessmentScore} candidateName={a.candidate.fullName} /> : null}
 
-            <section className="panel evidence-panel">
+            <Accordion
+              type="single"
+              collapsible
+              value={evidenceOpen ? 'evidence' : ''}
+              onValueChange={(value) => setEvidenceOpen(value === 'evidence')}
+              className="panel evidence-panel"
+            >
               <div className="panel-heading">
-                <div>
-                  <h2>{t('applications.evidenceBreakdownTitle', 'AI topgan dalillar (CV Evidence Breakdown)')}</h2>
-                  <p>
-                    {t('applications.evidenceBreakdownSubtitle', 'CV matnidan olingan faktik dalillar. AI nomzodlarni baholamaydi — qarorni faqat inson qabul qiladi.')}
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                  aria-expanded={evidenceOpen}
+                  onClick={() => setEvidenceOpen((current) => !current)}
+                >
+                  <ChevronDown size={18} className={`mt-1 shrink-0 text-slate-500 transition-transform duration-200 ${evidenceOpen ? 'rotate-180' : ''}`} />
+                  <div>
+                    <h2>{t('applications.evidenceBreakdownTitle', 'AI topgan dalillar (CV Evidence Breakdown)')}</h2>
+                    <p>
+                      {t('applications.evidenceBreakdownSubtitle', 'CV matnidan olingan faktik dalillar. AI nomzodlarni baholamaydi — qarorni faqat inson qabul qiladi.')}
+                    </p>
+                  </div>
+                </button>
                 <div className="flex items-center gap-2">
                   <button
                     className="primary"
@@ -1227,70 +1237,74 @@ export function ApplicationDetail() {
                   <span className="count-chip">{a.vacancy.requirements.length} {t('vacancies.cardRequirements', 'talab')}</span>
                 </div>
               </div>
-              {(aiBlocked || !a.candidate.resumeText) && (
-                <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between">
-                  {aiBlocked && <span className="text-xs text-amber-700">{t('applications.noConsentWarning', 'Nomzod AI tahliliga rozilik bermagan.')}</span>}
-                  {!a.candidate.resumeText && (
-                    <span className="text-xs text-amber-600">{t('applications.noCvWarning', 'Avval nomzod profiliga CV yuklang.')}</span>
-                  )}
-                </div>
-              )}
-              {a.vacancy.requirements.length ? (
-                a.vacancy.requirements.map((r) => {
-                  const evidence = a.analysis?.requirements.find((e) => e.requirementId === r.id);
-                  return (
-                    <article className="evidence-item" key={r.id}>
-                      <div className="row between">
-                        <div>
-                          <h3>
-                            {r.name}
-                            <span className="required-label">
-                              {r.required ? t('vacancyGenerator.required', 'Majburiy') : t('vacancyGenerator.niceToHave', 'Afzallik')}
-                            </span>
-                          </h3>
-                          {r.description && <p className="muted">{r.description}</p>}
-                        </div>
-                        {evidence ? (
-                          <Badge value={evidence.status} />
-                        ) : (
-                          <span className="muted small">{t('applications.notAnalyzed', 'Tahlil qilinmagan')}</span>
-                        )}
-                      </div>
-                      {evidence && (
-                        <>
-                          <p>{evidence.explanation}</p>
-                          {evidence.quotes.map((q, i) => (
-                            <blockquote key={i}>
-                              {q}
-                              <small>{t('applications.cvExactQuote', 'CV matnidan aniq parcha')}</small>
-                            </blockquote>
-                          ))}
-                        </>
+              <AccordionItem value="evidence" className="border-b-0">
+                <AccordionContent className="pb-0">
+                  {(aiBlocked || !a.candidate.resumeText) && (
+                    <div className="px-4 py-2 bg-slate-50 border-b flex items-center justify-between">
+                      {aiBlocked && <span className="text-xs text-amber-700">{t('applications.noConsentWarning', 'Nomzod AI tahliliga rozilik bermagan.')}</span>}
+                      {!a.candidate.resumeText && (
+                        <span className="text-xs text-amber-600">{t('applications.noCvWarning', 'Avval nomzod profiliga CV yuklang.')}</span>
                       )}
-                    </article>
-                  );
-                })
-              ) : (
-                <Empty
-                  title={t('applications.noRequirements', 'Vakansiyada talablar kiritilmagan')}
-                  text={t('applications.noRequirementsDesc', 'Ushbu vakansiyani tahrirlab, talablarni qo‘shing.')}
-                />
-              )}
-              <div className="evidence-legend">
-                <span>
-                  <b>Supported</b> {t('applications.legendSupported', 'Aniq tasdiqlangan dalil')}
-                </span>
-                <span>
-                  <b>Partial</b> {t('applications.legendPartial', 'Qisman dalil mavjud')}
-                </span>
-                <span>
-                  <b>Not found</b> {t('applications.legendNotFound', 'CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda aniqlashtirish zarur)')}
-                </span>
-                <span>
-                  <b>Unknown</b> {t('applications.legendUnknown', 'Aniq xulosa yo‘q, suhbatda aniqlash zarur')}
-                </span>
-              </div>
-            </section>
+                    </div>
+                  )}
+                  {a.vacancy.requirements.length ? (
+                    a.vacancy.requirements.map((r) => {
+                      const evidence = a.analysis?.requirements.find((e) => e.requirementId === r.id);
+                      return (
+                        <article className="evidence-item" key={r.id}>
+                          <div className="row between">
+                            <div>
+                              <h3>
+                                {r.name}
+                                <span className="required-label">
+                                  {r.required ? t('vacancyGenerator.required', 'Majburiy') : t('vacancyGenerator.niceToHave', 'Afzallik')}
+                                </span>
+                              </h3>
+                              {r.description && <p className="muted">{r.description}</p>}
+                            </div>
+                            {evidence ? (
+                              <Badge value={evidence.status} />
+                            ) : (
+                              <span className="muted small">{t('applications.notAnalyzed', 'Tahlil qilinmagan')}</span>
+                            )}
+                          </div>
+                          {evidence && (
+                            <>
+                              <p>{evidence.explanation}</p>
+                              {evidence.quotes.map((q, i) => (
+                                <blockquote key={i}>
+                                  {q}
+                                  <small>{t('applications.cvExactQuote', 'CV matnidan aniq parcha')}</small>
+                                </blockquote>
+                              ))}
+                            </>
+                          )}
+                        </article>
+                      );
+                    })
+                  ) : (
+                    <Empty
+                      title={t('applications.noRequirements', 'Vakansiyada talablar kiritilmagan')}
+                      text={t('applications.noRequirementsDesc', 'Ushbu vakansiyani tahrirlab, talablarni qo‘shing.')}
+                    />
+                  )}
+                  <div className="evidence-legend">
+                    <span>
+                      <b>Supported</b> {t('applications.legendSupported', 'Aniq tasdiqlangan dalil')}
+                    </span>
+                    <span>
+                      <b>Partial</b> {t('applications.legendPartial', 'Qisman dalil mavjud')}
+                    </span>
+                    <span>
+                      <b>Not found</b> {t('applications.legendNotFound', 'CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda aniqlashtirish zarur)')}
+                    </span>
+                    <span>
+                      <b>Unknown</b> {t('applications.legendUnknown', 'Aniq xulosa yo‘q, suhbatda aniqlash zarur')}
+                    </span>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
             <InterviewPanel applicationId={a.id} status={a.status} onChanged={reload} />
             <section className="panel padded stage-history">
               <h2>{t('applications.stageHistoryTitle', 'Stage history')}</h2>

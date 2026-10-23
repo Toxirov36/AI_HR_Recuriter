@@ -9,6 +9,10 @@ import { HeadHunterService } from '../external-recruiting/headhunter.service';
 import { GeminiProvider } from '../ai/providers/gemini.provider';
 import { assessmentInstructions } from '../ai/prompts/assessment.prompt';
 import { vacancyAssessmentSchema, type VacancyAssessment } from '../ai/schemas/assessment.schema';
+import { approvedAssessment, approvedInterview, approvedWrittenQuestions } from '../ai/utils/assessment-approval';
+import { textAiProvider } from '../../config/app.config';
+import { botText } from './telegram-i18n';
+import { MAX_INTERVIEW_ANSWERS } from '../ai/schemas/interview.schema';
 import { TelegramApiService } from './telegram-api.service';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/telegram.types';
@@ -211,10 +215,48 @@ export class TelegramAdminService {
     ]);
     await this.send(admin.telegramId, `<b>${escapeHtml(v.title)}</b> · ${v.status}\n✅ 70%+: ${passed} · 📉 past: ${low} · 👀 qo‘lda: ${manual}\nO‘tish bali: 70%`, [
       [button('📣 Nashr', `adm:p:${id}`), button('📝 Test', `adm:q:${id}`)],
-      [button('👥 Arizalar', `adm:a:${id}:0`)],
+      [button('👥 Arizalar', `adm:a:${id}:0`), button('👁 Nomzod ko‘rinishi', `adm:pv:${id}`)],
       ...(v.status === 'ACTIVE' ? [[button('🔒 Vakansiyani yopish', `adm:vc:${id}:${v.revision}`)]] : []),
       [button('⬅️ Ro‘yxat', 'adm:vs:0')],
     ]);
+  }
+
+  /**
+   * What a candidate goes through for this vacancy, shown to HR without starting an application: nothing is
+   * saved and nobody is notified. Only an approved test, its written questions and the interview are shown,
+   * exactly as the bot will use them.
+   */
+  private async candidatePreview(admin: Admin, id: number) {
+    const v = await this.db.vacancy.findFirst({ where: { id, companyId: admin.companyId }, include: { company: { select: { name: true, retentionDays: true } } } });
+    if (!v) throw new Error('Vakansiya topilmadi.');
+    const back = [[button('⬅️ Vakansiya', `adm:v:${id}`)]];
+    await this.send(admin.telegramId, `👁 <b>Nomzod ko‘rinishi</b>: ${escapeHtml(v.title)}\nBu faqat ko‘rib chiqish: hech narsa saqlanmaydi va hech kimga xabar ketmaydi.`);
+    await this.send(admin.telegramId, `<b>1. Rozilik</b>\n${escapeHtml(botText('uz', 'applyConsent', { title: v.title, company: v.company.name, days: v.company.retentionDays }))}`);
+
+    const test = approvedAssessment(v);
+    if (!test) {
+      await this.send(admin.telegramId, '<b>2. Test</b>\nTest hali tasdiqlanmagan yoki eskirgan: nomzodlar testsiz, arizasi qo‘lda ko‘rib chiqiladi. Tasdiqlash: 📝 Test.', back);
+      return;
+    }
+    const questions = test.questions.map((q, index) => `${index + 1}. ${escapeHtml(q.question.slice(0, 110))}`).join('\n');
+    await this.send(admin.telegramId, `<b>2. Test (${test.questions.length} ta savol, A–D tugmalari)</b>\n${questions}`);
+
+    const written = approvedWrittenQuestions(v);
+    await this.send(
+      admin.telegramId,
+      written.length
+        ? `<b>3. Yozma savollar (${written.length} ta)</b>\n${written.map((q, index) => `${index + 1}. ${escapeHtml(q)}`).join('\n')}`
+        : '<b>3. Yozma savollar</b>\nYo‘q.',
+    );
+
+    const interview = approvedInterview(v);
+    const aiReady = Boolean(textAiProvider(this.security.config));
+    const interviewText = !interview.enabled
+      ? 'O‘chiq. Yoqish: 📝 Test → AI suhbat.'
+      : !aiReady
+        ? 'Yoqilgan, lekin serverda AI sozlanmagan, shuning uchun nomzodlarga ko‘rsatilmaydi.'
+        : `Yoqilgan. ${escapeHtml(botText('uz', 'aiInterviewIntro', { max: MAX_INTERVIEW_ANSWERS }).replace(/<[^>]+>/g, ''))}${interview.focus ? `\nAI e’tibori: ${escapeHtml(interview.focus)}` : ''}`;
+    await this.send(admin.telegramId, `<b>4. AI suhbat</b>\n${interviewText}`, back);
   }
 
   private async channels(admin: Admin, offset = 0) {
@@ -356,6 +398,7 @@ export class TelegramAdminService {
       if (data === 'adm:home') await this.menu(admin);
       else if (p[1] === 'vs') await this.vacancies(admin, Math.max(0, Math.min(10000, id || 0)));
       else if (p[1] === 'v') await this.vacancy(admin, id);
+      else if (p[1] === 'pv') await this.candidatePreview(admin, id);
       else if (p[1] === 'channels') await this.channels(admin, Math.max(0, Math.min(10000, id || 0)));
       else if (data === 'adm:ca') { await this.setDraft(admin.telegramId, { kind: 'channel' }); await this.send(admin.telegramId, 'Kanal @nomi yoki -100... IDni yuboring. Bot kanal administratori va nashr qilish huquqiga ega bo‘lsin. Bekor qilish: /cancel'); }
       else if (p[1] === 'cr') await this.send(admin.telegramId, 'Kanalni uzishni tasdiqlaysizmi? Faol nashri bo‘lsa uzilmaydi.', [[button('✅ Uzish', `adm:crc:${id}`)], [button('❌ Bekor', 'adm:channels')]]);

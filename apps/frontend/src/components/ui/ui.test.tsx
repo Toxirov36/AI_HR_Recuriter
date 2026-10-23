@@ -23,7 +23,7 @@ describe('review interface', () => {
     const change = vi.fn();
     render(<AiConsent checked={false} onChange={change} configured={false} />);
     expect(screen.getByRole('checkbox')).not.toBeChecked();
-    expect(screen.getByRole('alert')).toHaveTextContent('GEMINI_API_KEY');
+    expect(screen.getByRole('alert')).toHaveTextContent('DEEPSEEK_API_KEY');
     fireEvent.click(screen.getByRole('checkbox'));
     expect(change).toHaveBeenCalledWith(true);
   });

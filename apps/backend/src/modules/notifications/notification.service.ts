@@ -124,7 +124,7 @@ export class NotificationService {
     candidate: CandidateNotificationTarget;
     vacancy: VacancyContext;
     companyName: string;
-    interview: { mode: 'ONLINE' | 'OFFLINE'; durationMinutes: number; note?: string | null };
+    interview: { id?: number; mode: 'ONLINE' | 'OFFLINE'; durationMinutes: number; note?: string | null; timezone?: string; slots?: Array<{ id: number; startsAt: Date }> };
     token: string;
   }) {
     const { candidate, vacancy, companyName, interview, token } = params;
@@ -138,10 +138,19 @@ export class NotificationService {
       minutes: interview.durationMinutes,
       noteLine: interview.note ? botText(lang, 'interviewNoteLine', { note: interview.note }) : '',
     });
+    // In the bot chat the candidate can also pick a time with one tap (answered by InterviewsService).
+    const extraRows =
+      interview.id && interview.slots?.length
+        ? [
+            ...interview.slots.map((slot) => [{ text: `🕐 ${formatInterviewTime(slot.startsAt, interview.timezone ?? 'Asia/Tashkent')}`, callback_data: `iv:${interview.id}:${slot.id}` }]),
+            [{ text: botText(lang, 'interviewNoneFit'), callback_data: `iv:${interview.id}:0` }],
+          ]
+        : undefined;
     return this.deliver(candidate, {
       lang,
       text,
       link: { url: link, label: botText(lang, 'interviewChoose') },
+      extraRows,
       subject: `${botText(lang, 'interviewSubjectProposal')}: ${vacancy.title} — ${companyName}`,
       eventType: 'INTERVIEW_PROPOSED',
       eventLabel: (channels) => `Suhbat vaqtlari taklif qilindi (${channels}) — ${vacancy.title}`,
@@ -172,21 +181,12 @@ export class NotificationService {
         minutes: interview.durationMinutes,
         where,
       }),
+      link: mapLink,
       subject: `${botText(lang, 'interviewSubjectConfirmed')}: ${vacancy.title} — ${companyName}`,
       eventType: 'INTERVIEW_CONFIRMATION_SENT',
       eventLabel: (channels) => `Suhbat tasdiqlandi, nomzodga yuborildi (${channels}) — ${vacancy.title}`,
       failureKind: 'Suhbat tasdig‘i',
     });
-  }
-
-  async sendInterviewCancelled(params: { candidate: CandidateNotificationTarget; vacancy: VacancyContext; companyName: string }) {
-    const { candidate, vacancy, companyName } = params;
-    const lang = await this.candidateLang(candidate);
-    return this.deliver(candidate, {
-      lang,
-      text: botText(lang, 'interviewCancelled', { company: companyName, vacancy: vacancy.title }),
-      subject: `${botText(lang, 'interviewSubjectCancelled')}: ${vacancy.title} — ${companyName}`,
-      eventType: 'INTERVIEW_CANCELLED_SENT',
     // A map pin goes only where Telegram delivered the confirmation; the email carries the link.
     if (delivered.telegramSent && interview.mode === 'OFFLINE' && interview.mapLat != null && interview.mapLng != null) {
       await this.sendVenue(candidate, interview.mapLat, interview.mapLng, companyName, interview.location ?? vacancy.title);
@@ -204,6 +204,16 @@ export class NotificationService {
     } catch (err) {
       this.logger.warn(`Interview map pin failed for candidateId=${candidate.id}: ${(err as Error).message}`);
     }
+  }
+
+  async sendInterviewCancelled(params: { candidate: CandidateNotificationTarget; vacancy: VacancyContext; companyName: string }) {
+    const { candidate, vacancy, companyName } = params;
+    const lang = await this.candidateLang(candidate);
+    return this.deliver(candidate, {
+      lang,
+      text: botText(lang, 'interviewCancelled', { company: companyName, vacancy: vacancy.title }),
+      subject: `${botText(lang, 'interviewSubjectCancelled')}: ${vacancy.title} — ${companyName}`,
+      eventType: 'INTERVIEW_CANCELLED_SENT',
       eventLabel: (channels) => `Suhbat bekor qilingani yuborildi (${channels}) — ${vacancy.title}`,
       failureKind: 'Suhbat bekor qilinishi',
     });
@@ -258,6 +268,8 @@ export class NotificationService {
       text: string;
       subject: string;
       link?: { url: string; label: string };
+      /** Extra inline-button rows, for the bot chat only (callbacks do not work in Business chats or email). */
+      extraRows?: Array<Array<{ text: string; callback_data: string }>>;
       eventType: string;
       eventLabel: (channels: string) => string;
       failureKind: string;
@@ -271,8 +283,12 @@ export class NotificationService {
     if (candidate.telegramUserId) {
       try {
         // 1) The bot chat: works for anyone who has ever opened the bot (Telegram refuses the message otherwise).
+        const rows = [
+          ...(link && link.url.startsWith('https://') ? [[{ text: link.label, url: link.url }]] : []),
+          ...(message.extraRows ?? []),
+        ];
         const direct = await this.telegramApi.sendMessage(candidate.telegramUserId, text, {
-          replyMarkup: link ? this.linkButton(link.url, link.label) : undefined,
+          replyMarkup: rows.length ? { inline_keyboard: rows } : undefined,
         });
         let delivered = direct.ok === true;
         if (delivered && link && !link.url.startsWith('https://')) await this.telegramApi.sendMessage(candidate.telegramUserId, link.url);

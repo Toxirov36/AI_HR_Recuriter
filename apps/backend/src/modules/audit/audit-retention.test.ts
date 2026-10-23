@@ -99,6 +99,9 @@ describe('Candidate Anonymization & Retention Policy (GDPR)', () => {
       resume: {
         deleteMany: vi.fn(),
       },
+      application: {
+        updateMany: vi.fn(),
+      },
       company: {
         findUniqueOrThrow: vi.fn(),
         update: vi.fn(),
@@ -116,6 +119,16 @@ describe('Candidate Anonymization & Retention Policy (GDPR)', () => {
     };
 
     retentionService = new RetentionService(mockDb, mockStorage, mockAudit);
+  });
+
+  it('also wipes the free-text answers given in the bot: written answers and the AI interview', async () => {
+    mockDb.candidate.findUnique.mockResolvedValue({ id: 55, companyId: 1, fullName: 'Sardor', isAnonymized: false, mergedIntoId: null, resumeObjectKey: null, source: 'TELEGRAM' });
+    mockDb.candidate.findMany.mockResolvedValue([]);
+    await retentionService.anonymizeCandidate(1, 55);
+    expect(mockDb.application.updateMany).toHaveBeenCalledWith({
+      where: { candidateId: 55, companyId: 1 },
+      data: { writtenAnswers: expect.anything(), aiInterview: expect.anything() },
+    });
   });
 
   it('anonymizes candidate PII and deletes CV storage object', async () => {

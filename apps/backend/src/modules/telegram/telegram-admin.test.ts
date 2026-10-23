@@ -120,3 +120,66 @@ describe('Telegram bot admin panel', () => {
     expect(telegram.sendMessage).toHaveBeenCalledWith('77', expect.stringContaining('cannot post'), expect.any(Object));
   });
 });
+
+describe('candidate preview for HR', () => {
+  const questions = Array.from({ length: 10 }, (_, i) => ({ id: i + 1, type: i < 5 ? 'HARD_SKILL' : 'SOFT_SKILL', question: `Savol raqami ${i + 1}?`, options: ['A', 'B', 'C', 'D'], correctIndex: 0, explanation: 'Sabab' }));
+  const approved = {
+    id: 5, title: 'SMM Lead', status: 'ACTIVE', revision: 2,
+    assessmentQuestions: { questions }, assessmentRevision: 2, assessmentApprovedAt: new Date(),
+    customQuestions: ['Nega bizni tanladingiz?'], aiInterviewEnabled: true, interviewFocus: 'Reels',
+    company: { name: 'Acme', retentionDays: 180 },
+  };
+
+  function previewSetup(vacancy: Record<string, unknown> | null, aiKey = 'k') {
+    const ctx = setup();
+    (ctx.service as any).security = { redis: (ctx.service as any).security.redis, config: { FRONTEND_ORIGIN: 'https://example.test', AI_PROVIDER: 'auto', DEEPSEEK_API_KEY: aiKey, GEMINI_API_KEY: '' }, limit: vi.fn() };
+    ctx.db.vacancy.findFirst.mockResolvedValue(vacancy);
+    return ctx;
+  }
+  const sent = (telegram: { sendMessage: ReturnType<typeof vi.fn> }) => telegram.sendMessage.mock.calls.map((call) => String(call[1]));
+
+  it('is a button on the vacancy screen', async () => {
+    const { service, db, telegram } = setup();
+    db.vacancy.findFirst.mockResolvedValue({ id: 5, title: 'SMM Lead', status: 'ACTIVE', revision: 2 });
+    await service.handleCallback(callback('adm:v:5'));
+    const buttons = (telegram.sendMessage.mock.calls.at(-1)![2].replyMarkup.inline_keyboard as Array<Array<{ callback_data: string }>>).flat().map((b) => b.callback_data);
+    expect(buttons).toContain('adm:pv:5');
+  });
+
+  it('shows the consent text, the approved test, the written questions and the AI interview, and saves nothing', async () => {
+    const { service, db, telegram, audit } = previewSetup(approved);
+    await service.handleCallback(callback('adm:pv:5'));
+    const texts = sent(telegram);
+    expect(texts.some((text) => text.includes('hech narsa saqlanmaydi'))).toBe(true);
+    expect(texts.some((text) => text.includes('SMM Lead') && text.includes('Acme') && text.includes('180'))).toBe(true);
+    expect(texts.some((text) => text.includes('Test (10 ta savol') && text.includes('10. Savol raqami 10?'))).toBe(true);
+    expect(texts.some((text) => text.includes('Yozma savollar (1 ta)') && text.includes('Nega bizni tanladingiz?'))).toBe(true);
+    expect(texts.some((text) => text.includes('Yoqilgan') && text.includes('AI e’tibori: Reels'))).toBe(true);
+    expect(db.vacancy.updateMany).not.toHaveBeenCalled();
+    expect(audit.log).not.toHaveBeenCalled();
+  });
+
+  it('says an unapproved test means manual review, and never shows an unapproved interview', async () => {
+    const { service, telegram } = previewSetup({ ...approved, assessmentApprovedAt: null });
+    await service.handleCallback(callback('adm:pv:5'));
+    const texts = sent(telegram);
+    expect(texts.some((text) => text.includes('Test hali tasdiqlanmagan'))).toBe(true);
+    expect(texts.some((text) => text.includes('4. AI suhbat'))).toBe(false);
+  });
+
+  it('explains when the interview is off or the server has no AI', async () => {
+    const off = previewSetup({ ...approved, aiInterviewEnabled: false });
+    await off.service.handleCallback(callback('adm:pv:5'));
+    expect(sent(off.telegram).some((text) => text.includes('O‘chiq'))).toBe(true);
+
+    const noAi = previewSetup(approved, '');
+    await noAi.service.handleCallback(callback('adm:pv:5'));
+    expect(sent(noAi.telegram).some((text) => text.includes('AI sozlanmagan'))).toBe(true);
+  });
+
+  it('refuses another company’s vacancy', async () => {
+    const { service, telegram } = previewSetup(null);
+    await service.handleCallback(callback('adm:pv:5'));
+    expect(sent(telegram).some((text) => text.includes('Vakansiya topilmadi'))).toBe(true);
+  });
+});

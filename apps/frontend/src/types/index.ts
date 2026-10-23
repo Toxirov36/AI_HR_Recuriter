@@ -25,11 +25,28 @@ export type AssessmentQuestion = {
   explanation: string;
 };
 export type WrittenAnswer = { question: string; answer: string; aiNote?: string };
+export type AiInterviewEvaluation = {
+  score: number;
+  verdict: 'recommend' | 'consider' | 'reject';
+  reason: string;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  risks: string[];
+  checkQuestions: string[];
+};
+export type AiInterview = {
+  turns: { role: 'ai' | 'candidate'; text: string }[];
+  evaluation: AiInterviewEvaluation | null;
+  finishedAt: string;
+  skipped?: boolean;
+};
 export type AssessmentView = {
   state: 'NONE' | 'STALE' | 'PENDING' | 'APPROVED';
   questions: AssessmentQuestion[] | null;
   approvedAt: string | null;
   customQuestions?: string[];
+  aiInterview?: { enabled: boolean; focus: string };
 };
 export type Vacancy = {
   id: number;
@@ -183,6 +200,7 @@ export type Application = {
   assessmentScore?: number | null;
   assessmentResult?: CandidateAssessmentResult | null;
   writtenAnswers?: WrittenAnswer[] | null;
+  aiInterview?: AiInterview | null;
   stageHistory: {
     id: number;
     fromStatus: Stage | null;
@@ -207,6 +225,7 @@ export type Interview = {
   durationMinutes: number;
   timezone: string;
   location: string | null;
+  mapUrl?: string | null;
   note: string | null;
   meetUrl: string | null;
   confirmedSlotId: number | null;
@@ -225,7 +244,6 @@ export type InterviewProposal = {
 };
 /** What the candidate's link page receives. */
 export type PublicInterview = {
-  mapUrl?: string | null;
   status: InterviewStatus;
   mode: InterviewMode;
   companyName: string;
@@ -233,6 +251,7 @@ export type PublicInterview = {
   durationMinutes: number;
   timezone: string;
   location: string | null;
+  mapUrl?: string | null;
   note: string | null;
   declined: boolean;
   slots: { id: number; startsAt: string }[];
@@ -249,4 +268,3 @@ export type DashboardData = {
   stages: { status: Stage; _count: number }[];
   recent: Application[];
 };
-  mapUrl?: string | null;

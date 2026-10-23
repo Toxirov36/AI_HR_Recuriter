@@ -142,8 +142,19 @@ describe('Pipeline hiring workflow', () => {
       </BrowserRouter>,
     );
 
-    expect(screen.getByRole('combobox', { name: /filter by vacancy/i })).toHaveValue('all');
-    expect(screen.getByRole('combobox', { name: /filter by stage/i })).toHaveValue('all');
+    expect(screen.getByRole('button', { name: /filter by vacancy/i })).toHaveTextContent('All vacancies');
+    expect(screen.getByRole('button', { name: /filter by stage/i })).toHaveTextContent('All stages');
+    // Both filters open like an accordion and choose an option.
+    const stageFilter = screen.getByRole('button', { name: /filter by stage/i });
+    fireEvent.click(stageFilter);
+    expect(stageFilter).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('option', { name: 'Interview' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('option', { name: 'Interview' }));
+    expect(stageFilter).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(screen.getByRole('button', { name: /filter by vacancy/i }));
+    expect(screen.getByRole('option', { name: 'Senior Go Developer' })).toBeInTheDocument();
+    // The stage choice lives in the URL; leave it clean for the next test.
+    window.history.pushState({}, '', '/');
     fireEvent.click(screen.getByRole('button', { name: 'List' }));
     expect(screen.getByRole('button', { name: 'List' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('Next action')).toBeInTheDocument();

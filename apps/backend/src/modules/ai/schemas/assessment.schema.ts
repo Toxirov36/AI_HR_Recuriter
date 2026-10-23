@@ -26,10 +26,17 @@ export const vacancyAssessmentSchema = z.object({
 /** Open questions written by HR; candidates answer them in writing after the multiple-choice test. */
 export const customQuestionsSchema = z.array(z.string().trim().min(5).max(500)).max(5);
 
+/** HR's switch for the AI chat interview and an optional hint about what the AI should dig into. */
+export const aiInterviewSettingSchema = z.object({
+  enabled: z.boolean().default(false),
+  focus: z.string().trim().max(500).default(''),
+});
+
 /** What HR submits when editing the test: the ten AI questions plus up to five own open questions. */
 export const assessmentEditSchema = z.object({
   questions: z.array(assessmentQuestionSchema).min(10).max(10),
   customQuestions: customQuestionsSchema.default([]),
+  aiInterview: aiInterviewSettingSchema.default({ enabled: false, focus: '' }),
 }).superRefine(({ questions }, context) => checkQuestionOrder(questions, context));
 
 export type AssessmentEdit = z.infer<typeof assessmentEditSchema>;
