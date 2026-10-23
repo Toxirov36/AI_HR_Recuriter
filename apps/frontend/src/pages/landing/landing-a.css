@@ -15,6 +15,8 @@
   --a-on-deep-muted: #b4d0c2;
   --a-lime: #c9f36b;
   --a-display: 'Unbounded', 'Onest', sans-serif;
+  /* The page runs edge to edge: only this side margin, growing with the screen */
+  --a-gutter: clamp(20px, 4.5vw, 96px);
 
   background: var(--a-paper);
   color: var(--a-ink);
@@ -22,7 +24,8 @@
   font-size: 17px;
 }
 .landing-page .landing-container {
-  width: min(1240px, calc(100% - 64px));
+  width: calc(100% - 2 * var(--a-gutter));
+  max-width: 1800px;
 }
 
 /* Header */
@@ -525,6 +528,135 @@
   outline-color: var(--a-pine);
 }
 
+/* Fluid scale: type, spacing and cards grow with the screen, so a wide monitor is filled rather than framed by empty margins */
+.landing-page .landing-hero h1 {
+  font-size: clamp(40px, 4.7vw, 100px);
+}
+.landing-page .landing-hero-description {
+  font-size: clamp(18px, 1.15vw, 23px);
+}
+.landing-page .landing-section {
+  padding-block: clamp(72px, 7vw, 150px);
+}
+.landing-page .landing-section h2 {
+  font-size: clamp(34px, 3.8vw, 76px);
+}
+.landing-page .landing-final-cta h2 {
+  font-size: clamp(36px, 4.6vw, 92px);
+}
+.landing-page .landing-section-head p,
+.landing-page .landing-how-intro > p,
+.landing-page .landing-faq-layout > div:first-child > p,
+.landing-page .landing-final-cta p,
+.landing-page .landing-pricing-intro > p {
+  font-size: clamp(17px, 1.05vw, 21px);
+}
+.landing-page .landing-feature-card,
+.landing-page .landing-whom-card {
+  padding: clamp(26px, 2.2vw, 44px);
+}
+.landing-page .landing-feature-card h3,
+.landing-page .landing-whom-card h3 {
+  font-size: clamp(20px, 1.4vw, 28px);
+}
+.landing-page .landing-feature-card p,
+.landing-page .landing-whom-card p,
+.landing-page .landing-flow-card p,
+.landing-page .landing-step p {
+  font-size: clamp(15.5px, 0.9vw, 18px);
+}
+.landing-page .landing-flow-number {
+  font-size: clamp(40px, 3.4vw, 68px);
+}
+.landing-page .landing-flow-card h3,
+.landing-page .landing-step h3,
+.landing-page .landing-faq-list summary {
+  font-size: clamp(18px, 1.15vw, 22px);
+}
+.landing-page .landing-step {
+  padding: clamp(22px, 1.8vw, 34px) clamp(24px, 2vw, 38px);
+}
+.landing-page .landing-bubble {
+  font-size: clamp(15px, 0.95vw, 18px);
+}
+.landing-page .landing-final-cta {
+  padding: clamp(40px, 5vw, 104px);
+}
+
+@media (min-width: 1100px) {
+  /* The hero takes the whole first screen */
+  .landing-page .landing-hero {
+    min-height: clamp(560px, calc(100svh - 80px), 980px);
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    gap: clamp(48px, 5vw, 128px);
+    padding-block: clamp(40px, 4vw, 80px);
+  }
+  .landing-page .landing-hero-actions {
+    margin-top: clamp(34px, 2.6vw, 52px);
+  }
+  .landing-page .landing-chat {
+    max-width: 760px;
+    margin-left: auto;
+  }
+  .landing-page .landing-chat-head {
+    padding: clamp(22px, 1.8vw, 32px) clamp(26px, 2vw, 38px) 6px;
+  }
+  .landing-page .landing-chat-body {
+    gap: clamp(10px, 0.8vw, 16px);
+    padding: 18px clamp(26px, 2vw, 38px) clamp(28px, 2.2vw, 42px);
+  }
+
+  /* Section heads use the full row: title on the left, the explanation on the right */
+  .landing-page .landing-section-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    column-gap: clamp(40px, 6vw, 140px);
+    align-items: end;
+    max-width: none;
+    margin-bottom: clamp(48px, 4vw, 80px);
+  }
+  .landing-page .landing-section-head .landing-kicker {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .landing-page .landing-section-head h2 {
+    margin-bottom: 0;
+  }
+  .landing-page .landing-section-head p {
+    max-width: 34em;
+    margin: 0 0 0.3em;
+  }
+
+  .landing-page .landing-how-layout,
+  .landing-page .landing-faq-layout {
+    gap: clamp(56px, 7vw, 160px);
+  }
+  .landing-page .landing-how-intro,
+  .landing-page .landing-pricing-intro {
+    max-width: 36em;
+  }
+
+  /* Pricing: the plan card fills its half, its list in two columns */
+  .landing-page .landing-pricing-layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: clamp(56px, 7vw, 160px);
+  }
+  .landing-page .landing-plan {
+    max-width: none;
+    padding: clamp(40px, 3.2vw, 64px);
+  }
+  .landing-page .landing-plan ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 28px;
+  }
+  .landing-page .landing-plan li {
+    font-size: clamp(16px, 0.95vw, 18px);
+  }
+  .landing-page .landing-plan-price strong {
+    font-size: clamp(46px, 3.6vw, 72px);
+  }
+}
+
 @media (max-width: 980px) {
   .landing-page .landing-flow-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -539,11 +671,8 @@
   }
 }
 @media (max-width: 760px) {
-  .landing-page .landing-container {
-    width: min(100% - 36px, 560px);
-  }
-  .landing-page .landing-section {
-    padding-block: 72px;
+  .landing-page {
+    --a-gutter: 18px;
   }
   .landing-page .landing-flow-grid {
     grid-template-columns: 1fr;
