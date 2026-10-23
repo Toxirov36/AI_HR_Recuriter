@@ -1,3 +1,4 @@
+import { textAiProvider } from '../../config/app.config';
 import { ConflictException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Database } from '../../database/prisma.service';
 import { Prisma } from '../../generated/prisma/client';
@@ -49,7 +50,7 @@ export class VacancyAssessmentService {
   /** Called when a vacancy is saved while ACTIVE: drafts a test unless one already exists for this revision. */
   async autoGenerate(companyId: number, id: number) {
     try {
-      if (!this.security.config.GEMINI_API_KEY) return;
+      if (!textAiProvider(this.security.config)) return;
       const vacancy = await this.load(companyId, id);
       if (vacancy.status !== 'ACTIVE') return;
       const state = assessmentState(vacancy);

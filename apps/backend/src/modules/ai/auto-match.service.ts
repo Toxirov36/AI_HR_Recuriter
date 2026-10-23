@@ -1,3 +1,4 @@
+import { textAiProvider } from '../../config/app.config';
 import { Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Worker } from 'bullmq';
 import Redis from 'ioredis';
@@ -16,7 +17,7 @@ export class AutoMatchService implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject(Database) private db: Database, @Inject(Security) private security: Security, @Inject(AiService) private ai: AiService) {}
 
   onModuleInit() {
-    if (this.security.config.NODE_ENV === 'test' || !this.security.config.GEMINI_API_KEY) return;
+    if (this.security.config.NODE_ENV === 'test' || !textAiProvider(this.security.config)) return;
     this.connection = this.security.createBullMqConnection();
     this.worker = new Worker<AutoMatchJob>(AUTO_MATCH_QUEUE, async job => {
       const { companyId, candidateId, applicationId, resumeRevision } = job.data;

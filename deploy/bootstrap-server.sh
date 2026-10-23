@@ -101,6 +101,7 @@ STORAGE_DRIVER=local
 # CVs are stored on this server (Docker volume uploads_data). R2_* below are only needed to copy old files.
 # Fill these in by hand (never commit them): AI, Telegram, SMTP, Google sign-in.
 GOOGLE_CLIENT_ID=
+DEEPSEEK_API_KEY=
 GEMINI_API_KEY=
 R2_ACCOUNT_ID=
 R2_ACCESS_KEY_ID=

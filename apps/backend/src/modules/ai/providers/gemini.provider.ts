@@ -12,10 +12,14 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { Security } from '../../../common/utils/security';
 import { instructions } from '../prompts/evidence.prompt';
 import { resumeSchema } from '../schemas/resume.schema';
+import { textAiProvider } from '../../../config/app.config';
+import { DeepSeekProvider } from './deepseek.provider';
 
 @Injectable()
 export class GeminiProvider {
   private readonly logger = new Logger(GeminiProvider.name);
+
+  private deepseek?: DeepSeekProvider;
 
   constructor(@Inject(Security) private security: Security) {}
 
@@ -27,9 +31,14 @@ export class GeminiProvider {
     modelOverride?: string,
   ): Promise<z.infer<T>> {
     const config = this.security.config;
+    // Text generation goes to DeepSeek when it is the active provider; the Gemini model override does not apply there.
+    if (textAiProvider(config) === 'deepseek') {
+      this.deepseek ??= new DeepSeekProvider(this.security);
+      return this.deepseek.generate(schema, task, input, systemInstructions);
+    }
     if (!config.GEMINI_API_KEY)
       throw new ServiceUnavailableException(
-        'AI is not configured. Set GEMINI_API_KEY on the backend to enable this feature.',
+        'AI is not configured. Set DEEPSEEK_API_KEY (or GEMINI_API_KEY) on the backend to enable this feature.',
       );
     try {
       const response = await this.request(modelOverride || config.GEMINI_MODEL, 'generateContent', {
@@ -156,7 +165,9 @@ export class GeminiProvider {
     );
   }
 
+  /** Gemini only (DeepSeek has no embedding API). Returns null when Gemini is not the embedding provider. */
   async embed(resume: z.infer<typeof resumeSchema>) {
+    if (!this.security.config.GEMINI_API_KEY || textAiProvider(this.security.config) === 'deepseek') return null;
     const model = this.security.config.GEMINI_EMBEDDING_MODEL;
     // Bound the professional summary input to fit the embedding model's context.
     const text = JSON.stringify({ summary: resume.summary, skills: resume.skills }).slice(0, 8000);
@@ -185,7 +196,7 @@ export class GeminiProvider {
     const config = this.security.config;
     if (!config.GEMINI_API_KEY) {
       throw new ServiceUnavailableException(
-        'AI is not configured. Set GEMINI_API_KEY on the backend to enable this feature.',
+        'Voice transcription needs GEMINI_API_KEY on the backend (DeepSeek cannot process audio).',
       );
     }
 

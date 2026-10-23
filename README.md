@@ -21,6 +21,8 @@ Open **http://localhost:5173**. Create a workspace to register your company and 
 
 To enable AI, add your key to the root `.env`, confirm `GEMINI_MODEL` is available to your Google AI Studio project, and restart the backend. The default model is configurable (`gemini-3.5-flash`). CV parsing also creates a 768-dimensional embedding with `GEMINI_EMBEDDING_MODEL=gemini-embedding-2` from up to 8,000 characters of the professional summary and skills. It is saved with its model and dimensions in `parsedResume.embedding`; replacing the CV clears it along with the parsed resume. Existing CVs need to be parsed again to create embeddings. These vectors are stored for future semantic retrieval; they do not rank candidates. [Gemini embeddings documentation](https://ai.google.dev/gemini-api/docs/embeddings). The frontend receives only an `aiConfigured` boolean, never a key. AI actions require the user to explicitly authorize sending the CV and vacancy to Google Gemini. Without a key the API returns 503 with an actionable message, and the UI disables AI actions.
 
+Text AI (CV parsing, candidate tests, matching, vacancy drafting, channel discovery) uses DeepSeek when `DEEPSEEK_API_KEY` is set (`DEEPSEEK_MODEL=deepseek-chat`); `AI_PROVIDER=auto|deepseek|gemini` pins a provider. DeepSeek has no embedding, audio or vision API, so voice transcription and OCR of scanned CVs still need `GEMINI_API_KEY`, and the CV embedding is skipped while DeepSeek is active.
+
 ## Workflow
 
 1. Register a company and administrator from the sign-in page.

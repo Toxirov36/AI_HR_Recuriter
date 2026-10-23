@@ -1,3 +1,4 @@
+import { textAiProvider } from '../../config/app.config';
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Response } from 'express';
 import { hash, compare } from 'bcryptjs';
@@ -103,7 +104,7 @@ export class AuthService {
     return {
       ...user,
       company,
-      aiConfigured: Boolean(this.security.config.GEMINI_API_KEY),
+      aiConfigured: Boolean(textAiProvider(this.security.config)),
     };
   }
 

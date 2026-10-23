@@ -1,3 +1,4 @@
+import { textAiProvider } from '../../config/app.config';
 import {
   BadGatewayException,
   BadRequestException,
@@ -109,9 +110,9 @@ export class AiService implements OnModuleInit {
   }
 
   private async locked<T>(key: string, userId: number, work: () => Promise<T>) {
-    if (!this.security.config.GEMINI_API_KEY)
+    if (!textAiProvider(this.security.config))
       throw new ServiceUnavailableException(
-        'AI is not configured. Set GEMINI_API_KEY on the backend to enable this feature.',
+        'AI is not configured. Set DEEPSEEK_API_KEY (or GEMINI_API_KEY) on the backend to enable this feature.',
       );
     await this.security.limit(`ai:${userId}`, 10, 600);
     const lock = `ai-lock:${key}`;
@@ -182,7 +183,7 @@ export class AiService implements OnModuleInit {
         const updated = await this.recruiting.db.candidate.updateMany({
           where: { id: candidateId, companyId, resumeRevision: candidate.resumeRevision },
           data: {
-            parsedResume: { ...result, embedding },
+            parsedResume: { ...result, ...(embedding ? { embedding } : {}) },
             skills: result.skills,
             experience: result.experience,
             education: result.education,
@@ -519,7 +520,7 @@ export class AiService implements OnModuleInit {
     // AI comparison generation
     let comparison = this.buildFallbackComparison(vacancy.title, topCandidates);
 
-    if (topCandidates.length > 0 && this.security.config.GEMINI_API_KEY) {
+    if (topCandidates.length > 0 && textAiProvider(this.security.config)) {
       try {
         const inputData = {
           vacancy: {
@@ -921,7 +922,7 @@ export class AiService implements OnModuleInit {
       }
     }
 
-    if (!this.security.config.GEMINI_API_KEY) throw new ServiceUnavailableException('AI assessment provider is not configured');
+    if (!textAiProvider(this.security.config)) throw new ServiceUnavailableException('AI assessment provider is not configured');
     const inputData = {
           title: vacancy.title,
           description: vacancy.description,

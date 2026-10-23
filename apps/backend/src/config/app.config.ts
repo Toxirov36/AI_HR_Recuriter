@@ -30,6 +30,12 @@ export const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().trim().default(''),
   GOOGLE_OAUTH_REDIRECT_URL: z.string().trim().default(''),
   GOOGLE_TOKEN_ENCRYPTION_KEY: z.string().trim().default(''),
+  // Text AI (resume parsing, tests, matching, vacancy drafting): DeepSeek when its key is set, else Gemini.
+  // AI_PROVIDER pins one of them; "auto" prefers DeepSeek. Embeddings, voice transcription and OCR need Gemini.
+  AI_PROVIDER: z.enum(['auto', 'deepseek', 'gemini']).default('auto'),
+  DEEPSEEK_API_KEY: z.string().trim().default(''),
+  DEEPSEEK_MODEL: z.string().trim().default('deepseek-chat'),
+  DEEPSEEK_BASE_URL: z.string().trim().default('https://api.deepseek.com'),
   GEMINI_API_KEY: z.string().default(''),
   GEMINI_MODEL: z.string().default('gemini-3.6-flash'),
   GEMINI_FALLBACK_MODEL: z.string().default('gemini-3.5-flash-lite'),
@@ -58,6 +64,13 @@ export const envSchema = z.object({
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
+
+/** Which provider handles text AI (structured generation), or null when none is configured. */
+export function textAiProvider(config: Pick<AppConfig, 'AI_PROVIDER' | 'DEEPSEEK_API_KEY' | 'GEMINI_API_KEY'>): 'deepseek' | 'gemini' | null {
+  if (config.AI_PROVIDER !== 'gemini' && config.DEEPSEEK_API_KEY) return 'deepseek';
+  if (config.AI_PROVIDER !== 'deepseek' && config.GEMINI_API_KEY) return 'gemini';
+  return null;
+}
 
 export function isR2Configured(config: AppConfig): boolean {
   return Boolean(

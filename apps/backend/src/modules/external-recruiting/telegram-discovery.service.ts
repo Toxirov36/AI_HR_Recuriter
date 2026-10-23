@@ -1,3 +1,4 @@
+import { textAiProvider } from '../../config/app.config';
 import { BadRequestException, ForbiddenException, Inject, Injectable, Logger, OnModuleDestroy, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { Job, Queue, Worker } from 'bullmq';
 import Redis from 'ioredis';
@@ -101,7 +102,7 @@ export class TelegramDiscoveryService implements OnModuleInit, OnModuleDestroy {
     const vacancy = await this.vacancy(companyId, vacancyId);
     const run = await this.db.telegramChannelDiscovery.findFirst({ where: { companyId, vacancyId }, orderBy: { createdAt: 'desc' } });
     return {
-      configured: this.telegram.configured && Boolean(this.security.config.GEMINI_API_KEY),
+      configured: this.telegram.configured && Boolean(textAiProvider(this.security.config)),
       run: run ? {
         id: run.id,
         status: run.status,
@@ -118,7 +119,7 @@ export class TelegramDiscoveryService implements OnModuleInit, OnModuleDestroy {
     if (!['ADMIN', 'HR', 'RECRUITER'].includes(user.role)) throw new ForbiddenException('Recruiter access required');
     const vacancy = await this.vacancy(user.companyId, vacancyId);
     if (!this.telegram.configured) throw new ServiceUnavailableException('Telegram discovery account is not configured');
-    if (!this.security.config.GEMINI_API_KEY) throw new ServiceUnavailableException('AI is not configured');
+    if (!textAiProvider(this.security.config)) throw new ServiceUnavailableException('AI is not configured');
     if (!this.queue) throw new ServiceUnavailableException('Channel discovery queue is unavailable');
     const active = await this.db.telegramChannelDiscovery.findFirst({
       where: { companyId: user.companyId, vacancyId, vacancyRevision: vacancy.revision, status: { in: ['QUEUED', 'RUNNING'] } },

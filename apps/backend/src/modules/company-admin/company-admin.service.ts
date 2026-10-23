@@ -1,3 +1,4 @@
+import { textAiProvider } from '../../config/app.config';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Database } from '../../database/prisma.service';
 import { admin } from '../../common/guards/auth.guard';
@@ -36,7 +37,7 @@ export class CompanyAdminService {
     const config = this.security.config;
     return {
       company, stats: { members, activeMembers, vacancies, candidates, applications, invitations }, stages,
-      integrations: { emailConfigured: smtpOptions().ok, aiConfigured: Boolean(config.GEMINI_API_KEY), telegramConnected: telegram > 0, storageConfigured: Boolean(config.R2_BUCKET_NAME) },
+      integrations: { emailConfigured: smtpOptions().ok, aiConfigured: Boolean(textAiProvider(config)), telegramConnected: telegram > 0, storageConfigured: Boolean(config.R2_BUCKET_NAME) },
     };
   }
 
