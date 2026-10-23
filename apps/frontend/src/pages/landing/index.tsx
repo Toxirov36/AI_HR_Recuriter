@@ -26,6 +26,12 @@ import './landing.css';
 import './landing.dark.css';
 import './landing-sections.css';
 import './landing-sections.dark.css';
+import '@fontsource/unbounded/700.css';
+import '@fontsource/unbounded/800.css';
+import '@fontsource/onest/400.css';
+import '@fontsource/onest/500.css';
+import '@fontsource/onest/600.css';
+import './landing-a.css';
 
 const NAV = [
   { href: '#telegram', key: 'navTelegram' },

@@ -6,9 +6,9 @@ import react from '@vitejs/plugin-react';
 import { defaultLocale, locales, type Locale } from './src/i18n/config';
 import { applyLandingSeo } from './src/lib/landing-seo-html';
 
-// Fonts the landing page needs immediately (hero heading, body text, buttons). Fontsource hashes the
+// Fonts the landing page needs immediately (Unbounded hero heading, Onest body text and buttons). Fontsource hashes the
 // file names, so the preload tags are generated from the build output.
-const CRITICAL_FONTS = /(inter-latin-(400|700)-normal|plus-jakarta-sans-latin-800-normal)-[\w-]+\.woff2$/;
+const CRITICAL_FONTS = /(onest-latin-(400|600)-normal|unbounded-latin-800-normal)-[\w-]+\.woff2$/;
 
 function preloadCriticalFonts(): Plugin {
   return {
