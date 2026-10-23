@@ -63,6 +63,14 @@ export const updatePassword = z
   })
   .strict();
 
+export const passwordResetRequest = z
+  .object({ email, lang: z.enum(['uz', 'en', 'ru', 'tg']).optional() })
+  .strict();
+
+export const passwordResetConfirm = z
+  .object({ email, code: z.string().trim().regex(/^\d{6}$/), password })
+  .strict();
+
 export const requirement = z
   .object({
     name: text(200),

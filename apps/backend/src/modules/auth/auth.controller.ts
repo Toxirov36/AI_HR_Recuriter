@@ -25,6 +25,10 @@ import {
   updateProfileSchema,
   UpdatePasswordDto,
   updatePasswordSchema,
+  PasswordResetRequestDto,
+  passwordResetRequestSchema,
+  PasswordResetConfirmDto,
+  passwordResetConfirmSchema,
 } from './dto';
 
 export { userSelect };
@@ -80,6 +84,22 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.authService.login(dto, req.ip, res);
+  }
+
+  @Post('password-reset/request')
+  async requestPasswordReset(
+    @Body(new ZodValidationPipe(passwordResetRequestSchema)) dto: PasswordResetRequestDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.requestPasswordReset(dto, req.ip);
+  }
+
+  @Post('password-reset/confirm')
+  async confirmPasswordReset(
+    @Body(new ZodValidationPipe(passwordResetConfirmSchema)) dto: PasswordResetConfirmDto,
+    @Req() req: Request,
+  ) {
+    return this.authService.confirmPasswordReset(dto, req.ip);
   }
 
   @Get('session')

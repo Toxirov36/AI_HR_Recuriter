@@ -24,14 +24,16 @@ export function AppProviders({ children }: { children: ReactNode }) {
   const isInvitation =
     location.pathname === '/' && new URLSearchParams(location.search).has('invite');
   const isLanding = location.pathname === '/' && !isInvitation;
+  const isForgot = location.pathname === '/forgot-password';
   const isAuthPage =
-    location.pathname === '/login' || location.pathname === '/register' || isInvitation;
+    location.pathname === '/login' || location.pathname === '/register' || isForgot || isInvitation;
   const next = new URLSearchParams(location.search).get('next');
   const safeNext =
     next?.startsWith('/') &&
     !next.startsWith('//') &&
     !next.startsWith('/login') &&
     !next.startsWith('/register') &&
+    !next.startsWith('/forgot-password') &&
     !next.startsWith('/apply/') &&
     !next.startsWith('/interview/')
       ? next
@@ -81,8 +83,20 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <Alert message={error} />
         <AuthPage
           key={location.pathname}
-          initialMode={location.pathname === '/register' || isInvitation ? 'register' : 'login'}
-          onModeChange={(mode) => navigate(mode === 'register' ? '/register' : '/login')}
+          initialMode={
+            location.pathname === '/register' || isInvitation ? 'register' : isForgot ? 'forgot' : 'login'
+          }
+          onModeChange={(mode, resetDone) =>
+            navigate(
+              mode === 'register'
+                ? '/register'
+                : mode === 'forgot'
+                  ? '/forgot-password'
+                  : resetDone
+                    ? '/login?reset=done'
+                    : '/login',
+            )
+          }
           onSuccess={handleAuthSuccess}
         />
       </>

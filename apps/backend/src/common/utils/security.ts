@@ -90,7 +90,13 @@ export class Security implements OnModuleDestroy {
   async issue(user: Identity, res: Response) {
     const sid = randomBytes(32).toString('hex');
     try {
-      await this.redis.set(`session:${sid}`, String(user.id), 'EX', 28800);
+      // The per-user index lets a password reset close every open session of that user
+      await this.redis
+        .multi()
+        .set(`session:${sid}`, String(user.id), 'EX', 28800)
+        .sadd(`user-sessions:${user.id}`, sid)
+        .expire(`user-sessions:${user.id}`, 28800)
+        .exec();
     } catch {
       this.unavailable();
     }
@@ -105,10 +111,24 @@ export class Security implements OnModuleDestroy {
     return user;
   }
 
+  /** Ends every session the user has open (after a password reset). */
+  async revokeUserSessions(userId: number) {
+    try {
+      const key = `user-sessions:${userId}`;
+      const sids = await this.redis.smembers(key);
+      const keys = sids.flatMap((sid) => [`session:${sid}`, `session-user:${sid}`]);
+      await this.redis.del(key, ...keys);
+    } catch {
+      this.unavailable();
+    }
+  }
+
   async logout(sid: string, res: Response) {
     try {
       // Session va user cache ikkalasini bir vaqtda o'chirish
+      const userId = await this.redis.get(`session:${sid}`);
       await this.redis.del(`session:${sid}`, `session-user:${sid}`);
+      if (userId) await this.redis.srem(`user-sessions:${userId}`, sid);
     } catch {
       this.unavailable();
     }

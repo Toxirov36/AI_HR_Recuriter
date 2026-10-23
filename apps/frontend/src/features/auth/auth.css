@@ -386,6 +386,32 @@
 .au-link:disabled {
   opacity: 0.6;
 }
+.au-forgot {
+  justify-self: end;
+  margin-top: -14px;
+  font-size: 14px;
+}
+.au-code {
+  font-size: 22px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.4em;
+  font-variant-numeric: tabular-nums;
+}
+.au-notice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--pine) 12%, var(--surface));
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+}
+.au-notice svg {
+  flex-shrink: 0;
+  color: var(--pine);
+}
 .au-note {
   color: var(--muted);
   font-size: 14px;

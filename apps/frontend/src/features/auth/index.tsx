@@ -7,6 +7,7 @@ import { ApiError, send } from '../../lib/api';
 import { BrandMark } from '../../components/brand-mark';
 import { Alert, LanguageSwitcher } from '../../components/ui';
 import { GoogleSignInButton } from './google-sign-in';
+import { ForgotPasswordForm } from './forgot-password';
 import '@fontsource/onest/700.css';
 import '@fontsource/onest/400.css';
 import '@fontsource/onest/500.css';
@@ -25,22 +26,32 @@ export const AuthContext = createContext<{ user: User; refresh: () => Promise<vo
 );
 export const useAuth = () => useContext(AuthContext);
 
+export type AuthMode = 'login' | 'register' | 'forgot';
+
 export function AuthPage({
   onSuccess,
   initialMode,
   onModeChange,
 }: {
   onSuccess: () => Promise<void>;
-  initialMode?: 'login' | 'register';
-  onModeChange?: (mode: 'login' | 'register') => void;
+  initialMode?: AuthMode;
+  /** `resetDone` is set when the user comes back to sign in after setting a new password. */
+  onModeChange?: (mode: AuthMode, resetDone?: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const token = new URLSearchParams(window.location.search).get('invite');
-  const [mode, setMode] = useState<'login' | 'register'>(
-    token ? 'register' : (initialMode ?? 'login'),
-  );
+  const query = new URLSearchParams(window.location.search);
+  const token = query.get('invite');
+  const [mode, setMode] = useState<AuthMode>(token ? 'register' : (initialMode ?? 'login'));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [resetDone, setResetDone] = useState(query.get('reset') === 'done');
+
+  function changeMode(nextMode: AuthMode, done = false) {
+    setMode(nextMode);
+    setError('');
+    setResetDone(done);
+    onModeChange?.(nextMode, done);
+  }
   const [showPassword, setShowPassword] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [googleSignup, setGoogleSignup] = useState<{
@@ -178,7 +189,9 @@ export function AuthPage({
         <div className="au-lang">
           <LanguageSwitcher />
         </div>
-        {googleSignup ? (
+        {mode === 'forgot' ? (
+          <ForgotPasswordForm onDone={() => changeMode('login', true)} onBack={() => changeMode('login')} />
+        ) : googleSignup ? (
           <form onSubmit={registerGoogle} className="au-form">
             <header>
               <h1>{t('auth.createCompanyTitle', 'Kompaniyangizni yarating')}</h1>
@@ -241,6 +254,11 @@ export function AuthPage({
                     : t('auth.registerSubtitle')}
               </p>
             </header>
+            {resetDone && mode === 'login' && (
+              <p className="au-notice" role="status">
+                <Check size={17} aria-hidden="true" /> {t('auth.resetDone')}
+              </p>
+            )}
             <Alert message={error} />
             {!token && (
               <GoogleSignInButton
@@ -320,6 +338,11 @@ export function AuthPage({
                 </button>
               </span>
             </label>
+            {mode === 'login' && !token && (
+              <button type="button" className="au-link au-forgot" onClick={() => changeMode('forgot')}>
+                {t('auth.forgotPassword')}
+              </button>
+            )}
             <button type="submit" className="au-submit" disabled={busy}>
               {busy
                 ? t('common.pleaseWait')
@@ -336,12 +359,7 @@ export function AuthPage({
                 <button
                   type="button"
                   className="au-link"
-                  onClick={() => {
-                    const nextMode = mode === 'login' ? 'register' : 'login';
-                    setMode(nextMode);
-                    onModeChange?.(nextMode);
-                    setError('');
-                  }}
+                  onClick={() => changeMode(mode === 'login' ? 'register' : 'login')}
                 >
                   {mode === 'login' ? t('auth.createAWorkspace') : t('auth.signIn')}
                 </button>

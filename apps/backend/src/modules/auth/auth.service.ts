@@ -1,13 +1,31 @@
 import { textAiProvider } from '../../config/app.config';
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { hash, compare } from 'bcryptjs';
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomInt, timingSafeEqual } from 'node:crypto';
 import { Database } from '../../database/prisma.service';
 import { Security, Identity, hashToken } from '../../common/utils/security';
 import { admin } from '../../common/guards/auth.guard';
-import { acceptInvite, invitation, login, registration } from '../../common/pipes/validation';
+import {
+  acceptInvite,
+  invitation,
+  login,
+  passwordResetConfirm,
+  passwordResetRequest,
+  registration,
+} from '../../common/pipes/validation';
+import { EmailService } from '../notifications/email.service';
+import { passwordResetEmail } from './password-reset-email';
 import { z } from 'zod';
+
+const RESET_TTL_SECONDS = 900;
+const RESET_MAX_ATTEMPTS = 5;
 
 export const userSelect = {
   id: true,
@@ -22,9 +40,12 @@ export const userSelect = {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     @Inject(Database) private db: Database,
     @Inject(Security) private security: Security,
+    @Inject(EmailService) private email: EmailService,
   ) {}
 
   private async limitAuth(action: string, ip: string | undefined, identity: string) {
@@ -157,6 +178,84 @@ export class AuthService {
 
   async logout(sessionId: string, res: Response) {
     await this.security.logout(sessionId, res);
+    return { ok: true };
+  }
+
+  private resetKeys(email: string) {
+    const id = hashToken(email);
+    return { code: `pwreset:${id}`, attempts: `pwreset-attempts:${id}` };
+  }
+
+  /**
+   * Emails a 6-digit code when the address belongs to an active account. The answer is the same either way
+   * and the email is sent in the background, so the response doesn't reveal which addresses are registered.
+   */
+  async requestPasswordReset(data: z.infer<typeof passwordResetRequest>, ip: string | undefined) {
+    await this.limitAuth('reset-request', ip, data.email);
+    await this.security.limit(`auth:reset-email:${hashToken(data.email).slice(0, 32)}`, 3, RESET_TTL_SECONDS);
+    const user = await this.db.user.findUnique({
+      where: { email: data.email },
+      select: { id: true, email: true, isActive: true, company: { select: { isActive: true } } },
+    });
+    if (!user?.email || !user.isActive || user.company?.isActive === false) return { ok: true };
+
+    const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
+    const keys = this.resetKeys(data.email);
+    try {
+      // A new code replaces the previous one and starts the attempt count again
+      await this.security.redis
+        .multi()
+        .set(keys.code, JSON.stringify({ userId: user.id, codeHash: hashToken(`${user.id}:${code}`) }), 'EX', RESET_TTL_SECONDS)
+        .del(keys.attempts)
+        .exec();
+    } catch {
+      this.security.unavailable();
+    }
+    void this.email
+      .sendMail({ to: user.email, ...passwordResetEmail(code, data.lang) })
+      .then((result) => {
+        if (!result.success) this.logger.warn(`Password reset email was not sent: ${result.error}`);
+      });
+    return { ok: true };
+  }
+
+  /** Checks the code (5 tries per code), sets the new password and ends all of the user's sessions. */
+  async confirmPasswordReset(data: z.infer<typeof passwordResetConfirm>, ip: string | undefined) {
+    await this.limitAuth('reset-confirm', ip, data.email);
+    const invalid = () => new BadRequestException('The code is invalid or expired');
+    const keys = this.resetKeys(data.email);
+    let entry: { userId: number; codeHash: string } | null = null;
+    let attempts = 0;
+    try {
+      const raw = await this.security.redis.get(keys.code);
+      if (!raw) throw invalid();
+      entry = JSON.parse(raw) as { userId: number; codeHash: string };
+      attempts = await this.security.redis.incr(keys.attempts);
+      if (attempts === 1) await this.security.redis.expire(keys.attempts, RESET_TTL_SECONDS);
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+      this.security.unavailable();
+    }
+    if (!entry) throw invalid();
+
+    const expected = Buffer.from(entry.codeHash);
+    const given = Buffer.from(hashToken(`${entry.userId}:${data.code}`));
+    const matches = attempts <= RESET_MAX_ATTEMPTS && timingSafeEqual(expected, given);
+    if (!matches) {
+      if (attempts >= RESET_MAX_ATTEMPTS) await this.security.redis.del(keys.code, keys.attempts).catch(() => 0);
+      throw invalid();
+    }
+    // Deleting the key claims the code, so two requests with the same code can't both succeed
+    const claimed = await this.security.redis.del(keys.code).catch(() => 0);
+    if (!claimed) throw invalid();
+    await this.security.redis.del(keys.attempts).catch(() => 0);
+
+    const updated = await this.db.user.updateMany({
+      where: { id: entry.userId, email: data.email, isActive: true },
+      data: { password: await hash(data.password, 12) },
+    });
+    if (!updated.count) throw invalid();
+    await this.security.revokeUserSessions(entry.userId);
     return { ok: true };
   }
 
