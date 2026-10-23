@@ -174,7 +174,7 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
       });
       expect(result.telegramSent).toBe(false);
       expect(mockTelegramApi.sendMessage).toHaveBeenCalledTimes(2);
-      expect(mockTelegramApi.sendMessage).toHaveBeenLastCalledWith('555666777', expect.any(String), { businessConnectionId: 'biz_conn_99' });
+      expect(mockTelegramApi.sendMessage).toHaveBeenNthCalledWith(1, '555666777', expect.any(String), { businessConnectionId: 'biz_conn_99' });
       expect(mockDb.candidateEvent.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ type: 'TELEGRAM_DELIVERY_FAILED' }),
       });

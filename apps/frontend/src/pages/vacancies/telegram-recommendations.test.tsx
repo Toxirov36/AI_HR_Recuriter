@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import '../../i18n';
 import { api, send } from '../../lib/api';
 import { TelegramRecommendations } from './telegram-recommendations';
 

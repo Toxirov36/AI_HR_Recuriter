@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { send } from '../../lib/api';
 import { Alert, Badge, Button, Card, Textarea } from '../../components/ui';
 import { toast } from 'sonner';
@@ -34,6 +35,7 @@ export function InterviewReviewEditor({
   onSaving: (saving: boolean) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const currentQuestions = application.interviewQuestions?.questions ?? [];
 
   // 1. Answers state for Interview Questions Guide
@@ -223,12 +225,12 @@ export function InterviewReviewEditor({
                     </div>
 
                     <label className="block text-xs font-medium">
-                      Candidate answer
+                      {t('scorecard.candidateAnswer', 'Candidate answer')}
                       <Textarea
                         rows={3}
                         maxLength={10000}
                         value={entry.answer}
-                        placeholder="Record the candidate's response…"
+                        placeholder={t('scorecard.answerPlaceholder', 'Record the candidate’s response…')}
                         className="mt-1 text-xs"
                         onChange={(e) => {
                           setAnswers(
@@ -240,12 +242,12 @@ export function InterviewReviewEditor({
                     </label>
 
                     <label className="block text-xs font-medium">
-                      HR notes
+                      {t('scorecard.hrNotes', 'HR notes')}
                       <Textarea
                         rows={2}
                         maxLength={5000}
                         value={entry.notes}
-                        placeholder="Observations and follow-up points…"
+                        placeholder={t('scorecard.notesPlaceholder', 'Observations and follow-up points…')}
                         className="mt-1 text-xs"
                         onChange={(e) => {
                           setAnswers(
@@ -262,7 +264,7 @@ export function InterviewReviewEditor({
 
             {!answers.length && (
               <p className="text-xs text-slate-500 italic p-4 bg-slate-50 rounded border">
-                Savollar ro‘yxati hozircha bo‘sh. Yuqoridagi savollar generatori orqali savollar yaratishingiz mumkin.
+                {t('scorecard.questionsEmpty', 'Savollar ro‘yxati hozircha bo‘sh. Yuqoridagi savollar generatori orqali savollar yaratishingiz mumkin.')}
               </p>
             )}
           </div>
@@ -274,15 +276,15 @@ export function InterviewReviewEditor({
             htmlFor="overall-interview-notes"
             className="block text-xs font-semibold text-slate-800 dark:text-slate-200"
           >
-            Overall interview notes
+            {t('scorecard.overallNotes', 'Overall interview notes')}
           </label>
           <Textarea
             id="overall-interview-notes"
-            aria-label="Overall interview notes"
+            aria-label={t('scorecard.overallNotes', 'Overall interview notes')}
             rows={3}
             maxLength={10000}
             value={notes}
-            placeholder="Summarize the conversation and agreed next steps…"
+            placeholder={t('scorecard.overallNotesPlaceholder', 'Summarize the conversation and agreed next steps…')}
             className="text-xs resize-y"
             onChange={(e) => {
               setNotes(e.target.value);

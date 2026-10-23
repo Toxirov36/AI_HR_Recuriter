@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { InterviewReviewEditor } from '../../features/interview-generator';
 import type { Application } from '../../types';
 import { send } from '../../lib/api';
+import { changeLanguage } from '../../i18n';
 vi.mock('../../lib/api', () => ({ send: vi.fn(), api: vi.fn(), ApiError: class ApiError extends Error { constructor(public status: number, message: string) { super(message); } } }));
 const application = {
   id: 1,
@@ -20,8 +21,8 @@ const application = {
   },
 } as Application;
 describe('interview review drafts', () => {
-  afterEach(cleanup);
-  beforeEach(() => vi.resetAllMocks());
+  afterEach(async () => { cleanup(); await changeLanguage('uz'); });
+  beforeEach(async () => { vi.resetAllMocks(); await changeLanguage('en'); });
   it('keeps previous answers attached to their original question after regeneration', () => {
     render(
       <InterviewReviewEditor application={application} onDirty={vi.fn()} onSaving={vi.fn()} />,
@@ -96,17 +97,17 @@ describe('interview review drafts', () => {
     );
 
     // Score 1
-    const score1Btn = screen.getAllByRole('button', { name: /1 ball: Tajriba yo‘q/i })[0];
+    const score1Btn = screen.getAllByRole('button', { name: /Score 1: Tajriba yo‘q/i })[0];
     fireEvent.click(score1Btn);
     expect(screen.getAllByText(/1 — Tajriba ko‘rsatmadi/i).length).toBeGreaterThan(0);
 
     // Score 3
-    const score3Btn = screen.getAllByRole('button', { name: /3 ball: Mustaqil/i })[0];
+    const score3Btn = screen.getAllByRole('button', { name: /Score 3: Mustaqil/i })[0];
     fireEvent.click(score3Btn);
     expect(screen.getAllByText(/3 — Mustaqil ishlay oladi/i).length).toBeGreaterThan(0);
 
     // Score 5
-    const score5Btn = screen.getAllByRole('button', { name: /5 ball: Ekspert/i })[0];
+    const score5Btn = screen.getAllByRole('button', { name: /Score 5: Ekspert/i })[0];
     fireEvent.click(score5Btn);
     expect(
       screen.getAllByText(/5 — Murakkab tizimlarni loyihalagan va boshqalarga mentorlik qilgan/i)
@@ -131,7 +132,7 @@ describe('interview review drafts', () => {
     );
 
     // Select score 4 for NestJS without typing evidence
-    const score4Btn = screen.getAllByRole('button', { name: /4 ball: Ilg‘or/i })[0];
+    const score4Btn = screen.getAllByRole('button', { name: /Score 4: Ilg‘or/i })[0];
     fireEvent.click(score4Btn);
 
     // Also type overall notes so button becomes dirty & enabled
@@ -183,12 +184,12 @@ describe('interview review drafts', () => {
     );
 
     // 1. Assign score 4 to NestJS
-    const score4Btn = screen.getAllByRole('button', { name: /4 ball: Ilg‘or/i })[0];
+    const score4Btn = screen.getAllByRole('button', { name: /Score 4: Ilg‘or/i })[0];
     fireEvent.click(score4Btn);
 
     // 2. Write mandatory evidence for NestJS
     const evidenceTextareas = screen.getAllByPlaceholderText(
-      /Ushbu ballni asoslovchi aniq dalil/i,
+      /Write the specific evidence or candidate answer/i,
     );
     fireEvent.change(evidenceTextareas[0], {
       target: {

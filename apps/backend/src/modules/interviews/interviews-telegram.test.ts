@@ -111,9 +111,9 @@ describe('time buttons in the bot chat', () => {
 });
 
 describe('the proposal message', () => {
-  function notification(language: string | null = 'uz') {
+  function notification(language: string | null = 'uz', business: { id: string } | null = null) {
     const db: any = {
-      telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue({ id: 'biz1' }) },
+      telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue(business) },
       telegramUserLanguage: { findUnique: vi.fn().mockResolvedValue(language ? { language } : null) },
       candidateEvent: { create: vi.fn().mockResolvedValue({}) },
     };
@@ -137,10 +137,9 @@ describe('the proposal message', () => {
   });
 
   it('keeps callback buttons out of the Business chat and email, which only get the link', async () => {
-    const { telegram, email, service } = notification(null);
-    telegram.sendMessage.mockResolvedValueOnce({ ok: false }); // the bot chat is unavailable
+    const { telegram, email, service } = notification(null, { id: 'biz1' });
     await service.sendInterviewProposal({ ...params, interview });
-    const [, text, options] = telegram.sendMessage.mock.calls[1];
+    const [, text, options] = telegram.sendMessage.mock.calls[0];
     expect(options).toEqual({ businessConnectionId: 'biz1' });
     expect(text).toContain(`/interview/${'T'.repeat(32)}`);
     expect(JSON.stringify(email.sendMail.mock.calls[0][0])).not.toContain('iv:9:');

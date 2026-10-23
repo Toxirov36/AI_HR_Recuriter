@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Textarea } from '../../components/ui';
 import { AlertCircle, Check, Info, Trash2, X } from 'lucide-react';
 import { SCORECARD_RUBRIC } from './scorecard-rubric';
@@ -19,6 +20,7 @@ export function ScorecardCriterionRow({
   onUpdate,
   onRemove,
 }: ScorecardCriterionRowProps) {
+  const { t } = useTranslation();
   const [hoveredScore, setHoveredScore] = useState<number | null>(null);
 
   const activeLevel = criterion.score ? SCORECARD_RUBRIC[criterion.score] : null;
@@ -29,10 +31,10 @@ export function ScorecardCriterionRow({
 
   const categoryLabel =
     criterion.category === 'TECHNICAL'
-      ? 'Texnik talab'
+      ? t('scorecard.categoryTechnical', 'Texnik talab')
       : criterion.category === 'CORE'
-        ? 'Umumiy kompetensiya'
-        : 'Qo‘shimcha mezon';
+        ? t('scorecard.categoryCore', 'Umumiy kompetensiya')
+        : t('scorecard.categoryCustom', 'Qo‘shimcha mezon');
 
   const categoryBadgeVariant =
     criterion.category === 'TECHNICAL'
@@ -81,7 +83,7 @@ export function ScorecardCriterionRow({
             disabled={disabled}
             onClick={onRemove}
             className="text-slate-400 hover:text-rose-600 h-7 w-7 p-0"
-            title="Mezonni o‘chirish"
+            title={t('scorecard.removeCriterion', 'Mezonni o‘chirish')}
           >
             <Trash2 size={14} />
           </Button>
@@ -91,7 +93,7 @@ export function ScorecardCriterionRow({
       {/* 1-5 Score Button Selector */}
       <div className="mt-2 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-slate-500 font-medium">Ball (1–5):</span>
+          <span className="text-xs text-slate-500 font-medium">{t('scorecard.scoreLabel', 'Ball (1–5):')}</span>
           <div className="flex items-center gap-1">
             {[1, 2, 3, 4, 5].map((s) => {
               const rubric = SCORECARD_RUBRIC[s];
@@ -101,7 +103,7 @@ export function ScorecardCriterionRow({
                   key={s}
                   type="button"
                   disabled={disabled}
-                  aria-label={`${s} ball: ${rubric.shortLabel}`}
+                  aria-label={t('scorecard.scoreAria', { defaultValue: '{{score}} ball: {{label}}', score: s, label: rubric.shortLabel })}
                   onClick={() => {
                     const newScore = isSelected ? null : s;
                     onUpdate({
@@ -131,7 +133,7 @@ export function ScorecardCriterionRow({
               className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 ml-1 flex items-center gap-0.5 underline"
             >
               <X size={12} />
-              Tozalash
+              {t('scorecard.clear', 'Tozalash')}
             </button>
           )}
         </div>
@@ -163,7 +165,7 @@ export function ScorecardCriterionRow({
                 : 'text-slate-700 dark:text-slate-300'
             }`}
           >
-            Dalil yoki izoh {hasScore ? <span className="text-rose-500 font-bold">* (Ball qo‘yilganda majburiy)</span> : <span className="text-slate-400">(Ixtiyoriy)</span>}
+            {t('scorecard.evidenceLabel', 'Dalil yoki izoh')} {hasScore ? <span className="text-rose-500 font-bold">{t('scorecard.evidenceRequired', '* (Ball qo‘yilganda majburiy)')}</span> : <span className="text-slate-400">{t('scorecard.optional', '(Ixtiyoriy)')}</span>}
           </label>
           <span className="text-[11px] text-slate-400">
             {criterion.evidence.length}/5000
@@ -178,8 +180,8 @@ export function ScorecardCriterionRow({
           value={criterion.evidence}
           placeholder={
             hasScore
-              ? 'Ushbu ballni asoslovchi aniq dalil yoki nomzod javobini yozing (majburiy)…'
-              : 'Nomzodning ushbu mezon bo‘yicha tajribasi yoki kuzatuvlar…'
+              ? t('scorecard.evidencePlaceholderScored', 'Ushbu ballni asoslovchi aniq dalil yoki nomzod javobini yozing (majburiy)…')
+              : t('scorecard.evidencePlaceholder', 'Nomzodning ushbu mezon bo‘yicha tajribasi yoki kuzatuvlar…')
           }
           className={`text-xs resize-y ${
             missingEvidence
@@ -197,7 +199,7 @@ export function ScorecardCriterionRow({
         {missingEvidence && (
           <div className="flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
             <AlertCircle size={13} className="shrink-0" />
-            <span>Interviewer ball qo‘yganda dalil yoki izoh yozishi majburiy!</span>
+            <span>{t('scorecard.evidenceMissing', 'Interviewer ball qo‘yganda dalil yoki izoh yozishi majburiy!')}</span>
           </div>
         )}
       </div>

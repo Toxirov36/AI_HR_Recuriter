@@ -186,7 +186,7 @@ export function Profile() {
                     disabled={!isAdmin}
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="Company name"
+                    placeholder={t('profile.companyNamePlaceholder', 'Company name')}
                     className={`w-full ${!isAdmin ? 'bg-slate-50 text-slate-500 cursor-not-allowed' : ''}`}
                   />
                   {!isAdmin && (

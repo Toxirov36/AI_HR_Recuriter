@@ -166,11 +166,11 @@ export function AuthPage({
         {googleSignup ? (
           <form onSubmit={registerGoogle} className="auth-card">
             <header className="auth-card-heading">
-              <span className="eyebrow">YANGI WORKSPACE</span>
-              <h2>Kompaniyangizni yarating</h2>
+              <span className="eyebrow">{t('auth.newWorkspaceEyebrow', 'YANGI WORKSPACE')}</span>
+              <h2>{t('auth.createCompanyTitle', 'Kompaniyangizni yarating')}</h2>
               <p>
-                Google hisobingiz tasdiqlandi: <strong>{googleSignup.email}</strong>. Ro‘yxatdan
-                o‘tishni yakunlang.
+                {t('auth.googleVerified', 'Google hisobingiz tasdiqlandi:')} <strong>{googleSignup.email}</strong>.{' '}
+                {t('auth.finishSignup', 'Ro‘yxatdan o‘tishni yakunlang.')}
               </p>
             </header>
             <Alert message={error} />
@@ -197,7 +197,7 @@ export function AuthPage({
               />
             </label>
             <Button type="submit" disabled={busy} className="auth-submit w-full">
-              {busy ? 'Yaratilmoqda…' : 'Workspace yaratish'}
+              {busy ? t('auth.creating', 'Yaratilmoqda…') : t('auth.createWorkspace', 'Workspace yaratish')}
             </Button>
             <button
               type="button"
@@ -208,7 +208,7 @@ export function AuthPage({
                 setError('');
               }}
             >
-              ← Boshqa usul bilan kirish
+              {t('auth.otherMethod', '← Boshqa usul bilan kirish')}
             </button>
           </form>
         ) : (

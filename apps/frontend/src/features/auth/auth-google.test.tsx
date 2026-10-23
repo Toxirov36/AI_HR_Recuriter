@@ -16,13 +16,13 @@ vi.mock('./google-sign-in', () => ({
 vi.mock('react-i18next', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useTranslation: () => ({
-    t: (key: string) =>
+    t: (key: string, fallback?: unknown) =>
       ({
         'auth.companyName': 'Company name',
         'auth.fullName': 'Full name',
         'auth.createWorkspace': 'Create a workspace',
         'auth.createAWorkspace': 'Create a workspace',
-      })[key] || key,
+      })[key] || (typeof fallback === 'string' ? fallback : key),
   }),
 }));
 vi.mock('../../components/ui', async (original) => ({
@@ -85,7 +85,7 @@ describe('Google login and registration', () => {
     fireEvent.change(screen.getByLabelText('Company name'), {
       target: { value: 'Google Workspace' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Workspace yaratish' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create a workspace' }));
     await waitFor(() => expect(success).toHaveBeenCalledOnce());
     expect(mocks.send).toHaveBeenLastCalledWith('/auth/google/register', {
       signupToken: 'a'.repeat(64),

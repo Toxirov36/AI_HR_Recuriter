@@ -338,6 +338,11 @@ export const SYSTEM_STATUS_LABELS: Partial<Record<Locale, Record<string, string>
     TELEGRAM: 'Telegram',
     MANUAL: 'Qo‘lda qo‘shilgan',
     REFERRAL: 'Tavsiya',
+    // CV evidence statuses
+    SUPPORTED: 'Tasdiqlangan',
+    PARTIAL: 'Qisman',
+    NOT_FOUND: 'Topilmadi',
+    UNKNOWN: 'Noma’lum',
     // Resume processing
     PENDING: 'Kutilmoqda',
     PROCESSING: 'Tahlil qilinmoqda',
@@ -373,6 +378,11 @@ export const SYSTEM_STATUS_LABELS: Partial<Record<Locale, Record<string, string>
     TELEGRAM: 'Telegram',
     MANUAL: 'Вручную',
     REFERRAL: 'Рекомендация',
+    // CV evidence statuses
+    SUPPORTED: 'Подтверждено',
+    PARTIAL: 'Частично',
+    NOT_FOUND: 'Не найдено',
+    UNKNOWN: 'Неизвестно',
     // Resume processing
     PENDING: 'В очереди',
     PROCESSING: 'Обработка',
@@ -408,6 +418,11 @@ export const SYSTEM_STATUS_LABELS: Partial<Record<Locale, Record<string, string>
     TELEGRAM: 'Telegram',
     MANUAL: 'Manual',
     REFERRAL: 'Referral',
+    // CV evidence statuses
+    SUPPORTED: 'Supported',
+    PARTIAL: 'Partial',
+    NOT_FOUND: 'Not found',
+    UNKNOWN: 'Unknown',
     // Resume processing
     PENDING: 'Pending',
     PROCESSING: 'Processing',
@@ -443,6 +458,11 @@ export const SYSTEM_STATUS_LABELS: Partial<Record<Locale, Record<string, string>
     TELEGRAM: 'Телеграм',
     MANUAL: 'Дастӣ',
     REFERRAL: 'Тавсия',
+    // CV evidence statuses
+    SUPPORTED: 'Тасдиқшуда',
+    PARTIAL: 'Қисман',
+    NOT_FOUND: 'Ёфт нашуд',
+    UNKNOWN: 'Номаълум',
     // Resume processing
     PENDING: 'Дар интизорӣ',
     PROCESSING: 'Дар ҳоли коркард',

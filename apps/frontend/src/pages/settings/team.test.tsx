@@ -139,8 +139,8 @@ describe('Settings Hub (RBAC, Audit Logs, Retention, Telegram)', () => {
     fireEvent.pointerDown(auditTab, { button: 0 });
     fireEvent.click(auditTab);
 
-    expect(screen.getByText('Export CSV')).toBeInTheDocument();
-    expect(screen.getByText('Export JSON')).toBeInTheDocument();
+    expect(screen.getByText('CSV eksport')).toBeInTheDocument();
+    expect(screen.getByText('JSON eksport')).toBeInTheDocument();
     expect(screen.getByText('CANDIDATE_ANONYMIZED')).toBeInTheDocument();
   });
 

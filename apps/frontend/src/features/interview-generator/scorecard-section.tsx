@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge, Button, Card, Input, Textarea } from '../../components/ui';
 import {
   AlertCircle,
@@ -34,6 +35,7 @@ export function ScorecardSection({
   disabled = false,
   onChange,
 }: ScorecardSectionProps) {
+  const { t } = useTranslation();
   const [newCriterionName, setNewCriterionName] = useState('');
   const [addingCustom, setAddingCustom] = useState(false);
 
@@ -113,24 +115,24 @@ export function ScorecardSection({
             <div className="flex items-center gap-2">
               <Scale className="text-[#245e4f] dark:text-[#58c0a0] dark:text-emerald-400" size={18} />
               <h3 className="font-semibold text-slate-900 dark:text-slate-100">
-                Strukturaviy baholash mezonlari (Scorecard)
+                {t('scorecard.overviewTitle', 'Strukturaviy baholash mezonlari (Scorecard)')}
               </h3>
             </div>
             <p className="text-xs text-slate-500">
-              Har bir mezon 1–5 shkalada baholanadi. Ball qo‘yilganda asoslovchi dalil yozish majburiydir.
+              {t('scorecard.overviewHint', 'Har bir mezon 1–5 shkalada baholanadi. Ball qo‘yilganda asoslovchi dalil yozish majburiydir.')}
             </p>
           </div>
 
           <div className="flex items-center gap-4 flex-wrap">
             <div className="text-right">
-              <span className="text-[11px] text-slate-400 block font-medium">Baholandi</span>
+              <span className="text-[11px] text-slate-400 block font-medium">{t('scorecard.scored', 'Baholandi')}</span>
               <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
                 {scoredCount} / {criteria.length}
               </span>
             </div>
 
             <div className="text-right border-l pl-4 dark:border-slate-800">
-              <span className="text-[11px] text-slate-400 block font-medium">O‘rtacha ball</span>
+              <span className="text-[11px] text-slate-400 block font-medium">{t('scorecard.averageScore', 'O‘rtacha ball')}</span>
               <div className="flex items-center gap-1">
                 <Star
                   size={15}
@@ -143,7 +145,7 @@ export function ScorecardSection({
             </div>
 
             <div className="text-right border-l pl-4 dark:border-slate-800">
-              <span className="text-[11px] text-slate-400 block font-medium">Yakuniy qaror</span>
+              <span className="text-[11px] text-slate-400 block font-medium">{t('scorecard.finalDecision', 'Yakuniy qaror')}</span>
               <Badge className={`text-xs font-semibold ${decisionConfig.badgeClass}`}>
                 {decisionConfig.label}
               </Badge>
@@ -182,17 +184,17 @@ export function ScorecardSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-              1. Texnik mezonlar (Vakansiya talablari)
+              {t('scorecard.technicalHeading', '1. Texnik mezonlar (Vakansiya talablari)')}
             </h4>
             <Badge variant="outline" className="text-xs">
-              {technicalCriteria.length} ta mezon
+              {t('scorecard.criteriaCount', { defaultValue: '{{total}} ta mezon', total: technicalCriteria.length })}
             </Badge>
           </div>
         </div>
 
         {technicalCriteria.length === 0 ? (
           <p className="text-xs text-slate-400 italic p-3 bg-slate-50 dark:bg-slate-900/30 rounded border">
-            Vakansiyada alohida texnik talablar belgilanmagan.
+            {t('scorecard.noTechnical', 'Vakansiyada alohida texnik talablar belgilanmagan.')}
           </p>
         ) : (
           <div className="space-y-3">
@@ -214,10 +216,10 @@ export function ScorecardSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-              2. Umumiy kompetensiyalar (Core Competencies)
+              {t('scorecard.coreHeading', '2. Umumiy kompetensiyalar (Core Competencies)')}
             </h4>
             <Badge variant="outline" className="text-xs">
-              {coreCriteria.length} ta mezon
+              {t('scorecard.criteriaCount', { defaultValue: '{{total}} ta mezon', total: coreCriteria.length })}
             </Badge>
           </div>
         </div>
@@ -240,11 +242,11 @@ export function ScorecardSection({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-              3. Qo‘shimcha mezonlar
+              {t('scorecard.extraHeading', '3. Qo‘shimcha mezonlar')}
             </h4>
             {customCriteria.length > 0 && (
               <Badge variant="outline" className="text-xs">
-                {customCriteria.length} ta mezon
+                {t('scorecard.criteriaCount', { defaultValue: '{{total}} ta mezon', total: customCriteria.length })}
               </Badge>
             )}
           </div>
@@ -259,7 +261,7 @@ export function ScorecardSection({
               className="text-xs h-8"
             >
               <Plus size={13} className="mr-1" />
-              Yangi mezon qo‘shish
+              {t('scorecard.addCriterion', 'Yangi mezon qo‘shish')}
             </Button>
           )}
         </div>
@@ -268,7 +270,7 @@ export function ScorecardSection({
           <Card className="p-3 border border-emerald-300 dark:border-emerald-800 bg-emerald-50/30 dark:bg-emerald-950/20">
             <div className="flex items-center gap-2">
               <Input
-                placeholder="Yangi mezon nomi (masalan: Microservices, System design, Agile)…"
+                placeholder={t('scorecard.newCriterionPlaceholder', 'Yangi mezon nomi (masalan: Microservices, System design, Agile)…')}
                 value={newCriterionName}
                 onChange={(e) => setNewCriterionName(e.target.value)}
                 onKeyDown={(e) => {
@@ -287,7 +289,7 @@ export function ScorecardSection({
                 onClick={addCustomCriterion}
                 disabled={!newCriterionName.trim()}
               >
-                Qo‘shish
+                {t('scorecard.add', 'Qo‘shish')}
               </Button>
               <Button
                 type="button"
@@ -299,7 +301,7 @@ export function ScorecardSection({
                   setNewCriterionName('');
                 }}
               >
-                Bekor qilish
+                {t('scorecard.cancel', 'Bekor qilish')}
               </Button>
             </div>
           </Card>
@@ -324,11 +326,11 @@ export function ScorecardSection({
             <div className="flex items-center gap-2">
               <UserCheck size={20} className="text-[#245e4f] dark:text-[#58c0a0] dark:text-emerald-400" />
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                Yakuniy insoniy qaror (Human Accountability)
+                {t('scorecard.humanDecisionTitle', 'Yakuniy insoniy qaror (Human Accountability)')}
               </h3>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              AI nomzodni qabul qilmaydi yoki rad etmaydi. Qaror faqat interviewer tomonidan mustaqil ravishda qabul qilinadi.
+              {t('scorecard.humanDecisionHint', 'AI nomzodni qabul qilmaydi yoki rad etmaydi. Qaror faqat interviewer tomonidan mustaqil ravishda qabul qilinadi.')}
             </p>
           </div>
 
@@ -381,7 +383,7 @@ export function ScorecardSection({
             htmlFor="decision-notes"
             className="block text-xs font-semibold text-slate-800 dark:text-slate-200"
           >
-            Yakuniy qaror asosnomasi (Inson xulosasi)
+            {t('scorecard.decisionNotesLabel', 'Yakuniy qaror asosnomasi (Inson xulosasi)')}
           </label>
           <Textarea
             id="decision-notes"
@@ -389,7 +391,7 @@ export function ScorecardSection({
             maxLength={5000}
             disabled={disabled}
             value={scorecard.decisionNotes ?? ''}
-            placeholder="Nima sababdan ushbu qaror qabul qilindi? Nomzodning kuchli tomonlari, xatarlar yoki kelajakdagi rivojlanish nuqtalari…"
+            placeholder={t('scorecard.decisionNotesPlaceholder', 'Nima sababdan ushbu qaror qabul qilindi? Nomzodning kuchli tomonlari, xatarlar yoki kelajakdagi rivojlanish nuqtalari…')}
             className="text-xs resize-y"
             onChange={(e) => setDecisionNotes(e.target.value)}
           />
@@ -398,7 +400,7 @@ export function ScorecardSection({
         {/* Attribution & Timestamp Metadata */}
         {scorecard.decidedBy && (
           <div className="text-xs text-slate-500 flex items-center gap-2 pt-2 border-t dark:border-slate-800">
-            <span className="font-medium">Baholovchi:</span>
+            <span className="font-medium">{t('scorecard.evaluator', 'Baholovchi:')}</span>
             <span className="text-slate-700 dark:text-slate-300 font-semibold">
               {scorecard.decidedBy}
             </span>

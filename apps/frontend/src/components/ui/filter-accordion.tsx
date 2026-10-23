@@ -16,13 +16,15 @@ type Props = {
   search?: { value: string; onChange: (value: string) => void; placeholder: string };
   emptyText?: ReactNode;
   className?: string;
+  /** The list opens flush with the right edge of the button (for filters near the right edge). */
+  alignRight?: boolean;
 };
 
 /**
  * A filter that opens like an accordion under its button (the same look as the status filter on the
  * vacancies page): one option is chosen, the list closes, and a click elsewhere or Escape closes it too.
  */
-export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackLabel, search, emptyText, className }: Props) {
+export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackLabel, search, emptyText, className, alignRight }: Props) {
   const [open, setOpen] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === 'filter';
@@ -56,7 +58,7 @@ export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackL
             <span className="truncate pr-2 text-left">{label}</span>
           </AccordionTrigger>
           <AccordionContent
-            containerClassName="absolute left-0 top-[calc(100%+6px)] z-50 w-full min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-2xl"
+            containerClassName={cn('absolute top-[calc(100%+6px)] z-50 w-full min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-2xl', alignRight ? 'right-0' : 'left-0')}
             className="p-1.5"
           >
             {search && (

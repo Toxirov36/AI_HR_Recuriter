@@ -726,7 +726,7 @@ export function Pipeline() {
             }
           }}
           className="pipeline-top-candidates-button h-10 px-3.5 rounded-xl border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-sm font-semibold text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 flex items-center gap-1.5 shadow-none shrink-0"
-          title="Vakansiya bo'yicha eng yaxshi 3 ta nomzodni AI tahlili orqali ko'rish"
+          title={t('pipeline.top3Title', 'Vakansiya bo‘yicha eng yaxshi 3 ta nomzodni AI tahlili orqali ko‘rish')}
         >
           <Sparkles size={15} className="text-emerald-600 dark:text-emerald-400" /> {t('pipeline.topCandidatesBtn', 'Top 3 Nomzodlar (AI)')}
         </Button>
@@ -850,13 +850,13 @@ export function Pipeline() {
                       </small>
                     </div>
                   </div>
-                  <span data-label="Vacancy">{application.vacancy.title}</span>
-                  <span data-label="Stage">
+                  <span data-label={t('pipeline.colVacancy', 'Vacancy')}>{application.vacancy.title}</span>
+                  <span data-label={t('pipeline.colStage', 'Stage')}>
                     <Badge value={application.status} />
                   </span>
-                  <span data-label="Owner">{applicationOwner(application, t('pipeline.unassigned', 'Unassigned'))}</span>
-                  <span data-label="Time">{t('pipeline.inStageDays', { days: daysInCurrentStage(application), defaultValue: `${daysInCurrentStage(application)}d` })}</span>
-                  <span data-label="Next action">{nextActionFor(application, t)}</span>
+                  <span data-label={t('pipeline.colOwner', 'Owner')}>{applicationOwner(application, t('pipeline.unassigned', 'Unassigned'))}</span>
+                  <span data-label={t('pipeline.colTime', 'Time')}>{t('pipeline.inStageDays', { days: daysInCurrentStage(application), defaultValue: `${daysInCurrentStage(application)}d` })}</span>
+                  <span data-label={t('pipeline.colNextAction', 'Next action')}>{nextActionFor(application, t)}</span>
                   <div className="flex items-center gap-1">
                     <button
                       type="button"
@@ -1038,34 +1038,14 @@ export function ApplicationDetail() {
                     <ArrowRight size={16} />
                   </button>
                 )}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="vacancies-filter-trigger stage-filter-trigger"
-                      aria-label="Pipeline stage"
-                      disabled={Boolean(busy)}
-                    >
-                      <span>{getStageLabel(a.status, t)}</span>
-                      <ChevronDown size={15} className="filter-chevron" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="vacancies-filter-popover w-[170px]">
-                    {stages.map((s) => {
-                      const isSelected = a.status === s;
-                      return (
-                        <DropdownMenuItem
-                          key={s}
-                          onClick={() => void changeStatus(s)}
-                          className={`vacancies-filter-item ${isSelected ? 'active-filter' : ''}`}
-                        >
-                          <span>{getStageLabel(s, t)}</span>
-                          {isSelected && <Check size={15} className="filter-check-icon" />}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <FilterAccordion
+                  className="w-[170px] shrink-0"
+                  alignRight
+                  value={a.status}
+                  onChange={(value) => void changeStatus(value as typeof a.status)}
+                  ariaLabel={t('pipeline.stageSelect', 'Pipeline stage')}
+                  options={stages.map((s) => ({ value: s, label: getStageLabel(s, t) }))}
+                />
                 <button
                   className="icon-button danger"
                   aria-label="Delete application"
@@ -1102,7 +1082,7 @@ export function ApplicationDetail() {
             </div>
 
             {a.candidate.source === 'TELEGRAM' && a.assessmentScore == null && (
-              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 mb-4">Test ishlamagan. Arizani qo‘lda ko‘rib chiqing.</p>
+              <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900 mb-4">{t('pipeline.testNotTaken', 'Test ishlamagan. Arizani qo‘lda ko‘rib chiqing.')}</p>
             )}
             {a.assessmentScore != null && (
               <Accordion type="single" collapsible className="panel mb-4 border-emerald-200 bg-emerald-50/20">
@@ -1128,7 +1108,7 @@ export function ApplicationDetail() {
                   <AccordionContent className="px-5 pb-5 pt-1 sm:px-6">
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4 text-xs">
                       <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">Umumiy natija</span>
+                        <span className="text-slate-400 block text-[10px] uppercase font-semibold">{t('pipeline.overallResult', 'Umumiy natija')}</span>
                         <strong className="text-emerald-800 text-base font-bold">
                           {a.assessmentScore}% ({a.assessmentResult?.correctCount ?? Math.round((a.assessmentScore / 10))}/10 to‘g‘ri)
                         </strong>
@@ -1152,9 +1132,9 @@ export function ApplicationDetail() {
                           <thead>
                             <tr className="bg-slate-50 text-slate-700 text-left border-b border-slate-200">
                               <th className="p-2.5 font-semibold w-12 text-center">#</th>
-                              <th className="p-2.5 font-semibold w-32">Yo‘nalish</th>
-                              <th className="p-2.5 font-semibold w-28">Natija</th>
-                              <th className="p-2.5 font-semibold">Tanlangan javob</th>
+                              <th className="p-2.5 font-semibold w-32">{t('pipeline.colDirection', 'Yo‘nalish')}</th>
+                              <th className="p-2.5 font-semibold w-28">{t('pipeline.colResult', 'Natija')}</th>
+                              <th className="p-2.5 font-semibold">{t('pipeline.colSelectedAnswer', 'Tanlangan javob')}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
@@ -1210,7 +1190,7 @@ export function ApplicationDetail() {
                 >
                   <ChevronDown size={18} className={`mt-1 shrink-0 text-slate-500 transition-transform duration-200 ${evidenceOpen ? 'rotate-180' : ''}`} />
                   <div>
-                    <h2>{t('applications.evidenceBreakdownTitle', 'AI topgan dalillar (CV Evidence Breakdown)')}</h2>
+                    <h2>{t('applications.evidenceBreakdownTitle', 'AI topgan dalillar')}</h2>
                     <p>
                       {t('applications.evidenceBreakdownSubtitle', 'CV matnidan olingan faktik dalillar. AI nomzodlarni baholamaydi — qarorni faqat inson qabul qiladi.')}
                     </p>
@@ -1290,16 +1270,16 @@ export function ApplicationDetail() {
                   )}
                   <div className="evidence-legend">
                     <span>
-                      <b>Supported</b> {t('applications.legendSupported', 'Aniq tasdiqlangan dalil')}
+                      <b>{getStageLabel('SUPPORTED', t)}</b> {t('applications.legendSupported', 'Aniq tasdiqlangan dalil')}
                     </span>
                     <span>
-                      <b>Partial</b> {t('applications.legendPartial', 'Qisman dalil mavjud')}
+                      <b>{getStageLabel('PARTIAL', t)}</b> {t('applications.legendPartial', 'Qisman dalil mavjud')}
                     </span>
                     <span>
-                      <b>Not found</b> {t('applications.legendNotFound', 'CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda aniqlashtirish zarur)')}
+                      <b>{getStageLabel('NOT_FOUND', t)}</b> {t('applications.legendNotFound', 'CV ichida dalil topilmadi (nomzod bilmaydi degani emas — suhbatda aniqlashtirish zarur)')}
                     </span>
                     <span>
-                      <b>Unknown</b> {t('applications.legendUnknown', 'Aniq xulosa yo‘q, suhbatda aniqlash zarur')}
+                      <b>{getStageLabel('UNKNOWN', t)}</b> {t('applications.legendUnknown', 'Aniq xulosa yo‘q, suhbatda aniqlash zarur')}
                     </span>
                   </div>
                 </AccordionContent>

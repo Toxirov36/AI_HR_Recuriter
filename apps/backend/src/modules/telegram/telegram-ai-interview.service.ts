@@ -112,6 +112,17 @@ export class TelegramAiInterviewService {
     await this.telegram.sendMessage(run.chatId, first.message, { replyMarkup: this.skipButton(run) });
   }
 
+  /** The candidate came back mid-interview: the last question is asked again (or the interview starts if nothing was asked yet). */
+  async resume(session: InterviewSession, run: InterviewRun) {
+    const turns = interviewTurnsOf(session.interviewTurns);
+    const last = turns[turns.length - 1];
+    if (!last) {
+      await this.start(run);
+      return;
+    }
+    if (last.role === 'ai') await this.telegram.sendMessage(run.chatId, last.text, { replyMarkup: this.skipButton(run) });
+  }
+
   /** The candidate wrote something while the interview step is active. */
   async handleText(session: InterviewSession, text: string, run: InterviewRun) {
     const stored = storedInterviewOf(session.interviewResult);

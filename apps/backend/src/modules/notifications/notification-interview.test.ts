@@ -5,9 +5,9 @@ const candidate = { id: 20, fullName: 'Ali Valiyev', email: 'ali@example.com', t
 const vacancy = { id: 5, title: 'SMM Lead' };
 const interview = { mode: 'ONLINE' as const, durationMinutes: 30, note: 'Portfolio olib keling' };
 
-function setup(language: string | null, origin = 'https://hrdai.uz') {
+function setup(language: string | null, origin = 'https://hrdai.uz', business: { id: string } | null = null) {
   const db: any = {
-    telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue({ id: 'biz1' }), findMany: vi.fn().mockResolvedValue([{ userChatId: BigInt(900), telegramUserId: BigInt(900) }]) },
+    telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue(business), findMany: vi.fn().mockResolvedValue([{ userChatId: BigInt(900), telegramUserId: BigInt(900) }]) },
     telegramUserLanguage: { findUnique: vi.fn().mockResolvedValue(language ? { language } : null) },
     candidateEvent: { create: vi.fn().mockResolvedValue({}) },
   };
@@ -51,15 +51,23 @@ describe('interview proposal', () => {
     expect(text).toContain('Assalomu alaykum');
   });
 
-  it('falls back to the Business chat, with the link in the text, when the bot cannot write first', async () => {
-    const { telegram, service } = setup(null);
-    telegram.sendMessage.mockResolvedValueOnce({ ok: false, description: 'Forbidden: bot can\'t initiate conversation with a user' });
+  it('goes out from the HR’s own account, with the link in the text, when Business is connected', async () => {
+    const { telegram, service } = setup(null, 'https://hrdai.uz', { id: 'biz1' });
+    const result = await service.sendInterviewProposal({ candidate, vacancy, companyName: 'Acme', interview, token: 'T'.repeat(32) });
+    expect(result.telegramSent).toBe(true);
+    expect(telegram.sendMessage).toHaveBeenCalledTimes(1);
+    const [, text, options] = telegram.sendMessage.mock.calls[0];
+    expect(options).toEqual({ businessConnectionId: 'biz1' });
+    expect(text).toContain(`/interview/${'T'.repeat(32)}`);
+  });
+
+  it('falls back to the bot chat when the Business chat does not deliver', async () => {
+    const { telegram, service } = setup(null, 'https://hrdai.uz', { id: 'biz1' });
+    telegram.sendMessage.mockResolvedValueOnce({ ok: false, description: 'Forbidden' });
     const result = await service.sendInterviewProposal({ candidate, vacancy, companyName: 'Acme', interview, token: 'T'.repeat(32) });
     expect(result.telegramSent).toBe(true);
     expect(telegram.sendMessage).toHaveBeenCalledTimes(2);
-    const [, text, options] = telegram.sendMessage.mock.calls[1];
-    expect(options).toEqual({ businessConnectionId: 'biz1' });
-    expect(text).toContain(`/interview/${'T'.repeat(32)}`);
+    expect(telegram.sendMessage.mock.calls[1][2].businessConnectionId).toBeUndefined();
   });
 
   it('falls back to email when Telegram fails', async () => {

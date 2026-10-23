@@ -140,7 +140,7 @@ function CandidateForm({
               type="tel"
               maxLength={50}
               defaultValue={value?.phone || ''}
-              placeholder="Optional (+998...)"
+              placeholder={t('candidates.optionalPhone', 'Optional (+998...)')}
               className="form-control-input"
             />
           </div>

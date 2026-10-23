@@ -121,6 +121,7 @@ export class TelegramJoinService {
       await this.telegram.sendMessage(message.chat.id, tr('vacancyGone'));
       return;
     }
+    if (await this.tryResume(userId, message.chat.id, companyId, vacancy.id, tr)) return;
     const blocked = await this.blockedReason(companyId, vacancy, userId);
     if (blocked) {
       await this.telegram.sendMessage(message.chat.id, this.blockedText(blocked, vacancy, tr), { replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } });
@@ -136,6 +137,13 @@ export class TelegramJoinService {
       return;
     }
 
+    // A candidate who is already past the CV keeps the test they were in the middle of.
+    const live = await this.activeSession(userId);
+    if (live && live.companyId === company.id && ['ASSESSMENT', 'WRITTEN', 'INTERVIEW'].includes(live.step) && (presetVacancyId == null || live.vacancyId === presetVacancyId)) {
+      await this.telegram.sendMessage(message.chat.id, tr('resumeNotice'));
+      await this.resumeStep(live, message.chat.id, tr);
+      return;
+    }
     await this.db.telegramApplySession.deleteMany({ where: { telegramUserId: userId } });
     await this.db.telegramJoinSession.upsert({
       where: { telegramUserId: userId },
@@ -634,6 +642,10 @@ export class TelegramJoinService {
       await this.telegram.answerCallbackQuery(query.id, tr('vacancyGone'), true);
       return;
     }
+    if (await this.tryResume(userId, chatId, session.companyId, vacancy.id, tr)) {
+      await this.telegram.answerCallbackQuery(query.id);
+      return;
+    }
     const blocked = await this.blockedReason(session.companyId, vacancy, userId);
     if (blocked) {
       await this.cancel(userId);
@@ -933,6 +945,84 @@ export class TelegramJoinService {
         ],
       },
     });
+  }
+
+  /**
+   * Picks the flow up where the candidate left it. A live session continues at its own step; an application
+   * whose test was never finished (the session expired) gets a fresh test session. Nothing is ever submitted twice.
+   */
+  private async tryResume(userId: string, chatId: number, companyId: number, vacancyId: number, tr: Tr): Promise<boolean> {
+    const live = await this.activeSession(userId);
+    if (live && live.companyId === companyId && live.vacancyId === vacancyId && !['PRIVACY', 'FIELD', 'VACANCY'].includes(live.step)) {
+      await this.telegram.sendMessage(chatId, tr('resumeNotice'));
+      await this.resumeStep(live, chatId, tr);
+      return true;
+    }
+    const candidate = await this.db.candidate.findUnique({
+      where: { companyId_telegramUserId: { companyId, telegramUserId: userId } },
+      select: { id: true, fullName: true, phone: true, privacyAcceptedAt: true, aiConsentAt: true },
+    });
+    if (!candidate?.privacyAcceptedAt) return false;
+    const application = await this.db.application.findUnique({
+      where: { vacancyId_candidateId: { vacancyId, candidateId: candidate.id } },
+      select: { id: true, assessmentResult: true, vacancy: true },
+    });
+    if (!application || application.assessmentResult || application.vacancy.status !== 'ACTIVE') return false;
+    await this.db.telegramApplySession.deleteMany({ where: { telegramUserId: userId } });
+    const fields = {
+      companyId,
+      step: 'ASSESSMENT' as const,
+      vacancyId,
+      applicationId: application.id,
+      fullName: candidate.fullName,
+      phone: candidate.phone,
+      privacyAcceptedAt: candidate.privacyAcceptedAt,
+      aiConsentAt: candidate.aiConsentAt,
+      currentQuestionIndex: 0,
+      answers: [],
+      expiresAt: this.expiry(),
+    };
+    await this.db.telegramJoinSession.upsert({ where: { telegramUserId: userId }, create: { telegramUserId: userId, ...fields }, update: fields });
+    await this.telegram.sendMessage(chatId, tr('resumeNotice'));
+    await this.prepareAssessment(userId, chatId, application.vacancy, tr);
+    return true;
+  }
+
+  /** Asks again what the live session is waiting for. */
+  private async resumeStep(session: SessionRow, chatId: number, tr: Tr) {
+    switch (session.step) {
+      case 'NAME':
+        await this.telegram.sendMessage(chatId, tr('namePrompt'), { replyMarkup: { inline_keyboard: [navButtons(tr, 'join:back:vacancy')] } });
+        return;
+      case 'PHONE':
+        await this.askPhone(chatId, session.fullName ?? '', tr);
+        return;
+      case 'DOCUMENT':
+        await this.telegram.sendMessage(chatId, tr('sendCv'), { parseMode: 'HTML' });
+        return;
+      case 'ASSESSMENT': {
+        const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
+        if (!assessment.success) {
+          const vacancy = session.vacancyId ? await this.db.vacancy.findFirst({ where: { id: session.vacancyId, companyId: session.companyId } }) : null;
+          if (vacancy) await this.prepareAssessment(session.telegramUserId, chatId, vacancy, tr);
+        } else if (session.currentQuestionIndex === 0) {
+          await this.telegram.sendMessage(chatId, tr('quizIntroJoin'), { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: tr('startQuiz'), callback_data: 'join:quizstart' }]] } });
+        } else {
+          await this.sendQuestion(chatId, assessment.data.questions, session.currentQuestionIndex, tr);
+        }
+        return;
+      }
+      case 'WRITTEN': {
+        const written = customQuestionsOf(session.customQuestions);
+        if (written[session.writtenIndex] !== undefined) await this.sendWrittenQuestion(chatId, written, session.writtenIndex, tr);
+        return;
+      }
+      case 'INTERVIEW':
+        if (this.interviewer) await this.interviewer.resume(session, await this.interviewRun(session, chatId, tr));
+        return;
+      default:
+        return;
+    }
   }
 
   /** One application per vacancy, and one per hiring field of a company (vacancies without a field only per vacancy). */

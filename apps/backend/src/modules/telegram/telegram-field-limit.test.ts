@@ -148,3 +148,46 @@ describe('my applications', () => {
     expect(many.telegram.sendMessage.mock.calls[0][1]).toContain('yana 12 ta ariza');
   });
 });
+
+describe('coming back to an unfinished application', () => {
+  const picked = { id: 5, title: 'SMM Lead', fieldId: 2, field: marketing, company: { id: 3, name: 'Acme', retentionDays: 180 } };
+  const questions = { questions: Array.from({ length: 10 }, (_, k) => ({ id: k + 1, type: k < 5 ? 'HARD_SKILL' : 'SOFT_SKILL', question: `Question number ${k + 1}`, options: ['a', 'b', 'c', 'd'], correctIndex: 0, explanation: 'Because it is.' })) };
+
+  it('asks the next test question again when the session is still alive', async () => {
+    const { db, telegram, service } = joinSetup([], false);
+    db.vacancy.findFirst.mockResolvedValue(picked);
+    db.telegramApplySession = { deleteMany: vi.fn() };
+    db.telegramJoinSession.upsert = vi.fn();
+    db.telegramJoinSession.findUnique.mockResolvedValue({ telegramUserId: '42', companyId: 3, vacancyId: 5, step: 'ASSESSMENT', currentQuestionIndex: 1, answers: [{ questionId: 1, selectedIndex: 0 }], assessmentQuestions: questions, expiresAt: future() });
+    await service.startVacancy({ message_id: 1, chat, from: user } as never, 3, 5);
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, botText('uz', 'resumeNotice'));
+    expect(telegram.sendMessage.mock.calls.some(([, text]: [number, string]) => text.includes('Question number 2'))).toBe(true);
+    expect(db.telegramJoinSession.upsert).not.toHaveBeenCalled();
+  });
+
+  it('opens a fresh test session when the application exists but the test was never finished', async () => {
+    const { db, telegram, service } = joinSetup([], false);
+    db.vacancy.findFirst.mockResolvedValue(picked);
+    db.telegramApplySession = { deleteMany: vi.fn() };
+    db.telegramJoinSession.upsert = vi.fn();
+    db.telegramJoinSession.findUnique.mockResolvedValue(null);
+    db.telegramJoinSession.updateMany.mockResolvedValue({ count: 1 });
+    db.candidate.findUnique.mockResolvedValue({ id: 7, fullName: 'Ali Valiyev', phone: '+998901234567', privacyAcceptedAt: new Date(), aiConsentAt: new Date() });
+    db.application.findUnique.mockResolvedValue({ id: 11, assessmentResult: null, vacancy: { id: 5, status: 'ACTIVE', revision: 1 } });
+    (service as any).apply = { getAssessment: vi.fn().mockResolvedValue(questions) };
+    await service.startVacancy({ message_id: 1, chat, from: user } as never, 3, 5);
+    expect(db.telegramJoinSession.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ step: 'ASSESSMENT', applicationId: 11, vacancyId: 5 }) }));
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, botText('uz', 'resumeNotice'));
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, botText('uz', 'quizIntroJoin'), expect.anything());
+  });
+
+  it('still refuses a vacancy whose test was already finished', async () => {
+    const { db, telegram, service } = joinSetup([], false);
+    db.vacancy.findFirst.mockResolvedValue(picked);
+    db.telegramJoinSession.findUnique.mockResolvedValue(null);
+    db.candidate.findUnique.mockResolvedValue({ id: 7, fullName: 'Ali Valiyev', phone: null, privacyAcceptedAt: new Date(), aiConsentAt: null });
+    db.application.findUnique.mockResolvedValue({ id: 11, assessmentResult: { score: 80 }, vacancy: { id: 5, status: 'ACTIVE' } });
+    await service.startVacancy({ message_id: 1, chat, from: user } as never, 3, 5);
+    expect(telegram.sendMessage).toHaveBeenCalledWith(42, botText('uz', 'alreadyAppliedTitle', { title: 'SMM Lead' }), expect.anything());
+  });
+});
