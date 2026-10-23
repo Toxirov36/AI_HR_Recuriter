@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Plus, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { api, send } from '../../lib/api';
@@ -10,6 +11,7 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
   const { t } = useTranslation();
   const [view, setView] = useState<AssessmentView | null>(null);
   const [draft, setDraft] = useState<AssessmentQuestion[]>([]);
+  const [custom, setCustom] = useState<string[]>([]);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -18,6 +20,7 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
   const apply = useCallback((next: AssessmentView) => {
     setView(next);
     setDraft(next.questions ?? []);
+    setCustom(next.customQuestions ?? []);
     setDirty(false);
   }, []);
 
@@ -39,10 +42,16 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
     }
   }
 
-  const saveDraft = () => send<AssessmentView>(base, { questions: draft }, 'PUT');
+  const cleanCustom = custom.map((text) => text.trim()).filter(Boolean);
+  const saveDraft = () => send<AssessmentView>(base, { questions: draft, customQuestions: cleanCustom }, 'PUT');
 
   function change(index: number, patch: Partial<AssessmentQuestion>) {
     setDraft((current) => current.map((question, i) => (i === index ? { ...question, ...patch } : question)));
+    setDirty(true);
+  }
+
+  function changeCustom(index: number, value: string) {
+    setCustom((current) => current.map((text, i) => (i === index ? value : text)));
     setDirty(true);
   }
 
@@ -55,7 +64,9 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
 
   const state = view?.state ?? 'NONE';
   const hasDraft = state === 'PENDING' || state === 'APPROVED';
-  const complete = draft.length === 10 && draft.every((q) => q.question.trim().length >= 5 && q.explanation.trim().length >= 5 && q.options.every((o) => o.trim()));
+  const customValid = custom.length <= 5 && custom.every((text) => text.trim().length === 0 || text.trim().length >= 5);
+  const complete =
+    customValid && draft.length === 10 && draft.every((q) => q.question.trim().length >= 5 && q.explanation.trim().length >= 5 && q.options.every((o) => o.trim()));
 
   return (
     <Modal title={t('vacancies.assessmentTitle')} subtitle={vacancy.title} close={close} className="max-w-[820px]">
@@ -118,6 +129,58 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
               />
             </section>
           ))}
+
+        {hasDraft && (
+          <section className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/40 p-4" aria-label={t('vacancies.customQuestionsTitle')}>
+            <div>
+              <h3 className="text-sm font-semibold">
+                {t('vacancies.customQuestionsTitle')} ({cleanCustom.length}/5)
+              </h3>
+              <p className="muted small">{t('vacancies.customQuestionsHint')}</p>
+            </div>
+            {custom.map((text, index) => (
+              <div key={index} className="flex items-start gap-2">
+                <span className="mt-2 w-5 shrink-0 text-center text-xs font-semibold text-slate-500">{index + 1}</span>
+                <div className="min-w-0 flex-1">
+                  <Textarea
+                    className="min-h-0 text-sm"
+                    rows={2}
+                    maxLength={500}
+                    placeholder={t('vacancies.customQuestionPlaceholder')}
+                    aria-label={`${t('vacancies.customQuestionsTitle')} ${index + 1}`}
+                    value={text}
+                    onChange={(event) => changeCustom(index, event.target.value)}
+                  />
+                  {text.trim().length > 0 && text.trim().length < 5 && <small className="text-red-700">{t('vacancies.customQuestionShort')}</small>}
+                </div>
+                <button
+                  type="button"
+                  className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-red-50 hover:text-red-700"
+                  aria-label={`${t('vacancies.customQuestionRemove')} ${index + 1}`}
+                  title={t('vacancies.customQuestionRemove')}
+                  onClick={() => {
+                    setCustom((current) => current.filter((_, i) => i !== index));
+                    setDirty(true);
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            ))}
+            {custom.length < 5 && (
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-[#1a5d4c] bg-white px-3.5 py-2 text-sm font-semibold text-[#1a5d4c] hover:bg-emerald-50"
+                onClick={() => {
+                  setCustom((current) => [...current, '']);
+                  setDirty(true);
+                }}
+              >
+                <Plus size={15} /> {t('vacancies.customQuestionAdd')}
+              </button>
+            )}
+          </section>
+        )}
 
         {hasDraft && (
           <div className="flex flex-wrap justify-end gap-2 border-t pt-3">

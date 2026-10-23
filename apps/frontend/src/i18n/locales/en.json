@@ -365,6 +365,12 @@
     "emptySearchSubtitle": "Try a different search or status filter.",
     "publishPlatform": "Publish to job platforms",
     "assessmentButton": "Test questions",
+    "customQuestionsTitle": "Your own questions (written answers)",
+    "customQuestionsHint": "After the 10-question test the candidate answers these in writing (1 to 5 questions). The AI adds a short note to each answer; the decision is yours.",
+    "customQuestionAdd": "Add a question",
+    "customQuestionPlaceholder": "For example: Why did you choose our company?",
+    "customQuestionRemove": "Remove question",
+    "customQuestionShort": "At least 5 characters",
     "assessmentTitle": "Candidate test",
     "assessmentIntro": "AI drafts the questions. You review, edit if needed, and approve them. Until approved, candidates are accepted in the bot without a test (the application is reviewed manually). If the vacancy is edited, the questions are regenerated and need approval again.",
     "assessmentStateNONE": "Test not created yet",
@@ -631,6 +637,9 @@
     "noCv": "No CV"
   },
   "applications": {
+    "writtenTitle": "Written answers",
+    "writtenSubtitle": "The candidate's answers to your own questions.",
+    "writtenAiNote": "AI note",
     "reviewTitle": "Application review",
     "candidateDossier": "Candidate profile",
     "aiAnalysisTitle": "AI Evidence Review",

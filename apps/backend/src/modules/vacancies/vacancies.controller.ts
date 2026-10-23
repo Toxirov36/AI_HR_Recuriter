@@ -17,7 +17,7 @@ import { AuthRequest } from '../../common/utils/security';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { VacanciesService } from './vacancies.service';
 import { VacancyAssessmentService } from './vacancy-assessment.service';
-import { vacancyAssessmentSchema, type VacancyAssessment } from '../ai/schemas/assessment.schema';
+import { assessmentEditSchema, type AssessmentEdit } from '../ai/schemas/assessment.schema';
 import {
   VacancyDto,
   vacancySchema,
@@ -62,7 +62,7 @@ export class VacanciesController {
   saveAssessment(
     @Req() req: AuthRequest,
     @Param('id', ParseIntPipe) id: number,
-    @Body(new ZodValidationPipe(vacancyAssessmentSchema)) dto: VacancyAssessment,
+    @Body(new ZodValidationPipe(assessmentEditSchema)) dto: AssessmentEdit,
   ) {
     return this.assessments.save(req.user, id, dto);
   }

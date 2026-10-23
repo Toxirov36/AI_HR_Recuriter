@@ -9,15 +9,30 @@ export const assessmentQuestionSchema = z.object({
   explanation: z.string().min(5),
 });
 
-export const vacancyAssessmentSchema = z.object({
-  questions: z.array(assessmentQuestionSchema).min(10).max(10),
-}).superRefine(({ questions }, context) => {
+type QuestionList = z.infer<typeof assessmentQuestionSchema>[];
+
+function checkQuestionOrder(questions: QuestionList, context: z.RefinementCtx) {
   questions.forEach((question, index) => {
     if (question.id !== index + 1 || question.type !== (index < 5 ? 'HARD_SKILL' : 'SOFT_SKILL')) {
       context.addIssue({ code: 'custom', message: 'Questions must have IDs 1–10 with five hard and five soft skill questions' });
     }
   });
-});
+}
+
+export const vacancyAssessmentSchema = z.object({
+  questions: z.array(assessmentQuestionSchema).min(10).max(10),
+}).superRefine(({ questions }, context) => checkQuestionOrder(questions, context));
+
+/** Open questions written by HR; candidates answer them in writing after the multiple-choice test. */
+export const customQuestionsSchema = z.array(z.string().trim().min(5).max(500)).max(5);
+
+/** What HR submits when editing the test: the ten AI questions plus up to five own open questions. */
+export const assessmentEditSchema = z.object({
+  questions: z.array(assessmentQuestionSchema).min(10).max(10),
+  customQuestions: customQuestionsSchema.default([]),
+}).superRefine(({ questions }, context) => checkQuestionOrder(questions, context));
+
+export type AssessmentEdit = z.infer<typeof assessmentEditSchema>;
 
 export type AssessmentQuestion = z.infer<typeof assessmentQuestionSchema>;
 export type VacancyAssessment = z.infer<typeof vacancyAssessmentSchema>;

@@ -1,4 +1,4 @@
-import { vacancyAssessmentSchema, type VacancyAssessment } from '../schemas/assessment.schema';
+import { customQuestionsSchema, vacancyAssessmentSchema, type VacancyAssessment } from '../schemas/assessment.schema';
 
 export type AssessmentState = 'NONE' | 'STALE' | 'PENDING' | 'APPROVED';
 
@@ -21,4 +21,15 @@ export function approvedAssessment(vacancy: AssessmentFields): VacancyAssessment
   if (assessmentState(vacancy) !== 'APPROVED') return null;
   const parsed = vacancyAssessmentSchema.safeParse(vacancy.assessmentQuestions);
   return parsed.success ? parsed.data : null;
+}
+
+/** HR's own open questions as stored on the vacancy (empty when none or malformed). */
+export function customQuestionsOf(value: unknown): string[] {
+  const parsed = customQuestionsSchema.safeParse(value);
+  return parsed.success ? parsed.data : [];
+}
+
+/** The written questions candidates get: only those HR approved together with the test. */
+export function approvedWrittenQuestions(vacancy: AssessmentFields & { customQuestions?: unknown }): string[] {
+  return assessmentState(vacancy) === 'APPROVED' ? customQuestionsOf(vacancy.customQuestions) : [];
 }

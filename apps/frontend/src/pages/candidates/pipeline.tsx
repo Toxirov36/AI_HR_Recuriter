@@ -33,6 +33,7 @@ import { useAuth } from '../../features/auth';
 import { getEvidenceSummary } from '../../lib/match-score';
 import { CandidateDossierModal } from '../../components/candidate-dossier-modal';
 import { InterviewPanel } from '../../features/interviews/interview-panel';
+import { WrittenAnswersPanel } from '../../components/written-answers';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import {
   Alert,
@@ -1189,6 +1190,7 @@ export function ApplicationDetail() {
                             </td>
                           </tr>
                         ))}
+            {a.writtenAnswers?.length ? <WrittenAnswersPanel items={a.writtenAnswers} /> : null}
                       </tbody>
                     </table>
                   </div>

@@ -104,3 +104,49 @@ describe('Telegram vacancy screening', () => {
     expect(telegram.sendMessage).toHaveBeenCalledWith(42, 'Ushbu ariza avval qabul qilingan.');
   });
 });
+
+describe('HR written questions in the vacancy-link flow', () => {
+  const questions = ['Nega aynan bizning kompaniya?', 'Qancha maosh kutasiz?'];
+  const session = (extra: Record<string, unknown>) => ({ vacancyId: 5, companyId: 3, step: 'WRITTEN', customQuestions: questions, writtenIndex: 0, writtenAnswers: [], expiresAt: new Date(Date.now() + 60_000), vacancy, ...extra });
+
+  it('freezes the approved written questions together with the test', async () => {
+    const db = { telegramApplySession: { findUnique: vi.fn().mockResolvedValue({ vacancyId: 5, step: 'PRIVACY', expiresAt: new Date(Date.now() + 60_000), vacancy: { ...approvedVacancy, customQuestions: questions } }), updateMany: vi.fn().mockResolvedValue({ count: 1 }) } };
+    await new TelegramApplyService(db as never, security as never, bot() as never, {} as never).handleCallback(callback('apply:5:privacy:yes'));
+    expect(db.telegramApplySession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ customQuestions: questions, writtenIndex: 0 }) }));
+  });
+
+  it('asks the written questions before the phone number, then moves on', async () => {
+    const first = { telegramApplySession: { findUnique: vi.fn().mockResolvedValue(session({})), updateMany: vi.fn().mockResolvedValue({ count: 1 }) } };
+    const bot1 = bot();
+    await new TelegramApplyService(first as never, security as never, bot1 as never, {} as never).handleText({ message_id: 1, chat: { id: 42, type: 'private' }, from: { id: 42 }, text: 'Jamoangiz kuchli.' } as never);
+    expect(first.telegramApplySession.updateMany).toHaveBeenCalledWith({ where: { telegramUserId: '42', step: 'WRITTEN', writtenIndex: 0 }, data: { writtenIndex: 1, writtenAnswers: ['Jamoangiz kuchli.'] } });
+    expect(bot1.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('Qancha maosh kutasiz?'), expect.anything());
+
+    const last = { telegramApplySession: { findUnique: vi.fn().mockResolvedValue(session({ writtenIndex: 1, writtenAnswers: ['Jamoangiz kuchli.'] })), updateMany: vi.fn().mockResolvedValue({ count: 1 }) } };
+    const bot2 = bot();
+    await new TelegramApplyService(last as never, security as never, bot2 as never, {} as never).handleText({ message_id: 2, chat: { id: 42, type: 'private' }, from: { id: 42 }, text: '8 million so\'m.' } as never);
+    expect(last.telegramApplySession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'CONTACT_PHONE', writtenAnswers: ['Jamoangiz kuchli.', '8 million so\'m.'] }) }));
+    expect(bot2.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('telefon'), expect.anything());
+  });
+
+  it('adds a short AI note to every written answer without deciding anything', async () => {
+    const items = [{ question: questions[0], answer: 'Jamoangiz kuchli.' }, { question: questions[1], answer: '8 million so\'m.' }];
+    const db = {
+      application: {
+        findFirst: vi.fn().mockResolvedValue({ writtenAnswers: items, vacancy: { title: 'Backend Developer', requirements: [{ name: 'NestJS' }] } }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const gemini = { generate: vi.fn().mockResolvedValue({ notes: [{ index: 0, note: 'Javob umumiy, aniq misol yo‘q.' }, { index: 1, note: 'Aniq raqam keltirilgan.' }] }) };
+    await new TelegramApplyService(db as never, security as never, bot() as never, {} as never, undefined, gemini as never).summarizeWrittenAnswers(3, 9);
+    expect(db.application.updateMany).toHaveBeenCalledWith({
+      where: { id: 9, companyId: 3 },
+      data: { writtenAnswers: [{ ...items[0], aiNote: 'Javob umumiy, aniq misol yo‘q.' }, { ...items[1], aiNote: 'Aniq raqam keltirilgan.' }] },
+    });
+    // AI trouble never loses the answers: nothing is written and nothing throws.
+    gemini.generate.mockRejectedValue(new Error('down'));
+    db.application.updateMany.mockClear();
+    await expect(new TelegramApplyService(db as never, security as never, bot() as never, {} as never, undefined, gemini as never).summarizeWrittenAnswers(3, 9)).resolves.toBeUndefined();
+    expect(db.application.updateMany).not.toHaveBeenCalled();
+  });
+});

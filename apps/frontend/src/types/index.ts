@@ -24,10 +24,12 @@ export type AssessmentQuestion = {
   correctIndex: number;
   explanation: string;
 };
+export type WrittenAnswer = { question: string; answer: string; aiNote?: string };
 export type AssessmentView = {
   state: 'NONE' | 'STALE' | 'PENDING' | 'APPROVED';
   questions: AssessmentQuestion[] | null;
   approvedAt: string | null;
+  customQuestions?: string[];
 };
 export type Vacancy = {
   id: number;
@@ -180,6 +182,7 @@ export type Application = {
   interviewReview: InterviewReview | null;
   assessmentScore?: number | null;
   assessmentResult?: CandidateAssessmentResult | null;
+  writtenAnswers?: WrittenAnswer[] | null;
   stageHistory: {
     id: number;
     fromStatus: Stage | null;

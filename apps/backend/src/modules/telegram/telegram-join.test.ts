@@ -221,6 +221,48 @@ describe('Telegram join flow', () => {
     expect(telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('100%'), expect.objectContaining({ parseMode: 'HTML' }));
   });
 
+  it('moves to HR\'s written questions after the last test answer instead of ending the session', async () => {
+    const answers = assessment.questions.slice(0, 9).map((q) => ({ questionId: q.id, selectedIndex: q.correctIndex }));
+    const last = assessment.questions[9];
+    const { db, telegram, service } = setup({ step: 'ASSESSMENT', applicationId: 9, vacancyId: 5, assessmentQuestions: assessment, currentQuestionIndex: 9, answers, customQuestions: ['Nega aynan bizning kompaniya?', 'Qancha maosh kutasiz?'] });
+    await service.handleCallback(callback(`join:q:${last.id}:${last.correctIndex}`));
+
+    expect(db.telegramJoinSession.deleteMany).not.toHaveBeenCalled();
+    expect(db.telegramJoinSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ step: 'WRITTEN', writtenIndex: 0 }) }));
+    expect(db.application.updateMany).toHaveBeenCalledWith({ where: { id: 9, companyId: 3 }, data: expect.objectContaining({ assessmentScore: 100 }) });
+    const texts = telegram.sendMessage.mock.calls.map((call: unknown[]) => String(call[1]));
+    expect(texts.some((text) => text.includes('100%'))).toBe(true);
+    expect(texts.some((text) => text.includes('Nega aynan bizning kompaniya?'))).toBe(true);
+  });
+
+  it('collects the written answers one by one, then saves them on the application and asks the AI for notes', async () => {
+    const questions = ['Nega aynan bizning kompaniya?', 'Qancha maosh kutasiz?'];
+    const first = setup({ step: 'WRITTEN', applicationId: 9, customQuestions: questions, writtenIndex: 0, writtenAnswers: [] });
+    await first.service.handleText({ message_id: 1, chat, from: user, text: 'Jamoangiz kuchli.' } as never);
+    expect(first.db.telegramJoinSession.updateMany).toHaveBeenCalledWith({ where: { telegramUserId: '42', step: 'WRITTEN', writtenIndex: 0 }, data: { writtenIndex: 1, writtenAnswers: ['Jamoangiz kuchli.'] } });
+    expect(first.telegram.sendMessage).toHaveBeenCalledWith(42, expect.stringContaining('Qancha maosh kutasiz?'), expect.anything());
+    expect(first.db.application.updateMany).not.toHaveBeenCalled();
+
+    const last = setup({ step: 'WRITTEN', applicationId: 9, customQuestions: questions, writtenIndex: 1, writtenAnswers: ['Jamoangiz kuchli.'] });
+    (last.apply as Record<string, unknown>).summarizeWrittenAnswers = vi.fn();
+    await last.service.handleText({ message_id: 2, chat, from: user, text: '8 million so\'m.' } as never);
+    expect(last.db.telegramJoinSession.deleteMany).toHaveBeenCalledWith({ where: { telegramUserId: '42', step: 'WRITTEN', writtenIndex: 1 } });
+    expect(last.db.application.updateMany).toHaveBeenCalledWith({
+      where: { id: 9, companyId: 3 },
+      data: { writtenAnswers: [{ question: questions[0], answer: 'Jamoangiz kuchli.' }, { question: questions[1], answer: '8 million so\'m.' }] },
+    });
+    expect((last.apply as Record<string, unknown>).summarizeWrittenAnswers).toHaveBeenCalledWith(3, 9);
+  });
+
+  it('rejects a written answer that is too short or too long and keeps waiting', async () => {
+    const { db, telegram, service } = setup({ step: 'WRITTEN', applicationId: 9, customQuestions: ['Nega aynan bizning kompaniya?'], writtenIndex: 0, writtenAnswers: [] });
+    await service.handleText({ message_id: 1, chat, from: user, text: 'a' } as never);
+    await service.handleText({ message_id: 2, chat, from: user, text: 'x'.repeat(1501) } as never);
+    expect(db.telegramJoinSession.updateMany).not.toHaveBeenCalled();
+    expect(db.telegramJoinSession.deleteMany).not.toHaveBeenCalled();
+    expect(telegram.sendMessage).toHaveBeenCalledTimes(2);
+  });
+
   it('ignores a duplicate or out-of-order answer', async () => {
     const { db, service } = setup({ step: 'ASSESSMENT', assessmentQuestions: assessment, currentQuestionIndex: 2, answers: [{ questionId: 1, selectedIndex: 0 }, { questionId: 2, selectedIndex: 0 }] });
     await service.handleCallback(callback('join:q:1:0'));

@@ -69,6 +69,7 @@ enum TelegramJoinStep {
   PHONE
   DOCUMENT
   ASSESSMENT
+  WRITTEN
 }
 enum TelegramApplyStep {
   PRIVACY
@@ -76,6 +77,7 @@ enum TelegramApplyStep {
   ASSESSMENT
   CONTACT_PHONE
   DOCUMENT
+  WRITTEN
 }
 model Company {
   id Int @id @default(autoincrement())
@@ -215,6 +217,8 @@ model Vacancy {
   assessmentRevision Int?
   assessmentEditVersion Int @default(0)
   assessmentApprovedAt DateTime?
+  // HR-written open questions (1-5) the candidate answers in writing after the multiple-choice test.
+  customQuestions Json?
   revision Int @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -296,6 +300,9 @@ model TelegramApplySession {
   answers Json?
   assessmentQuestions Json?
   assessmentRevision Int?
+  customQuestions Json?
+  writtenAnswers Json?
+  writtenIndex Int @default(0)
   phone String?
   expiresAt DateTime
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -321,6 +328,9 @@ model TelegramJoinSession {
   answers Json?
   assessmentQuestions Json?
   assessmentRevision Int?
+  customQuestions Json?
+  writtenAnswers Json?
+  writtenIndex Int @default(0)
   expiresAt DateTime
   company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
   updatedAt DateTime @updatedAt
@@ -483,6 +493,8 @@ model Application {
   interviewReview Json?
   assessmentScore Int?
   assessmentResult Json?
+  // [{ question, answer, aiNote? }] from the candidate's written answers.
+  writtenAnswers Json?
   reviewRevision Int @default(0)
   stageHistory ApplicationStageChange[]
   interviews Interview[]

@@ -86,3 +86,32 @@ describe('VacancyAssessmentService', () => {
     await expect(failing.service.autoGenerate(3, 5)).resolves.toBeUndefined();
   });
 });
+
+describe('HR written questions', () => {
+  const edit = { questions: assessment.questions, customQuestions: ['Nega aynan bizning kompaniya?', 'Qancha maosh kutasiz?'] };
+
+  it('validates up to five open questions and defaults to none', async () => {
+    const { assessmentEditSchema } = await import('../ai/schemas/assessment.schema');
+    expect(assessmentEditSchema.parse({ questions: assessment.questions }).customQuestions).toEqual([]);
+    expect(assessmentEditSchema.safeParse({ ...edit, customQuestions: Array.from({ length: 6 }, (_, i) => `Savol raqami ${i}`) }).success).toBe(false);
+    expect(assessmentEditSchema.safeParse({ ...edit, customQuestions: ['qisqa'] }).success).toBe(true);
+    expect(assessmentEditSchema.safeParse({ ...edit, customQuestions: ['x'] }).success).toBe(false);
+  });
+
+  it('saves them with the test, withdraws the approval and returns them in the view', async () => {
+    const { db, service } = setup({ assessmentQuestions: assessment, assessmentRevision: 2, assessmentApprovedAt: new Date(), customQuestions: edit.customQuestions });
+    const view = await service.save(actor, 5, edit as never);
+    expect(db.vacancy.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ customQuestions: edit.customQuestions, assessmentApprovedAt: null }),
+    }));
+    expect(view.customQuestions).toEqual(edit.customQuestions);
+  });
+
+  it('candidates only get the written questions when the whole test is approved', async () => {
+    const { approvedWrittenQuestions } = await import('../ai/utils/assessment-approval');
+    const vacancy = { revision: 2, assessmentQuestions: assessment, assessmentRevision: 2, customQuestions: edit.customQuestions };
+    expect(approvedWrittenQuestions({ ...vacancy, assessmentApprovedAt: new Date() })).toEqual(edit.customQuestions);
+    expect(approvedWrittenQuestions({ ...vacancy, assessmentApprovedAt: null })).toEqual([]);
+    expect(approvedWrittenQuestions({ ...vacancy, assessmentApprovedAt: new Date(), assessmentRevision: 1 })).toEqual([]);
+  });
+});

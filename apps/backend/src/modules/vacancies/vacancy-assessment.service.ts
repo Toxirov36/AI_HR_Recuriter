@@ -6,8 +6,8 @@ import { Security, type Identity } from '../../common/utils/security';
 import { AuditService } from '../audit/audit.service';
 import { GeminiProvider } from '../ai/providers/gemini.provider';
 import { assessmentInstructions } from '../ai/prompts/assessment.prompt';
-import { vacancyAssessmentSchema, type VacancyAssessment } from '../ai/schemas/assessment.schema';
-import { assessmentState } from '../ai/utils/assessment-approval';
+import { vacancyAssessmentSchema, type AssessmentEdit } from '../ai/schemas/assessment.schema';
+import { assessmentState, customQuestionsOf } from '../ai/utils/assessment-approval';
 
 const SYSTEM_ACTOR = { userId: null, actorName: 'System', actorRole: 'SYSTEM' } as const;
 
@@ -37,6 +37,7 @@ export class VacancyAssessmentService {
       state,
       questions: parsed?.success ? parsed.data.questions : null,
       approvedAt: state === 'APPROVED' ? vacancy.assessmentApprovedAt : null,
+      customQuestions: customQuestionsOf(vacancy.customQuestions),
     };
   }
 
@@ -88,7 +89,7 @@ export class VacancyAssessmentService {
   }
 
   /** HR edits the draft; any edit withdraws a previous approval. */
-  async save(actor: Identity, id: number, assessment: VacancyAssessment) {
+  async save(actor: Identity, id: number, edit: AssessmentEdit) {
     const vacancy = await this.load(actor.companyId, id);
     if (assessmentState(vacancy) === 'NONE' || assessmentState(vacancy) === 'STALE') {
       throw new ConflictException('Generate the test for the current vacancy first.');
@@ -96,7 +97,8 @@ export class VacancyAssessmentService {
     const saved = await this.db.vacancy.updateMany({
       where: { id, companyId: actor.companyId, revision: vacancy.revision, assessmentEditVersion: vacancy.assessmentEditVersion },
       data: {
-        assessmentQuestions: assessment as unknown as Prisma.InputJsonValue,
+        assessmentQuestions: { questions: edit.questions } as unknown as Prisma.InputJsonValue,
+        customQuestions: edit.customQuestions as unknown as Prisma.InputJsonValue,
         assessmentApprovedAt: null,
         assessmentEditVersion: { increment: 1 },
       },

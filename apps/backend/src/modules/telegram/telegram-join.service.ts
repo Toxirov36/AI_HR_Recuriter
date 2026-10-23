@@ -4,6 +4,7 @@ import { Prisma } from '../../generated/prisma/client';
 import { Security } from '../../common/utils/security';
 import { R2Storage } from '../../common/storage/r2-storage.service';
 import { calculateAssessmentScore } from '../ai/utils/assessment-helper';
+import { approvedWrittenQuestions, customQuestionsOf } from '../ai/utils/assessment-approval';
 import { AssessmentQuestion, vacancyAssessmentSchema } from '../ai/schemas/assessment.schema';
 import { TelegramApiService } from './telegram-api.service';
 import { TelegramApplyService } from './telegram-apply.service';
@@ -300,6 +301,30 @@ export class TelegramJoinService {
           return true;
         }
         await this.savePhone(userId, chatId, phone, tr);
+        return true;
+      }
+      case 'WRITTEN': {
+        const questions = customQuestionsOf(session.customQuestions);
+        const previous = Array.isArray(session.writtenAnswers) ? (session.writtenAnswers as string[]) : [];
+        if (!questions[session.writtenIndex] || session.writtenIndex !== previous.length) return true;
+        if (text.length < 2 || text.length > 1500) {
+          await this.telegram.sendMessage(chatId, tr('writtenInvalid'));
+          return true;
+        }
+        const answers = [...previous, text];
+        if (answers.length < questions.length) {
+          const claimed = await this.db.telegramJoinSession.updateMany({
+            where: { telegramUserId: userId, step: 'WRITTEN', writtenIndex: session.writtenIndex },
+            data: { writtenIndex: answers.length, writtenAnswers: answers },
+          });
+          if (claimed.count) await this.sendWrittenQuestion(chatId, questions, answers.length, tr);
+          return true;
+        }
+        // The last answer ends the session; deleting it is the atomic claim.
+        const done = await this.db.telegramJoinSession.deleteMany({ where: { telegramUserId: userId, step: 'WRITTEN', writtenIndex: session.writtenIndex } });
+        if (!done.count) return true;
+        await this.saveWritten(session, questions, answers);
+        await this.telegram.sendMessage(chatId, tr('writtenThanks'), { replyMarkup: mainMenuKeyboard(tr) });
         return true;
       }
       case 'ASSESSMENT':
@@ -622,7 +647,7 @@ export class TelegramJoinService {
   private async prepareAssessment(
     userId: string,
     chatId: number,
-    vacancy: { id: number; revision: number; assessmentQuestions: unknown; assessmentRevision: number | null; assessmentApprovedAt: Date | null },
+    vacancy: { id: number; revision: number; assessmentQuestions: unknown; assessmentRevision: number | null; assessmentApprovedAt: Date | null; customQuestions: unknown },
     tr: Tr,
   ) {
     let assessment;
@@ -638,7 +663,15 @@ export class TelegramJoinService {
     }
     const stored = await this.db.telegramJoinSession.updateMany({
       where: { telegramUserId: userId, step: 'ASSESSMENT' },
-      data: { assessmentQuestions: assessment as unknown as Prisma.InputJsonValue, assessmentRevision: vacancy.revision, currentQuestionIndex: 0, answers: [] },
+      data: {
+        assessmentQuestions: assessment as unknown as Prisma.InputJsonValue,
+        assessmentRevision: vacancy.revision,
+        customQuestions: approvedWrittenQuestions(vacancy),
+        writtenAnswers: [],
+        writtenIndex: 0,
+        currentQuestionIndex: 0,
+        answers: [],
+      },
     });
     if (!stored.count) return;
     await this.telegram.sendMessage(
@@ -682,6 +715,24 @@ export class TelegramJoinService {
       return;
     }
 
+    // Without HR's written questions the last answer ends the session; with them it moves on to the written step.
+    const written = customQuestionsOf(session.customQuestions);
+    if (written.length) {
+      const moved = await this.db.telegramJoinSession.updateMany({
+        where: { telegramUserId: userId, step: 'ASSESSMENT', currentQuestionIndex: session.currentQuestionIndex },
+        data: { step: 'WRITTEN', currentQuestionIndex: answers.length, answers: answers as unknown as Prisma.InputJsonValue, writtenIndex: 0, writtenAnswers: [] },
+      });
+      if (!moved.count) {
+        await this.telegram.answerCallbackQuery(query.id, tr('answerClaimed'));
+        return;
+      }
+      await this.telegram.answerCallbackQuery(query.id, tr('answerAccepted'));
+      await this.finish(session, questions, answers, chatId, tr);
+      await this.telegram.sendMessage(chatId, tr('writtenIntro', { count: written.length }));
+      await this.sendWrittenQuestion(chatId, written, 0, tr);
+      return;
+    }
+
     // The last answer ends the session; deleting it is the atomic claim.
     const finished = await this.db.telegramJoinSession.deleteMany({
       where: { telegramUserId: userId, step: 'ASSESSMENT', currentQuestionIndex: session.currentQuestionIndex },
@@ -715,6 +766,25 @@ export class TelegramJoinService {
       tr('joinFinish', { score: result.score, correct: result.correctCount, total: questions.length, hard: result.hardSkillScore, soft: result.softSkillScore }),
       { parseMode: 'HTML', replyMarkup: { inline_keyboard: [[{ text: tr('myAppsButton'), callback_data: 'my:apps' }]] } },
     );
+  }
+
+  private async sendWrittenQuestion(chatId: number, questions: string[], index: number, tr: Tr) {
+    await this.telegram.sendMessage(
+      chatId,
+      tr('writtenQuestion', { n: index + 1, total: questions.length, question: escapeHtml(questions[index]) }),
+      { parseMode: 'HTML' },
+    );
+  }
+
+  /** Stores the candidate's written answers on the application, then asks the AI for short notes (best effort). */
+  private async saveWritten(session: SessionRow, questions: string[], answers: string[]) {
+    if (!session.applicationId) return;
+    const items = questions.map((question, index) => ({ question, answer: answers[index] }));
+    await this.db.application.updateMany({
+      where: { id: session.applicationId, companyId: session.companyId },
+      data: { writtenAnswers: items as unknown as Prisma.InputJsonValue },
+    });
+    void this.apply.summarizeWrittenAnswers(session.companyId, session.applicationId);
   }
 
   /** Same recipients as the vacancy-link flow: enabled admin, HR and recruiter chats. */

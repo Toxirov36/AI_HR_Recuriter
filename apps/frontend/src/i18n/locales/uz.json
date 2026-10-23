@@ -365,6 +365,12 @@
     "emptySearchSubtitle": "Boshqa qidiruv so'zini yoki status filtrini sinab ko'ring.",
     "publishPlatform": "Platformalarda e'lon qilish",
     "assessmentButton": "Test savollari",
+    "customQuestionsTitle": "O‘z savollaringiz (yozma javob)",
+    "customQuestionsHint": "Nomzod 10 ta testdan keyin shu savollarga matn bilan javob yozadi (1 tadan 5 tagacha). AI har bir javobga qisqa izoh beradi, qaror sizniki.",
+    "customQuestionAdd": "Savol qo‘shish",
+    "customQuestionPlaceholder": "Masalan: Nega aynan bizning kompaniyani tanladingiz?",
+    "customQuestionRemove": "Savolni o‘chirish",
+    "customQuestionShort": "Kamida 5 ta belgi",
     "assessmentTitle": "Nomzodlar uchun test",
     "assessmentIntro": "Savollarni AI yaratadi. Siz ko‘rib chiqib, kerak bo‘lsa tahrirlaysiz va tasdiqlaysiz. Tasdiqlanmaguncha nomzodlar botda testsiz qabul qilinadi (ariza qo‘lda ko‘rib chiqiladi). Vakansiya tahrirlansa, savollar qayta yaratiladi va yana tasdiq talab qilinadi.",
     "assessmentStateNONE": "Test hali yaratilmagan",
@@ -631,6 +637,9 @@
     "noCv": "CV mavjud emas"
   },
   "applications": {
+    "writtenTitle": "Yozma javoblar",
+    "writtenSubtitle": "Nomzodning sizning savollaringizga yozgan javoblari.",
+    "writtenAiNote": "AI izohi",
     "reviewTitle": "Arizani ko‘rib chiqish",
     "candidateDossier": "Nomzod ma’lumotlari",
     "aiAnalysisTitle": "AI dalillar tahlili",

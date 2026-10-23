@@ -18,6 +18,9 @@ import {
 import type { TelegramCallbackQuery, TelegramDirectMessage } from './types/telegram.types';
 import { TelegramScreeningAlertService } from './telegram-screening-alert.service';
 import { TelegramLanguageService } from './telegram-language.service';
+import { approvedWrittenQuestions, customQuestionsOf } from '../ai/utils/assessment-approval';
+import { textAiProvider } from '../../config/app.config';
+import { writtenNotesInstructions, writtenNotesSchema, type WrittenAnswerItem } from '../ai/schemas/written-notes.schema';
 import { botText, DEFAULT_BOT_LANG, type BotMessageKey } from './telegram-i18n';
 
 const MAX_CV_BYTES = 10 * 1024 * 1024;
@@ -199,6 +202,9 @@ export class TelegramApplyService {
           aiConsentAt: new Date(),
           assessmentQuestions: assessment ?? Prisma.DbNull,
           assessmentRevision: assessment ? session.vacancy.revision : null,
+          customQuestions: assessment ? approvedWrittenQuestions(session.vacancy) : [],
+          writtenAnswers: [],
+          writtenIndex: 0,
           currentQuestionIndex: 0,
           answers: [],
         },
@@ -265,13 +271,15 @@ export class TelegramApplyService {
 
       const updatedAnswers = [...rawAnswers, { questionId: qId, selectedIndex: choiceIdx }];
       const nextIndex = updatedAnswers.length;
+      const written = customQuestionsOf(session.customQuestions);
 
       const claimed = await this.db.telegramApplySession.updateMany({
         where: { telegramUserId: userId, vacancyId: session.vacancyId, step: 'ASSESSMENT', currentQuestionIndex: session.currentQuestionIndex },
         data: {
-          step: nextIndex === assessment.data.questions.length ? 'CONTACT_PHONE' : 'ASSESSMENT',
+          step: nextIndex === assessment.data.questions.length ? (written.length ? 'WRITTEN' : 'CONTACT_PHONE') : 'ASSESSMENT',
           currentQuestionIndex: nextIndex,
           answers: updatedAnswers as any,
+          ...(nextIndex === assessment.data.questions.length && written.length ? { writtenIndex: 0, writtenAnswers: [] } : {}),
         },
       });
       if (!claimed.count) {
@@ -310,10 +318,19 @@ export class TelegramApplyService {
           },
         });
 
-        await this.telegram.sendMessage(chatId,
-          tr('quizResultAskPhone', { score: result.score, correct: result.correctCount, hard: result.hardSkillScore, soft: result.softSkillScore }),
-          { parseMode: 'HTML' },
-        );
+        if (written.length) {
+          await this.telegram.sendMessage(chatId,
+            tr('applyScore', { score: result.score, correct: result.correctCount, hard: result.hardSkillScore, soft: result.softSkillScore }).trim(),
+            { parseMode: 'HTML' },
+          );
+          await this.telegram.sendMessage(chatId, tr('writtenIntro', { count: written.length }));
+          await this.sendWrittenQuestion(chatId, written, 0, tr);
+        } else {
+          await this.telegram.sendMessage(chatId,
+            tr('quizResultAskPhone', { score: result.score, correct: result.correctCount, hard: result.hardSkillScore, soft: result.softSkillScore }),
+            { parseMode: 'HTML' },
+          );
+        }
       }
       return;
     }
@@ -389,6 +406,27 @@ export class TelegramApplyService {
         tr('phoneSaved', { phone: cleanedPhone, title: escapeTelegramHtml(session.vacancy.title) }),
         { parseMode: 'HTML' },
       );
+      return true;
+    }
+
+    if (session.step === 'WRITTEN') {
+      const questions = customQuestionsOf(session.customQuestions);
+      const previous = Array.isArray(session.writtenAnswers) ? (session.writtenAnswers as string[]) : [];
+      const answer = message.text.trim();
+      if (!questions[session.writtenIndex] || session.writtenIndex !== previous.length) return true;
+      if (answer.length < 2 || answer.length > 1500) {
+        await this.telegram.sendMessage(message.chat.id, tr('writtenInvalid'));
+        return true;
+      }
+      const answers = [...previous, answer];
+      const last = answers.length >= questions.length;
+      const claimed = await this.db.telegramApplySession.updateMany({
+        where: { telegramUserId: userId, step: 'WRITTEN', writtenIndex: session.writtenIndex },
+        data: last ? { step: 'CONTACT_PHONE', writtenIndex: answers.length, writtenAnswers: answers } : { writtenIndex: answers.length, writtenAnswers: answers },
+      });
+      if (!claimed.count) return true;
+      if (last) await this.telegram.sendMessage(message.chat.id, tr('writtenDoneAskPhone'), { parseMode: 'HTML' });
+      else await this.sendWrittenQuestion(message.chat.id, questions, answers.length, tr);
       return true;
     }
 
@@ -519,6 +557,12 @@ export class TelegramApplyService {
       [message.from.first_name, message.from.last_name].filter(Boolean).join(' ').trim() ||
       `Telegram user ${userId}`;
 
+    const writtenQuestions = customQuestionsOf(session.customQuestions);
+    const writtenGiven = Array.isArray(session.writtenAnswers) ? (session.writtenAnswers as string[]) : [];
+    const writtenItems = writtenQuestions.length && writtenGiven.length === writtenQuestions.length
+      ? writtenQuestions.map((question, index) => ({ question, answer: writtenGiven[index] }))
+      : null;
+
     // Score the exact questions shown to this applicant, even if the vacancy was edited.
     const assessment = vacancyAssessmentSchema.safeParse(session.assessmentQuestions);
     const rawAnswers = (session.answers as Array<{ questionId: number; selectedIndex: number }>) || [];
@@ -571,11 +615,13 @@ export class TelegramApplyService {
           aiConsentGranted: true,
           assessmentScore: assessmentResult?.score ?? null,
           assessmentResult: assessmentResult ? (assessmentResult as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+          ...(writtenItems ? { writtenAnswers: writtenItems as unknown as Prisma.InputJsonValue } : {}),
         },
         update: {
           aiConsentGranted: true,
           assessmentScore: assessmentResult?.score ?? null,
           assessmentResult: assessmentResult ? (assessmentResult as unknown as Prisma.InputJsonValue) : Prisma.DbNull,
+          ...(writtenItems ? { writtenAnswers: writtenItems as unknown as Prisma.InputJsonValue } : {}),
         },
       });
 
@@ -626,6 +672,7 @@ export class TelegramApplyService {
     }
 
     void this.alerts?.dispatch();
+    if (writtenItems) void this.summarizeWrittenAnswers(session.companyId, result.application.id);
 
     try {
       await this.queue.add({
@@ -655,6 +702,43 @@ export class TelegramApplyService {
         message.chat.id,
         tr('queueFailed'),
       );
+    }
+  }
+
+  private async sendWrittenQuestion(chatId: number, questions: string[], index: number, tr: (key: BotMessageKey, params?: Record<string, string | number>) => string) {
+    await this.telegram.sendMessage(
+      chatId,
+      tr('writtenQuestion', { n: index + 1, total: questions.length, question: escapeTelegramHtml(questions[index]) }),
+      { parseMode: 'HTML' },
+    );
+  }
+
+  /** Asks the AI for one short note per written answer; HR still reads the answers. Failures only skip the notes. */
+  async summarizeWrittenAnswers(companyId: number, applicationId: number) {
+    try {
+      if (!textAiProvider(this.security.config)) return;
+      const application = await this.db.application.findFirst({
+        where: { id: applicationId, companyId },
+        select: { writtenAnswers: true, vacancy: { select: { title: true, requirements: { select: { name: true } } } } },
+      });
+      const items = Array.isArray(application?.writtenAnswers) ? (application.writtenAnswers as WrittenAnswerItem[]) : [];
+      if (!application || !items.length || items.every((item) => item.aiNote)) return;
+      const result = await this.gemini.generate(
+        writtenNotesSchema,
+        'Write one note per item.',
+        {
+          vacancy: { title: application.vacancy.title, requirements: application.vacancy.requirements.map((r) => r.name) },
+          items: items.map((item, index) => ({ index, question: item.question, answer: item.answer })),
+        },
+        writtenNotesInstructions,
+      );
+      const notes = new Map(result.notes.map((note) => [note.index, note.note]));
+      await this.db.application.updateMany({
+        where: { id: applicationId, companyId },
+        data: { writtenAnswers: items.map((item, index) => ({ ...item, ...(notes.get(index) ? { aiNote: notes.get(index) } : {}) })) as unknown as Prisma.InputJsonValue },
+      });
+    } catch (error) {
+      this.logger.warn(`Written answer notes failed for application ${applicationId}: ${(error as Error).message}`);
     }
   }
 
