@@ -299,8 +299,6 @@ export function MemberAccessEditor({
             >
               <option value="ADMIN">{t('admin.roleAdminDesc')}</option>
               <option value="HR">{t('admin.roleHrDesc')}</option>
-              <option value="RECRUITER">{t('admin.roleRecruiterDesc')}</option>
-              <option value="INTERVIEWER">{t('admin.roleInterviewerDesc')}</option>
             </select>
             <label className="flex items-center gap-3 text-sm">
               <input

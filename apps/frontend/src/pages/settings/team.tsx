@@ -72,7 +72,6 @@ export function Team() {
   const [busy, setBusy] = useState(false);
   const [actionError, setError] = useState('');
   const [copied, setCopied] = useState(false);
-  const [role, setRole] = useState('HR');
 
   // Retention State
   const [retentionDays, setRetentionDays] = useState(180);
@@ -114,7 +113,7 @@ export function Team() {
     try {
       const result = await send<{ inviteUrl: string }>('/auth/invitations', {
         ...Object.fromEntries(new FormData(e.currentTarget)),
-        role,
+        role: 'HR',
       });
       setInvite(result.inviteUrl);
       setCopied(false);
@@ -347,8 +346,7 @@ export function Team() {
               )}
             </section>
 
-            {/* `.panel` clips its content; the role list has to float out over the page */}
-            <section className="panel padded" style={{ overflow: 'visible' }}>
+            <section className="panel padded">
               <h2>{t('admin.inviteNewMember')}</h2>
               <p className="muted small mb-4">{t('admin.inviteDesc')}</p>
               <form onSubmit={submitInvite} className="space-y-3">
@@ -363,20 +361,6 @@ export function Team() {
                     className="mt-1"
                   />
                 </label>
-                <div className="block text-xs font-semibold text-slate-700">
-                  {t('admin.accessRole')}
-                  <FilterAccordion
-                    className="mt-1"
-                    value={role}
-                    onChange={setRole}
-                    ariaLabel={t('admin.accessRole')}
-                    options={[
-                      { value: 'HR', label: t('admin.roleHrOption') },
-                      { value: 'RECRUITER', label: t('admin.roleRecruiterOption') },
-                      { value: 'INTERVIEWER', label: t('admin.roleInterviewerOption') },
-                    ]}
-                  />
-                </div>
                 <Button
                   type="submit"
                   disabled={busy}

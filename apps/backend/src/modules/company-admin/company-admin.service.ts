@@ -12,7 +12,8 @@ export const companySettingsSchema = z.object({
   retentionDays: z.number().int().min(30).max(3650),
 }).strict();
 export const memberAccessSchema = z.object({
-  role: z.enum(['ADMIN', 'HR', 'RECRUITER', 'INTERVIEWER']),
+  // A member is either the company's administrator or an HR.
+  role: z.enum(['ADMIN', 'HR']),
   isActive: z.boolean(),
 }).strict();
 

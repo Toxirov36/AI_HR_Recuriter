@@ -51,7 +51,7 @@ test('company admin settings, tenant isolation, roles and session blocking', asy
 
     await page.getByRole('tab', { name: /Jamoa va Rollar/ }).click();
     await page.getByRole('button', { name: 'QA Recruiter ruxsatlarini boshqarish' }).click();
-    await page.getByLabel('Rol', { exact: true }).selectOption('RECRUITER');
+    await page.getByLabel('Rol', { exact: true }).selectOption('HR');
     await page.getByLabel('Tizimga kirishga ruxsat berish').uncheck();
     await page.getByRole('button', { name: 'O‘zgarishlarni tasdiqlash' }).click();
     await expect(page.getByText('Bloklangan', { exact: true })).toBeVisible();

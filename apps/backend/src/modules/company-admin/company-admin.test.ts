@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ConflictException, ForbiddenException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { CompanyAdminService, companySettingsSchema, memberAccessSchema } from './company-admin.service';
+import { invitationSchema } from '../auth/dto';
 import { AuthGuard } from '../../common/guards/auth.guard';
 
 describe('company administrator access', () => {
@@ -33,15 +34,24 @@ describe('company administrator access', () => {
     expect(tx.user.update).not.toHaveBeenCalled();
   });
   it('updates member access with a tenant-scoped audit event in the transaction', async () => {
-    tx.user.findFirst.mockResolvedValueOnce({ id: 2, role: 'HR', isActive: true });
-    await service.member(actor, 2, { role: 'RECRUITER', isActive: false });
-    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 2, companyId: 10 }, data: { role: 'RECRUITER', isActive: false } }));
+    tx.user.findFirst.mockResolvedValueOnce({ id: 2, role: 'ADMIN', isActive: true });
+    tx.user.count.mockResolvedValue(2);
+    await service.member(actor, 2, { role: 'HR', isActive: false });
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 2, companyId: 10 }, data: { role: 'HR', isActive: false } }));
     expect(tx.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ companyId: 10, userId: 1, action: 'MEMBER_ACCESS_UPDATED' }) });
   });
   it('rejects tenant injection and invalid retention periods', () => {
     expect(companySettingsSchema.safeParse({ name: 'Company', retentionDays: 29 }).success).toBe(false);
     expect(companySettingsSchema.safeParse({ name: 'Company', retentionDays: 180, companyId: 99 }).success).toBe(false);
     expect(memberAccessSchema.safeParse({ role: 'OWNER', isActive: true }).success).toBe(false);
+  });
+  it('knows only two member roles, administrator and HR, and invites everyone as HR', () => {
+    expect(memberAccessSchema.safeParse({ role: 'HR', isActive: true }).success).toBe(true);
+    expect(memberAccessSchema.safeParse({ role: 'RECRUITER', isActive: true }).success).toBe(false);
+    expect(memberAccessSchema.safeParse({ role: 'INTERVIEWER', isActive: true }).success).toBe(false);
+    expect(invitationSchema.parse({ email: 'a@test.com' }).role).toBe('HR');
+    // A role sent by an older page is ignored
+    expect(invitationSchema.parse({ email: 'a@test.com', role: 'INTERVIEWER' }).role).toBe('HR');
   });
   it('blocks an existing session as soon as its member is disabled', async () => {
     const security: any = { jwt: { verifyAsync: vi.fn().mockResolvedValue({ sub: 2, sid: 'session' }) }, redis: { get: vi.fn().mockResolvedValue('2') }, limit: vi.fn() };

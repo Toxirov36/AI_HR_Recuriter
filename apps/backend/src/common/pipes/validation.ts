@@ -47,7 +47,7 @@ export const acceptInvite = z
   .strict();
 
 export const invitation = z
-  .object({ email, role: z.enum(['HR', 'RECRUITER', 'INTERVIEWER']) })
+  .object({ email, role: z.enum(['HR', 'RECRUITER', 'INTERVIEWER']).optional().transform(() => 'HR' as const) })
   .strict();
 
 export const updateProfile = z
