@@ -347,7 +347,8 @@ export function Team() {
               )}
             </section>
 
-            <section className="panel padded">
+            {/* `.panel` clips its content; the role list has to float out over the page */}
+            <section className="panel padded" style={{ overflow: 'visible' }}>
               <h2>{t('admin.inviteNewMember')}</h2>
               <p className="muted small mb-4">{t('admin.inviteDesc')}</p>
               <form onSubmit={submitInvite} className="space-y-3">
@@ -365,7 +366,6 @@ export function Team() {
                 <div className="block text-xs font-semibold text-slate-700">
                   {t('admin.accessRole')}
                   <FilterAccordion
-                    inline
                     className="mt-1"
                     value={role}
                     onChange={setRole}

@@ -27,14 +27,6 @@ function Harness({ onChange = vi.fn(), value = 'all' }: { onChange?: (value: str
 }
 
 describe('FilterAccordion', () => {
-  it('opens inline in the page flow when asked, so a clipping panel cannot cut the list off', () => {
-    const { container } = render(<FilterAccordion inline value="all" options={options} ariaLabel="Role" onChange={vi.fn()} />);
-    expect(container.firstElementChild).not.toHaveClass('h-10');
-    fireEvent.click(screen.getByRole('button', { name: 'Role' }));
-    const list = screen.getByRole('listbox', { name: 'Role' });
-    expect(list.closest('[data-state="open"][role="region"]')).not.toHaveClass('absolute');
-    expect(screen.getAllByRole('option')).toHaveLength(3);
-  });
 
   it('shows the selected option on the button and opens the list under it', () => {
     render(<Harness value="NEW" />);

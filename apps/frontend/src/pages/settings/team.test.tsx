@@ -142,6 +142,8 @@ describe('Settings Hub (RBAC, Audit Logs, Retention, Telegram)', () => {
     fireEvent.click(screen.getByRole('tab', { name: /Jamoa va Rollar/i }));
     const role = screen.getByRole('button', { name: /Ruxsat roli/i });
     expect(role).toHaveTextContent(/^HR/);
+    // The list floats over the page: its panel must not clip it, and it must not stretch the cards beside it
+    expect(role.closest('section')).toHaveStyle({ overflow: 'visible' });
     fireEvent.click(role);
     fireEvent.click(screen.getByRole('option', { name: /Recruiter/ }));
     expect(screen.queryByRole('option', { name: /Interviewer/ })).not.toBeInTheDocument();
