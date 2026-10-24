@@ -5,6 +5,14 @@ import { toast } from 'sonner';
 import { api, send } from '../../lib/api';
 import {
   Alert,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   Badge,
   Button,
   Card,
@@ -49,6 +57,7 @@ export function TelegramBusinessCard() {
   const [connectSetup, setConnectSetup] = useState<Setup | null>(null);
   const [disconnectModalOpen, setDisconnectModalOpen] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [memberToRemove, setMemberToRemove] = useState<{ id: string; name: string } | null>(null);
 
   // Refresh while a connection is being set up, even if the setup dialog was closed.
   const settingUp = connectModalOpen || (!telegramStatus?.connected && Boolean(connectSetup ?? telegramStatus?.setup));
@@ -105,8 +114,10 @@ export function TelegramBusinessCard() {
     }
   }
 
-  async function removeMember(id: string, name: string) {
-    if (!window.confirm(t('admin.telegramTeamRemoveConfirm', { name }))) return;
+  async function removeMember() {
+    if (!memberToRemove) return;
+    const { id } = memberToRemove;
+    setMemberToRemove(null);
     try {
       await api(`/v1/integrations/telegram/connections/${encodeURIComponent(id)}`, { method: 'DELETE' });
       toast.success(t('admin.telegramDisconnectedToast'));
@@ -175,7 +186,7 @@ export function TelegramBusinessCard() {
               <Button
                 onClick={startTelegramConnect}
                 disabled={busy}
-                className="bg-[#245e4f] hover:bg-[#1b4338] text-white gap-2 font-semibold shadow-sm"
+                className="bg-[color:var(--brand-fill)] hover:bg-[color:var(--brand-fill-hover)] text-white gap-2 font-semibold shadow-sm"
               >
                 <MessageCircle size={16} /> {t('admin.connectViaTelegram')}
               </Button>
@@ -234,7 +245,7 @@ export function TelegramBusinessCard() {
               <div className="max-w-md mx-auto space-y-2">
                 <p className="text-xs text-slate-600 leading-relaxed">{t('admin.telegramConnectPrompt')}</p>
                 <div className="pt-2">
-                  <Button onClick={startTelegramConnect} disabled={busy} className="bg-[#245e4f] hover:bg-[#1b4338] text-white gap-2 font-semibold">
+                  <Button onClick={startTelegramConnect} disabled={busy} className="bg-[color:var(--brand-fill)] hover:bg-[color:var(--brand-fill-hover)] text-white gap-2 font-semibold">
                     <MessageCircle size={16} /> {t('admin.connectViaTelegram')}
                   </Button>
                 </div>
@@ -276,7 +287,7 @@ export function TelegramBusinessCard() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => void removeMember(member.id, name)}
+                        onClick={() => setMemberToRemove({ id: member.id, name })}
                         className="text-xs border-red-200 text-red-600 hover:bg-red-50 gap-1"
                       >
                         <X size={13} /> {t('admin.disconnect')}
@@ -297,7 +308,7 @@ export function TelegramBusinessCard() {
         <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageCircle size={20} className="text-[#245e4f] dark:text-[#58c0a0]" /> {t('admin.modalConnectTitle')}
+              <MessageCircle size={20} className="text-[color:var(--brand-text)]" /> {t('admin.modalConnectTitle')}
             </DialogTitle>
             <DialogDescription>{t('admin.modalConnectDesc')}</DialogDescription>
           </DialogHeader>
@@ -322,7 +333,7 @@ export function TelegramBusinessCard() {
                       href={connectLinkData.connectUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#245e4f] hover:bg-[#1b4338] text-white font-medium text-xs shadow-sm transition-all"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[color:var(--brand-fill)] hover:bg-[color:var(--brand-fill-hover)] text-white font-medium text-xs shadow-sm transition-all"
                     >
                       {t('admin.reopenBot')} <ExternalLink size={13} />
                     </a>
@@ -367,6 +378,24 @@ export function TelegramBusinessCard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* A colleague's Telegram is removed only after the administrator confirms */}
+      <AlertDialog open={Boolean(memberToRemove)} onOpenChange={(open) => !open && setMemberToRemove(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('admin.disconnectModalTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('admin.telegramTeamRemoveConfirm', { name: memberToRemove?.name ?? '' })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('admin.cancel')}</AlertDialogCancel>
+            <AlertDialogAction className="bg-red-600 text-white hover:bg-red-700" onClick={() => void removeMember()}>
+              {t('admin.disconnectConfirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* TELEGRAM DISCONNECT CONFIRMATION DIALOG */}
       <Dialog open={disconnectModalOpen} onOpenChange={setDisconnectModalOpen}>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shortlist · B · Voronka</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Direction B — "Voronka": a top bar and the hiring board itself as the page.
+     Signature move: the funnel ribbon — each stage's width is its share of all applications, and the board's columns hang from it. */
+  :root {
+    --ground: #EEF1EC;
+    --sheet: #FFFFFF;
+    --ink: #13221B;
+    --muted: #5B6B62;
+    --line: #DCE3DD;
+    --pine: #14563F;
+    --pine-soft: #E3EFE8;
+    --saffron: #D9952B;
+    --saffron-soft: #FBF0DC;
+    --red: #B23A2E;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 14px/1.5 'Golos Text', system-ui, sans-serif; font-feature-settings: 'tnum' 1; }
+  button { font: inherit; cursor: pointer; }
+
+  header.bar { background: var(--sheet); border-bottom: 1px solid var(--line); }
+  .bar-in { max-width: 1440px; margin: 0 auto; padding: 0 28px; display: flex; align-items: center; gap: 28px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 17px; }
+  .mark { width: 28px; height: 28px; border-radius: 8px; background: var(--pine); display: grid; place-items: center; }
+  .tabs { display: flex; gap: 4px; height: 100%; }
+  .tabs a { display: flex; align-items: center; padding: 0 12px; color: var(--muted); text-decoration: none; font-weight: 500; border-bottom: 2px solid transparent; }
+  .tabs a.on { color: var(--ink); border-bottom-color: var(--pine); }
+  .bar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .kbd { border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; color: var(--muted); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--pine-soft); color: var(--pine); display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+
+  main { max-width: 1440px; margin: 0 auto; padding: 22px 28px 40px; }
+  .vac-switch { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .chip { border: 1px solid var(--line); background: var(--sheet); border-radius: 999px; padding: 6px 14px; color: var(--muted); font-weight: 500; }
+  .chip.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .chip small { opacity: .7; margin-left: 4px; }
+
+  .head { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+  h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: -0.015em; }
+  .sub { margin: 4px 0 0; color: var(--muted); max-width: 72ch; }
+  .sub b { color: var(--ink); font-weight: 600; }
+  .head .actions { margin-left: auto; display: flex; gap: 8px; }
+  .btn { border: 1px solid var(--line); background: var(--sheet); color: var(--ink); border-radius: 10px; padding: 9px 15px; font-weight: 500; white-space: nowrap; }
+  .btn.primary { background: var(--pine); border-color: var(--pine); color: #fff; }
+
+  /* Signature: funnel ribbon */
+  .ribbon { display: flex; height: 44px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+  .ribbon div { display: flex; align-items: center; justify-content: space-between; padding: 0 14px; color: #fff; font-weight: 600; min-width: 0; }
+  .ribbon div span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; opacity: .9; }
+
+  .board { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; align-items: start; }
+  .col { background: rgba(255,255,255,.55); border: 1px solid var(--line); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
+  .col-head { display: flex; align-items: baseline; gap: 6px; padding: 2px 4px 4px; }
+  .col-head b { font-weight: 600; }
+  .col-head small { color: var(--muted); }
+  .card { background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; }
+  .card.flag { border-color: var(--saffron); box-shadow: inset 3px 0 0 var(--saffron); }
+  .who { display: flex; align-items: center; gap: 9px; }
+  .initial { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 11.5px; flex: none; }
+  .who b { font-weight: 600; display: block; line-height: 1.25; }
+  .who small { color: var(--muted); font-size: 12px; }
+  .score { margin-left: auto; font-size: 18px; font-weight: 600; }
+  .score.low { color: var(--red); }
+  .line { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
+  .line .late { color: var(--red); font-weight: 600; }
+  .note { font-size: 12.5px; color: var(--ink); background: var(--ground); border-radius: 8px; padding: 6px 8px; }
+  .when { font-size: 12.5px; color: var(--pine); font-weight: 600; }
+  .empty { color: var(--muted); font-size: 12.5px; border: 1px dashed var(--line); border-radius: 10px; padding: 12px; text-align: center; }
+
+  @media (max-width: 1100px) { .board { grid-template-columns: repeat(5, 260px); overflow-x: auto; padding-bottom: 8px; } }
+  @media (max-width: 760px) {
+    .tabs, .kbd { display: none; } main, .bar-in { padding-left: 16px; padding-right: 16px; }
+    .head { flex-direction: column; } .head .actions { margin-left: 0; }
+    .ribbon div span { display: none; }
+  }
+  :focus-visible { outline: 2px solid var(--pine); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><span class="mark"><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg></span>Shortlist</div>
+    <nav class="tabs" aria-label="Asosiy">
+      <a href="#">Bugun</a><a href="#" class="on">Vakansiyalar</a><a href="#">Nomzodlar</a><a href="#">Suhbatlar</a><a href="#">Telegram bot</a>
+    </nav>
+    <div class="bar-right"><span class="kbd">Qidirish  Ctrl K</span><span class="avatar">DT</span></div>
+  </div>
+</header>
+
+<main>
+  <div class="vac-switch" aria-label="Vakansiyalar">
+    <button class="chip on">SMM menejer<small>12</small></button>
+    <button class="chip">Junior backend Node.js<small>9</small></button>
+    <button class="chip">Java dasturchi<small>4</small></button>
+    <button class="chip">Tish shifokori<small>2</small></button>
+  </div>
+
+  <div class="head">
+    <div>
+      <h1>SMM menejer</h1>
+      <p class="sub"><b>12 ta ariza, 5 tasi yangi.</b> Dilnoza Karimova 90% bilan eng kuchli, lekin 2 kundan beri javobsiz turibdi.</p>
+    </div>
+    <div class="actions"><button class="btn">Bot havolasini nusxalash</button><button class="btn primary">Dilnozani suhbatga taklif qilish</button></div>
+  </div>
+
+  <div class="ribbon" aria-label="Voronka: 12 ariza">
+    <div style="flex:5;background:#14563F">5<span>Yangi</span></div>
+    <div style="flex:3;background:#2E7A5E">3<span>Ko‘rib chiqilmoqda</span></div>
+    <div style="flex:2;background:#4F9878">2<span>Suhbat</span></div>
+    <div style="flex:1;background:#D9952B">1<span>Taklif</span></div>
+    <div style="flex:1;background:#A9B5AD">1<span>Rad</span></div>
+  </div>
+
+  <section class="board">
+    <div class="col">
+      <div class="col-head"><b>Yangi</b><small>5</small></div>
+      <article class="card flag">
+        <div class="who"><span class="initial" style="background:#E3EFE8;color:#14563F">DK</span><div><b>Dilnoza Karimova</b><small>Telegram · CV</small></div><span class="score">90%</span></div>
+        <div class="note">AI: 5 talabdan 4 tasi tasdiqlangan. Meta Ads tajribasini so‘rang.</div>
+        <div class="line"><span>Yozma javob 2/2</span><span class="late">2 kun kutmoqda</span></div>
+      </article>
+      <article class="card">
+        <div class="who"><span class="initial" style="background:#E6EDF8;color:#2B5597">MY</span><div><b>Madina Yusupova</b><small>Telegram · CV</small></div><span class="score">80%</span></div>
+        <div class="line"><span>Yozma javob 2/2</span><span>1 kun</span></div>
+      </article>
+      <article class="card">
+        <div class="who"><span class="initial" style="background:#FBF0DC;color:#8A5A12">JT</span><div><b>Jasur Toshmatov</b><small>Telegram · CV</small></div><span class="score">70%</span></div>
+        <div class="line"><span>Yozma javob kutilmoqda</span><span>5 soat</span></div>
+      </article>
+      <article class="card">
+        <div class="who"><span class="initial" style="background:#F1E8F6;color:#6E3F8F">SR</span><div><b>Shahnoza Rahimova</b><small>Test yo‘q, qo‘lda</small></div><span class="score" style="color:var(--muted)">—</span></div>
+        <div class="line"><span>CV yuklangan</span><span>6 soat</span></div>
+      </article>
+      <article class="card">
+        <div class="who"><span class="initial" style="background:#FBE7E4;color:#8E2A23">BA</span><div><b>Bekzod Aliyev</b><small>Telegram · CV</small></div><span class="score low">40%</span></div>
+        <div class="line"><span>AI: mos emas</span><span>3 soat</span></div>
+      </article>
+    </div>
+
+    <div class="col">
+      <div class="col-head"><b>Ko‘rib chiqilmoqda</b><small>3</small></div>
+      <article class="card"><div class="who"><span class="initial" style="background:#E9EEF7;color:#344F82">AN</span><div><b>Aziza Nurmatova</b><small>Sayt orqali</small></div><span class="score">85%</span></div><div class="line"><span>Laziz ko‘ryapti</span><span>bugun</span></div></article>
+      <article class="card"><div class="who"><span class="initial" style="background:#E6F2F1;color:#1D6E68">OS</span><div><b>Otabek Saidov</b><small>Telegram · CV</small></div><span class="score">75%</span></div><div class="line"><span>Laziz ko‘ryapti</span><span>kecha</span></div></article>
+      <article class="card"><div class="who"><span class="initial" style="background:#F6ECE3;color:#7E4B21">NQ</span><div><b>Nilufar Qodirova</b><small>hh.uz</small></div><span class="score" style="color:var(--muted)">—</span></div><div class="line"><span>Test yuborilmagan</span><span>3 kun</span></div></article>
+    </div>
+
+    <div class="col">
+      <div class="col-head"><b>Suhbat</b><small>2</small></div>
+      <article class="card"><div class="who"><span class="initial" style="background:#E3EFE8;color:#14563F">KE</span><div><b>Kamola Ergasheva</b><small>Offline · Amir Temur 1</small></div><span class="score">88%</span></div><div class="when">Ertaga, 14:00 · xaritada belgilangan</div></article>
+      <article class="card"><div class="who"><span class="initial" style="background:#ECE9F7;color:#4A3F8F">SM</span><div><b>Sardor Mirzayev</b><small>Online · Google Meet</small></div><span class="score">82%</span></div><div class="line"><span>Vaqt tanlashi kutilmoqda</span><span>3 taklif</span></div></article>
+    </div>
+
+    <div class="col">
+      <div class="col-head"><b>Taklif</b><small>1</small></div>
+      <article class="card"><div class="who"><span class="initial" style="background:#FBF0DC;color:#8A5A12">GA</span><div><b>Gulnoza Abdullayeva</b><small>8 mln so‘m taklif</small></div><span class="score">92%</span></div><div class="line"><span>Javob muddati</span><span>25-oktabr</span></div></article>
+    </div>
+
+    <div class="col">
+      <div class="col-head"><b>Rad etilgan</b><small>1</small></div>
+      <article class="card"><div class="who"><span class="initial" style="background:#EEF0EE;color:#5B6B62">UT</span><div><b>Umid Tursunov</b><small>Xabar yuborildi</small></div><span class="score low">30%</span></div></article>
+      <div class="empty">Rad etilganlarga bot avtomatik xabar yuboradi</div>
+    </div>
+  </section>
+</main>
+</body>
+</html>

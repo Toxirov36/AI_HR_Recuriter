@@ -177,7 +177,7 @@ export function Team() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 admin-page">
       <PageTitle
         eyebrow={t('admin.eyebrow')}
         title={t('admin.title')}

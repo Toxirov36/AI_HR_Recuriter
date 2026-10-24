@@ -44,20 +44,53 @@ export class NotificationService {
     }
   }
 
+  /** The connection of the HR this candidate wrote to (learned from the CV they sent), if known. */
+  private async knownConnectionId(companyId: number, telegramUserId: string): Promise<string | undefined> {
+    try {
+      const chat = await this.db.telegramBusinessChat.findUnique({
+        where: { companyId_telegramUserId: { companyId, telegramUserId } },
+        select: { connectionId: true },
+      });
+      return chat?.connectionId;
+    } catch {
+      return undefined;
+    }
+  }
+
   /**
-   * Sends from the HRs' own accounts, one after another, until one gets through: the candidate's chat is with
-   * whichever HR they wrote to, and Telegram refuses the others.
+   * Sends from the HRs' own accounts until one gets through: the candidate's chat is with whichever HR they wrote
+   * to, and Telegram refuses the others. The HR the candidate is known to have written to goes first, so the
+   * usual case is a single call; the rest are only a fallback, and a success there is remembered for next time.
    */
   private async viaBusiness<T extends { ok?: boolean }>(
-    companyId: number,
+    candidate: Pick<CandidateNotificationTarget, 'companyId' | 'telegramUserId'>,
     send: (businessConnectionId: string) => Promise<T>,
   ): Promise<{ result?: T; connectionId?: string }> {
+    const { companyId, telegramUserId } = candidate;
+    const ids = await this.businessConnectionIds(companyId);
+    const known = telegramUserId ? await this.knownConnectionId(companyId, telegramUserId) : undefined;
+    const ordered = known && ids.includes(known) ? [known, ...ids.filter((id) => id !== known)] : ids;
     let result: T | undefined;
-    for (const connectionId of await this.businessConnectionIds(companyId)) {
+    for (const connectionId of ordered) {
       result = await send(connectionId);
-      if (result?.ok === true) return { result, connectionId };
+      if (result?.ok === true) {
+        if (telegramUserId && connectionId !== known) await this.rememberConnection(companyId, telegramUserId, connectionId);
+        return { result, connectionId };
+      }
     }
     return { result };
+  }
+
+  private async rememberConnection(companyId: number, telegramUserId: string, connectionId: string) {
+    try {
+      await this.db.telegramBusinessChat.upsert({
+        where: { companyId_telegramUserId: { companyId, telegramUserId } },
+        update: { connectionId },
+        create: { companyId, telegramUserId, connectionId },
+      });
+    } catch {
+      // Remembering the connection is only an optimisation.
+    }
   }
 
   private async recordTelegramFailure(candidate: CandidateNotificationTarget, kind: string) {
@@ -91,7 +124,7 @@ export class NotificationService {
       const delivery = connectionId
         ? await this.telegramApi.sendMessage(chatId, message, { businessConnectionId: connectionId })
         : (
-            await this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+            await this.viaBusiness(candidate, (businessConnectionId) =>
               this.telegramApi.sendMessage(chatId, message, { businessConnectionId }),
             )
           ).result;
@@ -225,7 +258,7 @@ export class NotificationService {
       // The pin follows the confirmation: from the HR's own account when the text went that way.
       const chatId = candidate.telegramUserId;
       const own = () =>
-        this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+        this.viaBusiness(candidate, (businessConnectionId) =>
           this.telegramApi.sendVenue(chatId, lat, lng, title, address, { businessConnectionId }),
         );
       if (viaBusiness && (await own()).connectionId) return;
@@ -322,7 +355,7 @@ export class NotificationService {
         const own = async () =>
           Boolean(
             (
-              await this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+              await this.viaBusiness(candidate, (businessConnectionId) =>
                 this.telegramApi.sendMessage(chatId, textWithLink, { businessConnectionId }),
               )
             ).connectionId,
@@ -402,7 +435,7 @@ export class NotificationService {
       try {
         const chatId = candidate.telegramUserId;
         const result = (
-          await this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+          await this.viaBusiness(candidate, (businessConnectionId) =>
             this.telegramApi.sendMessage(chatId, telegramMessage, { businessConnectionId }),
           )
         ).result ?? { ok: false, description: undefined };

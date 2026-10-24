@@ -25,7 +25,7 @@ describe('LandingLanguageSelect', () => {
     fireEvent.click(options[1]);
     await waitFor(() => expect(i18n.language).toBe('ru'));
     expect(document.documentElement.lang).toBe('ru');
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
   });
 
   it('works from the keyboard and closes on Escape or an outside click', async () => {
@@ -41,10 +41,10 @@ describe('LandingLanguageSelect', () => {
     fireEvent.click(trigger);
     expect(screen.getByRole('listbox')).toBeInTheDocument();
     fireEvent.keyDown(screen.getByRole('listbox'), { key: 'Escape' });
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
 
     fireEvent.click(trigger);
     fireEvent.pointerDown(document.body);
-    expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
   });
 });

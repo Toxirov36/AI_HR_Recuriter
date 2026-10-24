@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shortlist · A · Rishton</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Direction A — "Rishton": the cobalt of Rishton ceramics carries the data, the chrome stays quiet.
+     Signature move: every candidate's bot journey drawn as a glaze track (consent → CV → test → written → interview). */
+  :root {
+    --ground: #F2F4F7;
+    --sheet: #FFFFFF;
+    --ink: #172033;
+    --muted: #5E6B80;
+    --line: #E1E6EE;
+    --cobalt: #1D4FA8;
+    --cobalt-soft: #E7EEFA;
+    --turquoise: #1C8C83;
+    --amber: #B7791F;
+    --red: #B4372F;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 14px/1.5 'Onest', system-ui, sans-serif; font-feature-settings: 'tnum' 1; }
+  button { font: inherit; cursor: pointer; }
+  .app { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
+
+  /* Rail */
+  .rail { background: var(--cobalt); color: #DDE7F8; padding: 20px 14px; display: flex; flex-direction: column; gap: 22px; }
+  .brand { display: flex; align-items: center; gap: 10px; color: #fff; font-weight: 700; font-size: 17px; padding: 0 6px; }
+  .mark { width: 30px; height: 30px; border-radius: 9px; background: #fff; display: grid; place-items: center; }
+  .workspace { background: rgba(255,255,255,.08); border-radius: 12px; padding: 10px 12px; }
+  .workspace b { color: #fff; display: block; font-weight: 600; }
+  .workspace small { color: #AFC3E8; }
+  .nav { display: grid; gap: 2px; }
+  .nav a { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; color: #CBD8F1; text-decoration: none; font-weight: 500; }
+  .nav a:hover { background: rgba(255,255,255,.07); }
+  .nav a.on { background: rgba(255,255,255,.14); color: #fff; }
+  .nav .count { margin-left: auto; font-size: 12px; color: #fff; background: rgba(255,255,255,.18); border-radius: 999px; padding: 0 7px; }
+  .rail-foot { margin-top: auto; font-size: 12px; color: #AFC3E8; padding: 0 6px; }
+
+  /* Main */
+  main { padding: 22px 28px 32px; }
+  .topline { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13px; }
+  .search { margin-left: auto; display: flex; align-items: center; gap: 8px; background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 7px 12px; width: 300px; color: var(--muted); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #DCE6F7; color: var(--cobalt); display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+
+  .title-row { display: flex; align-items: flex-end; gap: 16px; margin: 18px 0 4px; }
+  h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.01em; }
+  .finding { margin: 2px 0 18px; color: var(--muted); max-width: 70ch; }
+  .finding b { color: var(--ink); font-weight: 600; }
+  .actions { margin-left: auto; display: flex; gap: 8px; }
+  .btn { border: 1px solid var(--line); background: var(--sheet); color: var(--ink); border-radius: 10px; padding: 8px 14px; font-weight: 500; }
+  .btn.primary { background: var(--cobalt); border-color: var(--cobalt); color: #fff; }
+
+  .stages { display: flex; gap: 0; background: var(--sheet); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-bottom: 18px; }
+  .stage { flex: 1; padding: 10px 16px; border-right: 1px solid var(--line); }
+  .stage:last-child { border-right: 0; }
+  .stage small { color: var(--muted); display: block; }
+  .stage b { font-size: 20px; font-weight: 600; }
+  .stage.on { box-shadow: inset 0 -3px 0 var(--cobalt); }
+
+  .work { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+  .sheet { background: var(--sheet); border: 1px solid var(--line); border-radius: 14px; }
+  .sheet-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+  .sheet-head h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .seg { margin-left: auto; display: flex; background: var(--ground); border-radius: 9px; padding: 3px; }
+  .seg button { border: 0; background: none; padding: 4px 10px; border-radius: 7px; color: var(--muted); font-size: 13px; }
+  .seg button.on { background: var(--sheet); color: var(--ink); box-shadow: 0 1px 2px rgba(23,32,51,.08); }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12.5px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+  td { padding: 12px 18px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  tr:last-child td { border-bottom: 0; }
+  tr.sel td { background: var(--cobalt-soft); }
+  tr:hover td { background: #F7F9FC; }
+  tr.sel:hover td { background: var(--cobalt-soft); }
+  .person { display: flex; align-items: center; gap: 10px; }
+  .initial { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 12px; }
+  .person small { display: block; color: var(--muted); }
+  .num { text-align: right; font-weight: 600; }
+  .score { display: flex; align-items: center; gap: 8px; justify-content: flex-end; }
+  .bar { width: 64px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--cobalt); }
+  .wait { color: var(--muted); }
+  .wait.late { color: var(--red); font-weight: 600; }
+
+  /* Signature: the glaze track */
+  .track { display: flex; align-items: center; gap: 3px; }
+  .track span { width: 18px; height: 6px; border-radius: 3px; background: var(--line); }
+  .track span.done { background: var(--turquoise); }
+  .track span.now { background: var(--cobalt); }
+
+  .verdict { font-size: 12.5px; font-weight: 600; border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+  .v-yes { color: #12665F; background: #E3F4F2; }
+  .v-maybe { color: #8A5A12; background: #FBF1DE; }
+  .v-no { color: #8E2A23; background: #FBE8E6; }
+
+  /* Preview */
+  .preview { padding: 18px; display: grid; gap: 16px; position: sticky; top: 16px; }
+  .preview h3 { margin: 0; font-size: 18px; font-weight: 650; }
+  .meta { color: var(--muted); font-size: 13px; }
+  .scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 12px; }
+  .scores div { padding: 10px 12px; border-right: 1px solid var(--line); }
+  .scores div:last-child { border-right: 0; }
+  .scores small { color: var(--muted); display: block; font-size: 12px; }
+  .scores b { font-size: 20px; font-weight: 600; }
+  .ai { border-left: 3px solid var(--cobalt); padding: 2px 0 2px 12px; }
+  .ai p { margin: 4px 0 0; }
+  .qa { display: grid; gap: 10px; }
+  .qa div { background: var(--ground); border-radius: 10px; padding: 10px 12px; }
+  .qa q { display: block; color: var(--muted); font-size: 12.5px; quotes: none; }
+  .qa p { margin: 4px 0 0; }
+  .qa em { display: block; margin-top: 6px; font-style: normal; color: var(--cobalt); font-size: 12.5px; }
+  .row-actions { display: flex; gap: 8px; }
+  .row-actions .btn { flex: 1; }
+  .next { display: flex; gap: 12px; align-items: center; padding: 12px; border: 1px dashed #C9D4E6; border-radius: 12px; font-size: 13px; }
+  .next b { display: block; }
+
+  @media (max-width: 1100px) { .work { grid-template-columns: 1fr; } .preview { position: static; } }
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; } .rail { display: none; } main { padding: 16px; }
+    .search { display: none; } .title-row { flex-wrap: wrap; } .actions { margin-left: 0; }
+    .stages { overflow-x: auto; } th:nth-child(3), td:nth-child(3), th:nth-child(5), td:nth-child(5) { display: none; }
+  }
+  :focus-visible { outline: 2px solid var(--cobalt); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="rail">
+    <div class="brand"><span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h5" stroke="#1D4FA8" stroke-width="2.2" stroke-linecap="round"/></svg></span>Shortlist</div>
+    <div class="workspace"><b>Apex Learning</b><small>Toshkent · 4 ta faol vakansiya</small></div>
+    <nav class="nav" aria-label="Asosiy">
+      <a href="#">Bugun</a>
+      <a href="#" class="on">Vakansiyalar <span class="count">4</span></a>
+      <a href="#">Nomzodlar</a>
+      <a href="#">Suhbatlar <span class="count">2</span></a>
+      <a href="#">Telegram bot</a>
+      <a href="#">Sozlamalar</a>
+    </nav>
+    <div class="rail-foot">Bot: @apex_hr_bot ishlayapti</div>
+  </aside>
+
+  <main>
+    <div class="topline">
+      Vakansiyalar / <b style="color:var(--ink);font-weight:500">SMM menejer</b>
+      <label class="search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Nomzod, vakansiya yoki telefon</label>
+      <span class="avatar">DT</span>
+    </div>
+
+    <div class="title-row">
+      <h1>SMM menejer</h1>
+      <div class="actions">
+        <button class="btn">Testni ko‘rish</button>
+        <button class="btn primary">Keyingi nomzodni ko‘rish</button>
+      </div>
+    </div>
+    <p class="finding"><b>5 ta ariza qaroringizni kutmoqda.</b> Dilnoza Karimova testdan 90% oldi va 2 kundan beri javob kutyapti, avval uni ko‘ring.</p>
+
+    <div class="stages" role="tablist" aria-label="Bosqichlar">
+      <div class="stage on"><small>Yangi</small><b>5</b></div>
+      <div class="stage"><small>Ko‘rib chiqilmoqda</small><b>3</b></div>
+      <div class="stage"><small>Suhbat</small><b>2</b></div>
+      <div class="stage"><small>Taklif</small><b>1</b></div>
+      <div class="stage"><small>Rad etilgan</small><b>1</b></div>
+    </div>
+
+    <div class="work">
+      <section class="sheet" aria-label="Yangi arizalar">
+        <div class="sheet-head">
+          <h2>Yangi arizalar</h2>
+          <div class="seg"><button class="on">Kutish vaqti</button><button>Test bali</button><button>AI xulosa</button></div>
+        </div>
+        <table>
+          <thead><tr><th>Nomzod</th><th>Bot yo‘li</th><th>AI xulosa</th><th style="text-align:right">Test</th><th style="text-align:right">Kutmoqda</th></tr></thead>
+          <tbody>
+            <tr class="sel">
+              <td><div class="person"><span class="initial" style="background:#E7EEFA;color:#1D4FA8">DK</span><div>Dilnoza Karimova<small>+998 90 214 55 08</small></div></div></td>
+              <td><div class="track" title="Rozilik, CV, test, yozma javob tayyor"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="now"></span></div></td>
+              <td><span class="verdict v-yes">Tavsiya</span></td>
+              <td class="num"><div class="score">90%<span class="bar"><i style="width:90%"></i></span></div></td>
+              <td class="num wait late">2 kun</td>
+            </tr>
+            <tr>
+              <td><div class="person"><span class="initial" style="background:#E5F4EF;color:#1C7A63">MY</span><div>Madina Yusupova<small>+998 93 541 20 77</small></div></div></td>
+              <td><div class="track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="now"></span></div></td>
+              <td><span class="verdict v-yes">Tavsiya</span></td>
+              <td class="num"><div class="score">80%<span class="bar"><i style="width:80%"></i></span></div></td>
+              <td class="num wait">1 kun</td>
+            </tr>
+            <tr>
+              <td><div class="person"><span class="initial" style="background:#F6EEDD;color:#8A5A12">JT</span><div>Jasur Toshmatov<small>+998 97 330 18 46</small></div></div></td>
+              <td><div class="track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="now"></span><span></span></div></td>
+              <td><span class="verdict v-maybe">Ko‘rib chiqing</span></td>
+              <td class="num"><div class="score">70%<span class="bar"><i style="width:70%"></i></span></div></td>
+              <td class="num wait">5 soat</td>
+            </tr>
+            <tr>
+              <td><div class="person"><span class="initial" style="background:#F1E8F6;color:#6E3F8F">SR</span><div>Shahnoza Rahimova<small>Test tasdiqlanmagan edi</small></div></div></td>
+              <td><div class="track"><span class="done"></span><span class="done"></span><span></span><span></span><span></span></div></td>
+              <td><span class="meta">Qo‘lda</span></td>
+              <td class="num" style="color:var(--muted)">—</td>
+              <td class="num wait">6 soat</td>
+            </tr>
+            <tr>
+              <td><div class="person"><span class="initial" style="background:#FBE8E6;color:#8E2A23">BA</span><div>Bekzod Aliyev<small>+998 99 812 04 63</small></div></div></td>
+              <td><div class="track"><span class="done"></span><span class="done"></span><span class="done"></span><span class="done"></span><span class="now"></span></div></td>
+              <td><span class="verdict v-no">Mos emas</span></td>
+              <td class="num"><div class="score">40%<span class="bar"><i style="width:40%"></i></span></div></td>
+              <td class="num wait">3 soat</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <aside class="sheet preview" aria-label="Tanlangan nomzod">
+        <div>
+          <h3>Dilnoza Karimova</h3>
+          <div class="meta">Telegram orqali · 21-oktabr, 18:42 · CV: dilnoza_smm.pdf</div>
+        </div>
+        <div class="scores">
+          <div><small>Test</small><b>90%</b></div>
+          <div><small>Hard skill</small><b>100%</b></div>
+          <div><small>Soft skill</small><b>80%</b></div>
+        </div>
+        <div class="ai">
+          <b>AI xulosa: tavsiya</b>
+          <p>3 yil Instagram va Telegram kanallarini yuritgan, kontent rejasi va reklama byudjeti bilan ishlagan. Tavsifdagi 5 talabdan 4 tasi CVda tasdiqlangan; Meta Ads tajribasini suhbatda so‘rang.</p>
+        </div>
+        <div class="qa">
+          <div><q>Nega aynan bizning o‘quv markazimiz?</q><p>Ta’lim sohasida kontent qilishni yoqtiraman, o‘quvchilar natijasini ko‘rsatish menga qiziq.</p><em>AI: aniq va sohaga bog‘langan javob.</em></div>
+          <div><q>Qancha maosh kutasiz?</q><p>7–8 million so‘m.</p><em>AI: vakansiya diapazoni ichida (6–9 mln).</em></div>
+        </div>
+        <div class="row-actions">
+          <button class="btn">Rad etish</button>
+          <button class="btn primary">Suhbatga taklif qilish</button>
+        </div>
+        <div class="next"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1D4FA8" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><div><b>Ertaga 14:00 — Kamola Ergasheva</b>Offline suhbat, Amir Temur ko‘chasi 1 · xaritada belgilangan</div></div>
+      </aside>
+    </div>
+  </main>
+</div>
+</body>
+</html>

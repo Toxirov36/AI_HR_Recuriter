@@ -367,14 +367,19 @@ export class TelegramService {
     };
   }
 
-  /** Disconnects the user's own Telegram; an administrator may pass another member's connection id. */
+  /**
+   * Disconnects the Telegram account shown as the user's own (plus their own already-disabled records); an
+   * administrator may pass another member's connection id. An old connection with no owner is removed only when it
+   * is the one shown as the administrator's, so disconnecting never takes a colleague's account with it.
+   */
   async disconnect(user: Identity, connectionId?: string) {
     if (connectionId) admin(user);
+    const own = connectionId ? null : await this.ownConnection(user);
     const where = connectionId
       ? { id: connectionId, companyId: user.companyId }
       : {
           companyId: user.companyId,
-          ...(user.role === 'ADMIN' ? { OR: [{ userId: user.id }, { userId: null }] } : { userId: user.id }),
+          OR: [...(own ? [{ id: own.id }] : []), { userId: user.id, enabled: false }],
         };
     const existing = await this.db.telegramBusinessConnection.findMany({ where });
 

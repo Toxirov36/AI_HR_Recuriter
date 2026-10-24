@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import type { KeyboardEvent } from 'react';
+import type { CSSProperties, KeyboardEvent } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage, languages, locales, type Locale } from '../i18n';
@@ -17,28 +17,42 @@ export function LandingLanguageSelect() {
   const current = locales.includes(rawCurrent) ? rawCurrent : 'uz';
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  // The list stays mounted for a moment after closing so it can fade out.
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<number | undefined>(undefined);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLUListElement>(null);
   const id = useId();
 
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+
+  function closeList() {
+    setOpen(false);
+    setClosing(true);
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => setClosing(false), 180);
+  }
+
   useEffect(() => {
     if (!open) return;
     list.current?.focus();
     const onPointerDown = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) setOpen(false);
+      if (!root.current?.contains(event.target as Node)) closeList();
     };
     document.addEventListener('pointerdown', onPointerDown);
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
   function openList() {
+    window.clearTimeout(closeTimer.current);
+    setClosing(false);
     setActive(Math.max(0, locales.indexOf(current)));
     setOpen(true);
   }
 
   function choose(next: Locale) {
-    setOpen(false);
+    closeList();
     button.current?.focus();
     if (next === current) return;
     void changeLanguage(next);
@@ -56,7 +70,7 @@ export function LandingLanguageSelect() {
     else if (event.key === 'End') setActive(last);
     else if (event.key === 'Enter' || event.key === ' ') choose(locales[active]);
     else if (event.key === 'Escape' || event.key === 'Tab') {
-      setOpen(false);
+      closeList();
       button.current?.focus();
       if (event.key === 'Escape') event.stopPropagation();
       return;
@@ -74,7 +88,7 @@ export function LandingLanguageSelect() {
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={`${id}-list`}
-        onClick={() => (open ? setOpen(false) : openList())}
+        onClick={() => (open ? closeList() : openList())}
         onKeyDown={(event) => {
           if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
             event.preventDefault();
@@ -82,12 +96,16 @@ export function LandingLanguageSelect() {
           }
         }}
       >
-        <span>{languages[current].nativeName}</span>
-        <ChevronDown size={14} aria-hidden="true" />
+        <span key={current} className="landing-lang-label">
+          {languages[current].nativeName}
+        </span>
+        <ChevronDown size={14} aria-hidden="true" className="landing-lang-chevron" />
       </button>
-      {open && (
+      {(open || closing) && (
         <ul
           ref={list}
+          data-state={open ? 'open' : 'closed'}
+          style={{ '--i': active } as CSSProperties}
           id={`${id}-list`}
           className="landing-lang-menu"
           role="listbox"

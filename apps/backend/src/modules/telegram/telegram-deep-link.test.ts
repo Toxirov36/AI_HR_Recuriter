@@ -297,8 +297,8 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
 
     const disconnectRes = await service.disconnect(user);
     expect(disconnectRes.ok).toBe(true);
-    // The administrator's own connection, plus old ones made before connections had an owner
-    expect(deleteMany).toHaveBeenCalledWith({ where: { companyId: 2, OR: [{ userId: 10 }, { userId: null }] } });
+    // Only the connection shown as the administrator's own, not every old one that has no owner
+    expect(deleteMany).toHaveBeenCalledWith({ where: { companyId: 2, OR: [{ id: 'conn-xyz' }, { userId: 10, enabled: false }] } });
     expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'TELEGRAM_DISCONNECTED' }),
     );
@@ -330,7 +330,7 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
 
     // Disconnecting touches only the HR's own connection; removing a colleague's is for the administrator
     await service.disconnect(hr);
-    expect(deleteMany).toHaveBeenLastCalledWith({ where: { companyId: 2, userId: 12 } });
+    expect(deleteMany).toHaveBeenLastCalledWith({ where: { companyId: 2, OR: [{ userId: 12, enabled: false }] } });
     await expect(service.disconnect(hr, 'conn-hr')).rejects.toThrow();
 
     const adminUser = { id: 10, companyId: 2, role: 'ADMIN', fullName: 'Admin', email: 'admin@apex.uz' };

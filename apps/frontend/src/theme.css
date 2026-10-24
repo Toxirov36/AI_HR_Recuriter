@@ -767,3 +767,498 @@ a.company-switch:hover .company-chevron {
 .company-chevron {
   transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
+
+/* Phone: the workspace sections sit in a floating bar at the bottom (thumb reach); wider screens are unchanged */
+.bottom-nav {
+  display: none;
+}
+@media (max-width: 760px) {
+  .bottom-nav {
+    position: fixed;
+    inset: auto 12px calc(12px + env(safe-area-inset-bottom)) 12px;
+    z-index: 30;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-around;
+    gap: 2px;
+    padding: 6px;
+    border-radius: 24px;
+    background: var(--card);
+    box-shadow: 0 8px 28px rgb(16 24 20 / 0.14), 0 1px 3px rgb(16 24 20 / 0.08);
+  }
+  .bottom-nav a,
+  .bottom-nav button {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 54px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 4px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    color: var(--muted-foreground);
+    font: inherit;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.15;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .bottom-nav span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .bottom-nav a.active {
+    background: var(--brand);
+    color: var(--brand-ink);
+    font-weight: 600;
+  }
+  .bottom-nav a:focus-visible,
+  .bottom-nav button:focus-visible {
+    outline: 3px solid var(--brand);
+    outline-offset: 2px;
+  }
+  .topbar .mobile-only {
+    display: none;
+  }
+  .main-content {
+    padding-bottom: calc(104px + env(safe-area-inset-bottom));
+  }
+}
+
+/* Phone redesign: a compact header with the page name as the title, roomier rounded cards, bigger numbers */
+@media (max-width: 760px) {
+  .topbar {
+    height: 64px;
+    padding: 0 16px;
+    gap: 8px;
+    background: var(--ground);
+  }
+  .topbar .breadcrumb-root,
+  .topbar .breadcrumb-divider {
+    display: none;
+  }
+  .topbar .breadcrumb-page {
+    font-family: 'Onest', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .topbar-actions {
+    gap: 6px;
+  }
+  .main-content {
+    padding-top: 4px;
+  }
+  .stat,
+  .panel,
+  .insight-card,
+  .pipeline-summary-card {
+    border-radius: 24px;
+  }
+  .stat {
+    padding: 18px;
+  }
+  .stat > strong {
+    font-size: 30px;
+  }
+  .panel-heading h2 {
+    font-size: 18px;
+  }
+  .page-title h1 {
+    font-size: 24px;
+  }
+  .page-footer {
+    display: none;
+  }
+}
+
+/* Phone: the sidebar is not used (the bottom bar and the sheet replace it); its slid-away card left a white strip at the edge */
+@media (max-width: 760px) {
+  .app-shell > .sidebar {
+    display: none;
+  }
+}
+
+/* Phone: the candidate list. Header without the repeated label, a compact search row, and each candidate as its own card */
+@media (max-width: 760px) {
+  .candidates-page .page-title .eyebrow {
+    display: none;
+  }
+  .candidates-page .page-title {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .candidates-page .page-title h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .candidates-page .page-title p {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .candidates-page .page-title > div:last-child {
+    align-self: flex-end;
+  }
+  .candidates-page .page-title .btn-pill {
+    width: auto;
+    min-height: 44px;
+    padding: 0 20px;
+    font-size: 14px;
+  }
+  .candidates-toolbar {
+    display: grid !important;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .candidates-toolbar .vacancies-search-box {
+    grid-column: 1 / -1;
+  }
+  .candidates-toolbar .vacancies-search-input {
+    height: 48px;
+    border-radius: 999px;
+    background: var(--card);
+  }
+  .candidates-toolbar .candidates-count-pill {
+    width: auto;
+    border: 0;
+    background: transparent;
+    padding: 0 4px;
+    height: auto;
+    color: var(--muted-foreground);
+  }
+  .candidates-toolbar > button {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 999px;
+    border: 0;
+    background: var(--card);
+  }
+  .candidates-export-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .candidates-page .panel {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+  .candidates-page .table-wrap {
+    overflow: visible;
+    background: transparent;
+  }
+  .candidates-page table,
+  .candidates-page tbody {
+    display: block;
+    width: 100%;
+  }
+  .candidates-page thead {
+    display: none;
+  }
+  .candidates-page tr {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-bottom: 10px;
+    padding: 16px;
+    border: 0;
+    border-radius: 24px;
+    background: var(--card);
+  }
+  .candidates-page td {
+    display: block;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    min-width: 0;
+  }
+  .candidates-page td:first-child {
+    flex: 1 1 100%;
+  }
+  .candidates-page td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 12px;
+    color: var(--muted-foreground);
+  }
+  .candidates-page td.candidate-actions-cell {
+    flex: 1 1 100%;
+    padding-top: 10px;
+    border-top: 2px solid var(--soft);
+  }
+  .candidates-page td.candidate-actions-cell .row {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .candidates-page td.candidate-actions-cell .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+  .candidates-page .candidate-contact-lines a,
+  .candidates-page .candidate-contact-lines > span {
+    min-height: 24px;
+  }
+}
+
+/* Phone: the vacancy list header. The create button is a compact pill on the right (like adding a candidate), not a full-width bar */
+@media (max-width: 760px) {
+  .vacancies-page-header {
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 12px;
+    margin: 0 0 16px;
+  }
+  .vacancies-page-header .vacancies-header-text {
+    width: 100%;
+  }
+  .vacancies-page-header .vacancies-eyebrow {
+    display: none;
+  }
+  .vacancies-page-header .vacancies-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .vacancies-page-header .vacancies-subtitle {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .vacancies-page-header .btn-pill {
+    width: auto;
+    align-self: flex-end;
+    min-height: 44px;
+    padding: 0 20px;
+    font-size: 14px;
+  }
+  .vacancies-toolbar .vacancies-search-input {
+    height: 48px;
+    border-radius: 999px;
+    background: var(--card);
+  }
+}
+
+/* Phone: the hiring pipeline header. The title is already in the top bar, so it is not repeated; the add button is a compact pill on the right */
+@media (max-width: 760px) {
+  .pipeline-redesign > .page-title .eyebrow {
+    display: none;
+  }
+  .pipeline-redesign > .page-title h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .pipeline-redesign > .page-title {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .pipeline-redesign > .page-title p {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+  }
+  .pipeline-redesign > .page-title > div:last-child {
+    align-self: flex-end;
+  }
+  .pipeline-redesign > .page-title .btn-pill {
+    width: auto;
+    min-height: 44px;
+    padding: 0 20px;
+    font-size: 14px;
+  }
+}
+
+/* Tablet: the sidebar becomes a slim icon rail that stays beside the content (it used to cover it); names show as tooltips */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .app-shell > .sidebar {
+    width: 72px;
+    padding: 20px 10px 16px;
+    overflow-x: hidden;
+    align-items: center;
+  }
+  .app-shell > .sidebar .brand {
+    font-size: 0;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .app-shell > .sidebar .company-switch {
+    width: 52px;
+    margin: 16px 0;
+    padding: 6px;
+    justify-content: center;
+    gap: 0;
+  }
+  .app-shell > .sidebar .company-switch-info,
+  .app-shell > .sidebar .company-chevron,
+  .app-shell > .sidebar .nav-label {
+    display: none;
+  }
+  .app-shell > .sidebar > div,
+  .app-shell > .sidebar nav {
+    width: 100%;
+    align-items: center;
+  }
+  .app-shell > .sidebar nav {
+    gap: 8px;
+  }
+  .app-shell > .sidebar nav a {
+    width: 52px;
+    min-height: 52px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+    font-size: 0;
+    border-radius: 18px;
+  }
+  .app-shell > .sidebar nav a svg {
+    width: 22px;
+    height: 22px;
+  }
+  .main-shell {
+    margin-left: 104px;
+  }
+  .topbar {
+    padding: 0 24px;
+  }
+  .main-content {
+    padding: 8px 24px 0;
+  }
+}
+
+/* Tablet top bar: one row (page title, search, actions) instead of the actions wrapping under the search */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .topbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 220px) auto;
+    align-items: center;
+    column-gap: 14px;
+    height: 72px;
+    background: var(--ground);
+  }
+  .topbar .breadcrumb-root,
+  .topbar .breadcrumb-divider {
+    display: none;
+  }
+  .topbar .breadcrumb-page {
+    font-family: 'Onest', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .topbar-search-pill {
+    max-width: none;
+    min-width: 0;
+  }
+  .topbar-search-pill .search-pill-kbd {
+    display: none;
+  }
+  .topbar-actions {
+    gap: 8px;
+  }
+}
+
+/* Tablet: the top bar already names the page, so the list pages do not repeat it as a second title (phones do the same above) */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .candidates-page .page-title .eyebrow,
+  .pipeline-redesign > .page-title .eyebrow,
+  .vacancies-page-header .vacancies-eyebrow {
+    display: none;
+  }
+  .candidates-page .page-title h1,
+  .pipeline-redesign > .page-title h1,
+  .vacancies-page-header .vacancies-title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .candidates-page .page-title p,
+  .pipeline-redesign > .page-title p,
+  .vacancies-page-header .vacancies-subtitle {
+    color: var(--ink);
+    font-size: 15px;
+    margin: 0;
+  }
+}
+
+/* Phone and tablet: the company admin page does not repeat the top bar's name as a second title */
+@media (max-width: 1000px) {
+  .admin-page > .page-title .eyebrow {
+    display: none;
+  }
+  .admin-page > .page-title h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .admin-page > .page-title p {
+    color: var(--ink);
+    font-size: 15px;
+    margin: 0;
+  }
+}
+
+/* Phone and tablet: the profile page does not repeat the top bar's name; the role badge and description stay */
+@media (max-width: 1000px) {
+  .profile-page > .profile-header {
+    border-bottom: 0;
+    padding-bottom: 0;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .profile-page > .profile-header h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .profile-page > .profile-header p {
+    margin: 0;
+    color: var(--ink);
+    font-size: 15px;
+  }
+}
+
+/* Tablet: no logo at the top of the icon rail */
+@media (min-width: 761px) and (max-width: 1000px) {
+  .app-shell > .sidebar .brand {
+    display: none;
+  }
+}

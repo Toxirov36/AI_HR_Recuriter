@@ -306,10 +306,16 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s var(--ease);
+  transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), color 0.2s var(--ease);
 }
-.landing-lang:hover {
+.landing-lang:hover,
+.landing-lang[aria-expanded='true'] {
   border-color: var(--pine);
+  color: var(--ink);
+}
+.landing-lang:focus-visible {
+  outline: 3px solid var(--pine);
+  outline-offset: 3px;
 }
 .landing-lang-menu {
   position: absolute;
@@ -325,8 +331,22 @@
   box-shadow: 0 22px 44px -22px rgba(11, 53, 38, 0.45);
   list-style: none;
   outline: none;
+  transform-origin: top right;
+}
+/* One pill slides to the option under the pointer or the arrow keys instead of each row flashing its own background. */
+.landing-lang-menu::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  left: 6px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--soft);
+  transform: translateY(calc(var(--i, 0) * 44px));
 }
 .landing-lang-option {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -341,12 +361,63 @@
   cursor: pointer;
 }
 .landing-lang-option.is-active {
-  background: var(--soft);
   color: var(--ink);
 }
 .landing-lang-option.is-selected {
   color: var(--pine);
   font-weight: 700;
+}
+
+/* Language list motion: it answers the click, so it stays even if the rest of the page is calm. */
+@media (prefers-reduced-motion: no-preference) {
+  .landing-lang:active {
+    transform: scale(0.97);
+  }
+  .landing-lang {
+    transition: border-color 0.2s var(--ease), background-color 0.2s var(--ease), color 0.2s var(--ease), transform 0.15s var(--ease);
+  }
+  .landing-lang-chevron {
+    transition: transform 0.35s var(--ease);
+  }
+  .landing-lang[aria-expanded='true'] .landing-lang-chevron {
+    transform: rotate(180deg);
+  }
+  .landing-lang-label {
+    animation: landing-lang-swap 0.35s var(--ease) both;
+  }
+  .landing-lang-menu[data-state='open'] {
+    animation: landing-lang-in 0.22s var(--ease) both;
+  }
+  .landing-lang-menu[data-state='closed'] {
+    animation: landing-lang-out 0.16s ease-in both;
+    pointer-events: none;
+  }
+  .landing-lang-menu::before {
+    transition: transform 0.22s var(--ease);
+  }
+  .landing-lang-menu[data-state='open'] .landing-lang-option {
+    animation: landing-lang-row 0.28s var(--ease) both;
+  }
+  .landing-lang-menu[data-state='open'] .landing-lang-option:nth-child(2) { animation-delay: 0.03s; }
+  .landing-lang-menu[data-state='open'] .landing-lang-option:nth-child(3) { animation-delay: 0.06s; }
+  .landing-lang-menu[data-state='open'] .landing-lang-option:nth-child(4) { animation-delay: 0.09s; }
+  .landing-lang-menu[data-state='open'] .landing-lang-option:nth-child(5) { animation-delay: 0.12s; }
+}
+@keyframes landing-lang-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes landing-lang-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(-4px) scale(0.97); }
+}
+@keyframes landing-lang-row {
+  from { opacity: 0; transform: translateX(8px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes landing-lang-swap {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 
 /* Hero */
@@ -1329,4 +1400,12 @@
 }
 .sl-page [tabindex='-1']:focus {
   outline: none;
+}
+
+/* With reduced motion there is no fade-out, so a closing list disappears at once instead of lingering and staying clickable */
+@media (prefers-reduced-motion: reduce) {
+  .landing-lang-menu[data-state='closed'] {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }

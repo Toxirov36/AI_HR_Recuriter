@@ -238,7 +238,7 @@ export function Candidates() {
           className="flex items-center gap-1.5 h-10 px-3.5 rounded-xl border border-slate-200 dark:border-solid dark:border-[color:var(--control-border)] text-slate-800 bg-white hover:bg-slate-50 font-medium text-sm shadow-none shrink-0"
           title={t('common.exportCsv')}
         >
-          <Download size={15} /> {t('common.exportCsv')}
+          <Download size={15} /> <span className="candidates-export-label">{t('common.exportCsv')}</span>
         </Button>
       </div>
       <Alert message={error || actionError} />
@@ -337,15 +337,15 @@ export function Candidates() {
                               );
                             })()}
                           </TableCell>
-                          <TableCell>
+                          <TableCell data-label={t('candidates.tableResume')}>
                             <span className={`file-state ${c.resumeName ? 'has-file' : ''}`}>
                               <FileText size={15} />
                               {c.resumeName ? t('candidates.resumeUploaded') : t('candidates.resumeNotUploaded')}
                             </span>
                           </TableCell>
-                          <TableCell>{c._count?.applications || 0}</TableCell>
-                          <TableCell>{date(c.createdAt)}</TableCell>
-                          <TableCell>
+                          <TableCell data-label={t('candidates.tableApplications')}>{c._count?.applications || 0}</TableCell>
+                          <TableCell data-label={t('candidates.tableCreated')}>{date(c.createdAt)}</TableCell>
+                          <TableCell className="candidate-actions-cell">
                             <div className="row">
                               <Link
                                 className="icon-button"

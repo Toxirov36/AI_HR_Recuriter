@@ -103,9 +103,9 @@ export function Profile() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto pb-12">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12 profile-page">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-5">
+      <div className="profile-header flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/80 pb-5">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">{t('profile.title')}</h1>
           <p className="text-sm text-slate-500 mt-1">{t('profile.description')}</p>

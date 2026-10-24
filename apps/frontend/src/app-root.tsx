@@ -109,6 +109,7 @@ function SidebarNav({
             key={l.to}
             to={l.to}
             end={l.to === '/dashboard'}
+            title={l.title}
             onPointerEnter={() => void preloadRoute(l.to)}
             onFocus={() => void preloadRoute(l.to)}
             onClick={() => onNavigate?.()}
@@ -358,6 +359,26 @@ function AppShell() {
             <span>{t('navigation.evidenceLedRecruiting')}</span>
           </footer>
         </main>
+        <nav className="bottom-nav" aria-label={t('navigation.workspace')}>
+          {(links.length > 5 ? links.slice(0, 4) : links).map((l) => (
+            <NavLink
+              key={l.to}
+              to={l.to}
+              end={l.to === '/dashboard'}
+              onPointerEnter={() => void preloadRoute(l.to)}
+              onFocus={() => void preloadRoute(l.to)}
+            >
+              <l.icon size={21} />
+              <span>{l.title}</span>
+            </NavLink>
+          ))}
+          {links.length > 5 && (
+            <button type="button" onClick={() => setMenu(true)} aria-label={t('navigation.openNavigation')}>
+              <Menu size={21} />
+              <span>{t('navigation.more')}</span>
+            </button>
+          )}
+        </nav>
       </div>
       <AlertDialog open={confirmLogout} onOpenChange={setConfirmLogout}>
         <AlertDialogContent>

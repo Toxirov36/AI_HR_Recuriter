@@ -44,6 +44,9 @@ export class BusinessMessageHandler {
         mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     if (!isCv || (document.file_size ?? 0) > MAX_TELEGRAM_CV_BYTES) return;
 
+    // The candidate wrote to this HR: later notifications to them go through this connection first.
+    await this.rememberChat(connection.companyId, String(sender.id), connectionId);
+
     if (!this.telegramApi || !connection.canReply) {
       this.logger.warn('CV received on a Business connection without reply permission; no redirect sent');
       return;
@@ -62,6 +65,18 @@ export class BusinessMessageHandler {
       if (!delivery.ok) throw new Error(delivery.description || 'Telegram business reply failed');
     } catch (error) {
       this.logger.warn(`Failed to send the bot redirect: ${(error as Error).message}`);
+    }
+  }
+
+  private async rememberChat(companyId: number, telegramUserId: string, connectionId: string) {
+    try {
+      await this.db.telegramBusinessChat.upsert({
+        where: { companyId_telegramUserId: { companyId, telegramUserId } },
+        update: { connectionId },
+        create: { companyId, telegramUserId, connectionId },
+      });
+    } catch (error) {
+      this.logger.warn(`Could not remember the Business chat: ${(error as Error).message}`);
     }
   }
 

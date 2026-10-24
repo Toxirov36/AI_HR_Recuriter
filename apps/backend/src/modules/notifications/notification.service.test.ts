@@ -248,6 +248,51 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
       expect(mockTelegramApi.sendMessage.mock.calls.map((call: unknown[]) => (call[2] as { businessConnectionId: string }).businessConnectionId)).toEqual(['hr_a', 'hr_b']);
     });
 
+    it('tries the HR the candidate wrote to first, so the usual case is a single call', async () => {
+      mockDb.telegramBusinessConnection.findMany = vi.fn().mockResolvedValue([{ id: 'hr_a' }, { id: 'hr_b' }, { id: 'hr_c' }]);
+      mockDb.telegramBusinessChat = {
+        findUnique: vi.fn().mockResolvedValue({ connectionId: 'hr_c' }),
+        upsert: vi.fn(),
+      };
+      const result = await service.sendRejectionNotice({
+        applicationId: 204,
+        candidate: { id: 33, fullName: 'Aziza', telegramUserId: '888', companyId: 3 },
+        vacancy: { id: 1, title: 'Designer' },
+        companyName: 'Acme',
+      });
+      expect(result.telegramSent).toBe(true);
+      expect(mockTelegramApi.sendMessage).toHaveBeenCalledTimes(1);
+      expect(mockTelegramApi.sendMessage.mock.calls[0][2]).toMatchObject({ businessConnectionId: 'hr_c' });
+      expect(mockDb.telegramBusinessChat.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { companyId_telegramUserId: { companyId: 3, telegramUserId: '888' } } }),
+      );
+      expect(mockDb.telegramBusinessChat.upsert).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the other HRs when the remembered one refuses, and remembers the one that works', async () => {
+      mockDb.telegramBusinessConnection.findMany = vi.fn().mockResolvedValue([{ id: 'hr_a' }, { id: 'hr_b' }]);
+      mockDb.telegramBusinessChat = {
+        findUnique: vi.fn().mockResolvedValue({ connectionId: 'hr_a' }),
+        upsert: vi.fn().mockResolvedValue({}),
+      };
+      mockTelegramApi.sendMessage.mockImplementation(async (_chat: string, _text: string, options?: { businessConnectionId?: string }) =>
+        options?.businessConnectionId === 'hr_b' ? { ok: true } : { ok: false, description: 'chat not found' },
+      );
+      const result = await service.sendRejectionNotice({
+        applicationId: 205,
+        candidate: { id: 34, fullName: 'Dilshod', telegramUserId: '999', companyId: 3 },
+        vacancy: { id: 1, title: 'Designer' },
+        companyName: 'Acme',
+      });
+      expect(result.telegramSent).toBe(true);
+      expect(mockTelegramApi.sendMessage.mock.calls.map((call: unknown[]) => (call[2] as { businessConnectionId: string }).businessConnectionId)).toEqual(['hr_a', 'hr_b']);
+      expect(mockDb.telegramBusinessChat.upsert).toHaveBeenCalledWith({
+        where: { companyId_telegramUserId: { companyId: 3, telegramUserId: '999' } },
+        update: { connectionId: 'hr_b' },
+        create: { companyId: 3, telegramUserId: '999', connectionId: 'hr_b' },
+      });
+    });
+
     it('does not throw when notification delivery fails', async () => {
       mockTelegramApi.sendMessage.mockRejectedValueOnce(new Error('Bot blocked by user'));
       mockEmailService.sendMail.mockRejectedValueOnce(new Error('SMTP connection timeout'));

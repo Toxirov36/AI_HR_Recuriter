@@ -43,6 +43,7 @@ describe('Telegram integration', () => {
     const setup = (overrides: Record<string, unknown> = {}, nudge: string | null = 'OK') => {
       const db = {
         telegramBusinessConnection: { findUnique: vi.fn().mockResolvedValue({ ...connection, ...overrides }) },
+        telegramBusinessChat: { upsert: vi.fn().mockResolvedValue({}) },
         candidate: { upsert: vi.fn() },
         resume: { create: vi.fn() },
         $transaction: vi.fn(),
@@ -67,6 +68,24 @@ describe('Telegram integration', () => {
       expect(db.$transaction).not.toHaveBeenCalled();
       expect(db.candidate.upsert).not.toHaveBeenCalled();
       expect(db.resume.create).not.toHaveBeenCalled();
+    });
+
+    it('remembers which HR connection the candidate wrote to, even when no reply is sent', async () => {
+      const { db, handler } = setup({ canReply: false });
+      await handler.handle(cv);
+      expect(db.telegramBusinessChat.upsert).toHaveBeenCalledWith({
+        where: { companyId_telegramUserId: { companyId: 3, telegramUserId: '42' } },
+        update: { connectionId: 'business-1' },
+        create: { companyId: 3, telegramUserId: '42', connectionId: 'business-1' },
+      });
+    });
+
+    it('does not remember the HR account itself or non-CV files', async () => {
+      const own = setup();
+      await own.handler.handle({ ...cv, from: { id: 999, first_name: 'HR' } });
+      const photo = setup();
+      await photo.handler.handle({ ...cv, document: { ...cv.document, file_name: 'photo.png', mime_type: 'image/png' } });
+      for (const { db } of [own, photo]) expect(db.telegramBusinessChat.upsert).not.toHaveBeenCalled();
     });
 
     it('does not repeat the reply within a day for the same chat', async () => {

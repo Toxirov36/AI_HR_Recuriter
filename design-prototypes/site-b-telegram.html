@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shortlist · Sayt B · Telegram</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Site B — "Telegram": the page is the candidate's conversation with the bot.
+     Idea: the bot dialogue, the thing candidates actually see, becomes the page's structure; each section is a reply.
+     Live thing: the phone in the hero is a working demo of the bot — tap the answers. */
+  :root {
+    --sky: #E8F2FB;
+    --sky-deep: #CFE3F5;
+    --ink: #0B1B2B;
+    --muted: #46596C;
+    --blue: #1F6FC5;
+    --blue-dark: #134F91;
+    --bubble: #FFFFFF;
+    --mine: #DCF3C8;
+    --line: #C9DAEA;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--sky); color: var(--ink); font: 17px/1.6 'Golos Text', system-ui, sans-serif; }
+  a { color: inherit; }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+  header { display: flex; align-items: center; gap: 26px; height: 74px; }
+  .logo { display: flex; gap: 10px; align-items: center; font-weight: 800; font-size: 19px; text-decoration: none; }
+  .logo i { width: 32px; height: 32px; border-radius: 50%; background: var(--blue); display: grid; place-items: center; }
+  nav { margin-left: auto; display: flex; gap: 22px; }
+  nav a { text-decoration: none; color: var(--muted); font-weight: 500; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 14px; padding: 13px 20px; font-weight: 700; text-decoration: none; border: 0; font-size: 16px; cursor: pointer; font-family: inherit; }
+  .btn.blue { background: var(--blue); color: #fff; }
+  .btn.ghost { background: #fff; color: var(--ink); }
+
+  .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; padding: 40px 0 96px; }
+  h1 { font-size: clamp(42px, 5.6vw, 80px); line-height: 1.02; letter-spacing: -0.035em; margin: 0 0 24px; font-weight: 800; }
+  .hero p { font-size: 20px; color: var(--muted); max-width: 30em; margin: 0 0 32px; }
+  .hero .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .phone { justify-self: center; width: 360px; background: #0B1B2B; border-radius: 44px; padding: 12px; box-shadow: 0 40px 80px -40px rgba(11,27,43,.55); }
+  .screen { background: #DCE8F3 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40'%3E%3Cpath d='M20 6v8M16 10h8' stroke='%23c4d6e8' stroke-width='1.5'/%3E%3C/svg%3E"); border-radius: 34px; overflow: hidden; height: 620px; display: flex; flex-direction: column; }
+  .chat-head { background: #fff; padding: 14px 16px; display: flex; gap: 10px; align-items: center; }
+  .chat-head i { width: 38px; height: 38px; border-radius: 50%; background: var(--blue); display: grid; place-items: center; color: #fff; font-style: normal; font-weight: 800; }
+  .chat-head b { display: block; font-size: 15px; line-height: 1.2; }
+  .chat-head small { color: var(--muted); font-size: 12px; }
+  .log { flex: 1; overflow-y: auto; padding: 14px 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14.5px; }
+  .m { max-width: 82%; padding: 8px 12px; border-radius: 16px; line-height: 1.45; animation: pop .25s ease-out; }
+  .m.bot { background: var(--bubble); align-self: flex-start; border-bottom-left-radius: 6px; }
+  .m.me { background: var(--mine); align-self: flex-end; border-bottom-right-radius: 6px; }
+  .keys { display: grid; gap: 6px; padding: 10px 12px 14px; background: rgba(255,255,255,.6); }
+  .keys button { border: 0; background: #fff; border-radius: 12px; padding: 10px; font: 600 14px 'Golos Text'; color: var(--blue); cursor: pointer; }
+  @keyframes pop { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { .m { animation: none; } }
+
+  .section { padding: 0 0 110px; }
+  .say { display: grid; grid-template-columns: 200px 1fr; gap: 28px; align-items: start; }
+  .who { font-weight: 700; color: var(--blue-dark); padding-top: 10px; }
+  .who small { display: block; color: var(--muted); font-weight: 500; }
+  h2 { font-size: clamp(32px, 4vw, 54px); line-height: 1.06; letter-spacing: -0.03em; margin: 0 0 16px; font-weight: 800; }
+  .bubble { background: #fff; border-radius: 26px 26px 26px 8px; padding: 34px; }
+  .bubble p { color: var(--muted); margin: 0 0 20px; max-width: 40em; }
+  .flow { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .flow div { background: var(--sky); border-radius: 16px; padding: 16px; }
+  .flow b { display: block; font-size: 16px; margin-bottom: 4px; }
+  .flow span { color: var(--muted); font-size: 14px; }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { background: var(--sky); border-radius: 20px; padding: 22px; }
+  .card h3 { margin: 0 0 6px; font-size: 20px; }
+  .card p { margin: 0; color: var(--muted); font-size: 15.5px; }
+  .card.result { background: var(--blue); color: #fff; }
+  .card.result p { color: #D7E6F7; }
+  .big { font-size: 56px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; margin: 6px 0 10px; }
+
+  .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .plan { background: var(--sky); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; }
+  .plan.pick { background: var(--ink); color: #fff; }
+  .plan h3 { margin: 0; font-size: 17px; }
+  .plan .price { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; margin: 12px 0 0; }
+  .plan small { color: var(--muted); }
+  .plan.pick small, .plan.pick li { color: #B8C7D6; }
+  .plan ul { padding-left: 18px; color: var(--muted); font-size: 15px; margin: 14px 0 18px; }
+  .plan .btn { margin-top: auto; }
+  .fine { color: var(--muted); font-size: 14px; margin: 14px 0 0; }
+
+  .faq details { background: var(--sky); border-radius: 16px; padding: 16px 18px; margin-bottom: 8px; }
+  .faq summary { font-weight: 700; cursor: pointer; }
+  .faq details p { color: var(--muted); margin: 8px 0 0; }
+
+  .final { background: var(--blue); color: #fff; border-radius: 34px; padding: 64px; text-align: left; display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: end; margin-bottom: 40px; }
+  .final h2 { margin: 0; max-width: 12em; }
+  .final .btn { background: #fff; color: var(--blue-dark); }
+  footer { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; padding: 18px 0 40px; }
+
+  @media (max-width: 960px) {
+    nav { display: none; } .hero, .say, .grid2, .final { grid-template-columns: 1fr; } .flow, .plans { grid-template-columns: 1fr 1fr; }
+    .phone { width: 100%; max-width: 360px; } .who { padding-top: 0; }
+  }
+  @media (max-width: 560px) { .wrap { padding: 0 18px; } .flow, .plans { grid-template-columns: 1fr; } .bubble, .final { padding: 24px; } }
+  :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="#"><i><svg width="15" height="15" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></i>Shortlist</a>
+    <nav><a href="#nomzod">Nomzod uchun</a><a href="#hr">HR uchun</a><a href="#narx">Narxlar</a><a href="#savol">Savollar</a></nav>
+    <a class="btn blue" href="#">Bepul boshlash</a>
+  </header>
+
+  <section class="hero">
+    <div>
+      <h1>Ishga qabul endi Telegram’da</h1>
+      <p>Nomzod sizning botingizda ariza beradi, CV yuboradi va test yechadi. Siz esa tayyor natijani ko‘rasiz: ball, AI xulosa va kimni suhbatga chaqirish kerakligi.</p>
+      <div class="cta"><a class="btn blue" href="#">Bepul boshlash</a><a class="btn ghost" href="#nomzod">Botni sinab ko‘rish</a></div>
+    </div>
+    <div class="phone" aria-label="Bot namoyishi">
+      <div class="screen">
+        <div class="chat-head"><i>A</i><div><b>Apex Learning · HR</b><small>bot</small></div></div>
+        <div class="log" id="log" aria-live="polite"></div>
+        <div class="keys" id="keys"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="nomzod">
+    <div class="say">
+      <div class="who">Nomzod<small>2 daqiqada ariza</small></div>
+      <div class="bubble">
+        <h2>Sayt yo‘q, parol yo‘q, kutish yo‘q</h2>
+        <p>Nomzod bot havolasini kanalingizdan, hh.uz yoki OLX e’lonidan, yoki sizning Telegram profilingizdan topadi. Qolgani bitta suhbatda.</p>
+        <div class="flow">
+          <div><b>Rozilik</b><span>Ma’lumotlar qancha saqlanishi aytiladi</span></div>
+          <div><b>Vakansiya</b><span>Ochiq vakansiyalardan tanlaydi</span></div>
+          <div><b>Ism, telefon, CV</b><span>PDF yoki DOCX, 10 MB gacha</span></div>
+          <div><b>Test</b><span>10 ta savol, 5 hard va 5 soft</span></div>
+          <div><b>Yozma savollar</b><span>Sizning 1–5 ta savolingiz</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="hr">
+    <div class="say">
+      <div class="who">HR<small>natija bitta joyda</small></div>
+      <div class="bubble">
+        <h2>Siz faqat qaror qilasiz</h2>
+        <p>Har bir ariza sizga tartiblangan holda keladi. AI tavsiya beradi, lekin hech kimni o‘zi rad etmaydi.</p>
+        <div class="grid2">
+          <div class="card result"><h3>Test natijasi</h3><div class="big">90%</div><p>9 / 10 to‘g‘ri · Hard 100% · Soft 80%. Siz tasdiqlagan savollar bilan.</p></div>
+          <div class="card"><h3>AI xulosa</h3><p>CV vakansiyaning har bir talabi bilan solishtiriladi: nima tasdiqlangan, nimani suhbatda so‘rash kerak.</p></div>
+          <div class="card"><h3>Suhbatga taklif</h3><p>Bo‘sh vaqtlaringizni belgilaysiz, nomzod botda birini tanlaydi. Online bo‘lsa Google Meet havolasi, offline bo‘lsa xaritadagi nuqta.</p></div>
+          <div class="card"><h3>Kanallarga e’lon</h3><p>Vakansiya faollashganda Telegram kanallaringizga avtomatik chiqadi, ichida bot havolasi bilan.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="narx">
+    <div class="say">
+      <div class="who">Narxlar<small>so‘mda, oyiga</small></div>
+      <div class="bubble">
+        <h2>Bepul boshlang, keyin o‘sing</h2>
+        <div class="plans">
+          <div class="plan"><h3>Bepul</h3><div class="price">0</div><small>doimiy</small><ul><li>1 vakansiya</li><li>15 nomzod / oy</li></ul><a class="btn ghost" href="#">Boshlash</a></div>
+          <div class="plan pick"><h3>Start</h3><div class="price">149 000</div><small>so‘m / oy</small><ul><li>3 vakansiya</li><li>100 nomzod / oy</li><li>Yozma savollar</li></ul><a class="btn blue" href="#">Tanlash</a></div>
+          <div class="plan"><h3>Biznes</h3><div class="price">399 000</div><small>so‘m / oy</small><ul><li>10 vakansiya</li><li>400 nomzod / oy</li><li>Suhbatlar, kanallar</li></ul><a class="btn ghost" href="#">Tanlash</a></div>
+          <div class="plan"><h3>Pro</h3><div class="price">899 000</div><small>so‘m / oy</small><ul><li>Cheksiz vakansiya</li><li>1 500 nomzod / oy</li></ul><a class="btn ghost" href="#">Bog‘lanish</a></div>
+        </div>
+        <p class="fine">Narxlar namunaviy, tasdiqlanmagan.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="section faq" id="savol">
+    <div class="say">
+      <div class="who">Savollar<small>qisqa javoblar</small></div>
+      <div class="bubble">
+        <details open><summary>Bot nomzodlarga qaysi tilda yozadi?</summary><p>O‘zbek, rus va tojik tilida. Nomzod tilni o‘zi tanlaydi.</p></details>
+        <details><summary>Telegram profilimga CV yuborishsa nima bo‘ladi?</summary><p>Profilingiz Shortlist’ga ulangan bo‘lsa, bot nomzodga ariza havolasini yuboradi va CV botda qabul qilinadi.</p></details>
+        <details><summary>Test savollari menga mos keladimi?</summary><p>AI ularni vakansiyangizdan tuzadi, siz tahrirlab tasdiqlaysiz. Tasdiqlanmaguncha nomzodlarga berilmaydi.</p></details>
+      </div>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Birinchi vakansiyani bugun botga ulang</h2>
+    <a class="btn" href="#">Bepul boshlash</a>
+  </section>
+  <footer><span>© 2026 Shortlist · hrdai.uz</span><span>Toshkent</span></footer>
+</div>
+<script>
+  // The live thing: a scripted demo of the real bot flow. Without script the phone simply stays empty.
+  const steps = [
+    { bot: 'Assalomu alaykum! Apex Learning’ga ariza. Ma’lumotlaringiz 180 kungacha saqlanadi. Davom etamizmi?', keys: ['Roziman'] },
+    { bot: 'Qaysi vakansiyaga ariza topshirasiz?', keys: ['SMM menejer', 'Junior backend Node.js'] },
+    { bot: 'Ism va familiyangizni yozing:', keys: ['Dilnoza Karimova'] },
+    { bot: 'CV faylingizni yuboring (PDF yoki DOCX):', keys: ['📄 dilnoza_smm.pdf'] },
+    { bot: '✅ CV qabul qilindi. Endi 10 ta savoldan iborat qisqa test.', keys: ['▶️ Testni boshlash'] },
+    { bot: '📊 Natijangiz: 90% (9/10). Arizangiz HRga yuborildi, javobni shu yerda olasiz.', keys: ['Qaytadan ko‘rish'] },
+  ];
+  const log = document.getElementById('log');
+  const keys = document.getElementById('keys');
+  let i = 0;
+  function add(text, who) { const m = document.createElement('div'); m.className = 'm ' + who; m.textContent = text; log.appendChild(m); log.scrollTop = log.scrollHeight; }
+  function show() {
+    add(steps[i].bot, 'bot');
+    keys.replaceChildren(...steps[i].keys.map((label) => {
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = label;
+      b.onclick = () => { if (i === steps.length - 1) { log.replaceChildren(); i = 0; return show(); } add(label, 'me'); i += 1; setTimeout(show, 350); };
+      return b;
+    }));
+  }
+  show();
+</script>
+</body>
+</html>

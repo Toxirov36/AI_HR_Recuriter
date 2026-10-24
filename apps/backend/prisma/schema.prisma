@@ -448,11 +448,22 @@ model TelegramBusinessConnection {
   screeningAlertsEnabled Boolean @default(true)
   company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  chats TelegramBusinessChat[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   @@index([companyId])
   @@index([userId])
   @@index([telegramUserId])
+}
+/// Which HR Business connection a candidate wrote to (learned from the CV they sent), so replies try that one first.
+model TelegramBusinessChat {
+  companyId Int
+  telegramUserId String
+  connectionId String
+  connection TelegramBusinessConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  updatedAt DateTime @updatedAt
+  @@id([companyId, telegramUserId])
+  @@index([connectionId])
 }
 model TelegramAdminPairing {
   id Int @id @default(autoincrement())

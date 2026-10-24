@@ -1,7 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Building2,
-  Search,
   ShieldCheck,
   RefreshCw,
   LockKeyhole,
@@ -295,6 +294,20 @@ export function PlatformAdmin() {
   const [draftSearch, setDraftSearch] = useState('');
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
+  // The one place a search is committed: typing does it shortly after the last key, Enter does it at once.
+  const commitSearch = useCallback(
+    (value: string) => {
+      const next = value.trim();
+      if (next === search) return;
+      setSearch(next);
+      setPage(1);
+    },
+    [search],
+  );
+  useEffect(() => {
+    const timer = window.setTimeout(() => commitSearch(draftSearch), 350);
+    return () => window.clearTimeout(timer);
+  }, [draftSearch, commitSearch]);
   const [selected, setSelected] = useState<Company | null>(null);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -416,23 +429,12 @@ export function PlatformAdmin() {
         <section className="panel padded">
           <div className="flex flex-wrap gap-3 items-center justify-between">
             <h2>{t('platformAdmin.companiesList')}</h2>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                companies.reload();
-                summary.reload();
-              }}
-            >
-              <RefreshCw size={14} className="mr-2" /> {t('common.refresh')}
-            </Button>
           </div>
           <form
             className="flex flex-wrap gap-3 mt-5 mb-5"
             onSubmit={(e) => {
               e.preventDefault();
-              setSearch(draftSearch.trim());
-              setPage(1);
+              commitSearch(draftSearch);
             }}
           >
             <Input
@@ -451,8 +453,15 @@ export function PlatformAdmin() {
               }}
               summary={summary.data}
             />
-            <Button type="submit" variant="outline">
-              <Search size={15} className="mr-2" /> {t('common.search')}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                companies.reload();
+                summary.reload();
+              }}
+            >
+              <RefreshCw size={15} className="mr-2" /> {t('common.refresh')}
             </Button>
           </form>
 

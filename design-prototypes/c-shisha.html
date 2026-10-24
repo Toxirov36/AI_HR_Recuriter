@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shortlist · C · Shisha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Direction C — "Shisha" (glass): Liquid-Glass-style translucent layers over a Tashkent-dusk ground.
+     Organisation is an inbox: candidates on the left, the candidate's Telegram conversation in the middle, the decision on the right.
+     Signature move: the bot conversation itself is the candidate profile — test, CV and written answers appear as the chat they came from. */
+  :root {
+    --ink: #0E1726;
+    --muted: #4A5568;
+    --glass: rgba(255,255,255,.58);
+    --glass-strong: rgba(255,255,255,.78);
+    --edge: rgba(255,255,255,.75);
+    --hair: rgba(14,23,38,.08);
+    --violet: #4B3FD6;
+    --violet-soft: rgba(75,63,214,.10);
+    --green: #0F7A5A;
+    --red: #B4372F;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink); font: 14px/1.5 'Manrope', system-ui, sans-serif; font-feature-settings: 'tnum' 1; min-height: 100vh;
+    background:
+      radial-gradient(900px 600px at 12% 8%, #B9C8FF 0%, transparent 60%),
+      radial-gradient(800px 600px at 88% 12%, #FFD3B5 0%, transparent 55%),
+      radial-gradient(900px 700px at 70% 95%, #A9E6D6 0%, transparent 60%),
+      #E9ECF6;
+  }
+  button { font: inherit; cursor: pointer; }
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(22px) saturate(1.6);
+    -webkit-backdrop-filter: blur(22px) saturate(1.6);
+    border: 1px solid var(--edge);
+    box-shadow: 0 1px 0 rgba(255,255,255,.6) inset, 0 18px 40px -24px rgba(30,40,90,.35);
+  }
+
+  .topnav { position: sticky; top: 14px; z-index: 5; margin: 14px auto 0; width: fit-content; border-radius: 999px; padding: 6px; display: flex; align-items: center; gap: 4px; }
+  .topnav .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; padding: 0 12px 0 8px; }
+  .mark { width: 26px; height: 26px; border-radius: 50%; background: var(--violet); display: grid; place-items: center; }
+  .topnav a { padding: 7px 14px; border-radius: 999px; color: var(--muted); text-decoration: none; font-weight: 600; }
+  .topnav a.on { background: var(--glass-strong); color: var(--ink); box-shadow: 0 1px 3px rgba(30,40,90,.12); }
+
+  .layout { max-width: 1400px; margin: 20px auto 32px; padding: 0 24px; display: grid; grid-template-columns: 320px minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
+  .panel { border-radius: 22px; padding: 16px; }
+
+  /* Inbox */
+  .inbox h2 { margin: 2px 4px 2px; font-size: 18px; font-weight: 800; }
+  .inbox p { margin: 0 4px 12px; color: var(--muted); font-size: 13px; }
+  .filter { display: flex; gap: 6px; margin: 0 0 10px; }
+  .filter button { border: 1px solid var(--hair); background: rgba(255,255,255,.5); border-radius: 999px; padding: 4px 11px; font-weight: 600; font-size: 12.5px; color: var(--muted); }
+  .filter button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .item { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 10px; border-radius: 14px; }
+  .item + .item { margin-top: 2px; }
+  .item.on { background: var(--glass-strong); box-shadow: 0 1px 3px rgba(30,40,90,.12); }
+  .initial { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 12.5px; }
+  .item b { font-weight: 700; display: block; line-height: 1.25; }
+  .item small { color: var(--muted); font-size: 12px; }
+  .item .pct { font-weight: 800; font-size: 15px; text-align: right; }
+  .item .pct small { display: block; font-weight: 600; }
+  .late { color: var(--red) !important; }
+
+  /* Conversation */
+  .convo { padding: 0; overflow: hidden; }
+  .convo-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--hair); }
+  .convo-head h1 { margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+  .convo-head span { color: var(--muted); font-size: 13px; }
+  .tg { margin-left: auto; display: flex; align-items: center; gap: 6px; font-weight: 700; color: #2381C4; font-size: 13px; }
+  .chat { padding: 18px; display: grid; gap: 10px; max-height: 640px; overflow: auto; }
+  .day { justify-self: center; font-size: 12px; color: var(--muted); background: rgba(255,255,255,.55); border-radius: 999px; padding: 2px 10px; }
+  .msg { max-width: 78%; padding: 10px 13px; border-radius: 16px; }
+  .bot { justify-self: start; background: rgba(255,255,255,.72); border-top-left-radius: 6px; }
+  .me { justify-self: end; background: var(--violet); color: #fff; border-top-right-radius: 6px; }
+  .msg time { display: block; font-size: 11px; opacity: .6; margin-top: 2px; text-align: right; }
+  .file { display: flex; align-items: center; gap: 10px; }
+  .file i { width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.22); display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 11px; }
+  .result { justify-self: stretch; max-width: none; background: var(--glass-strong); border: 1px solid var(--edge); }
+  .result-row { display: flex; gap: 22px; align-items: baseline; }
+  .result-row b { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; }
+  .result-row span { color: var(--muted); }
+  .ainote { display: block; margin-top: 6px; color: var(--violet); font-size: 12.5px; font-weight: 600; }
+
+  /* Decision */
+  .decide h3 { margin: 0 0 4px; font-size: 16px; font-weight: 800; }
+  .decide p { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+  .verdict { display: flex; gap: 10px; align-items: flex-start; padding: 12px; border-radius: 16px; background: rgba(15,122,90,.10); margin-bottom: 12px; }
+  .verdict b { color: var(--green); display: block; }
+  .reqs { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+  .reqs li { display: flex; gap: 8px; }
+  .reqs .ok { color: var(--green); font-weight: 800; }
+  .reqs .ask { color: #A0640F; font-weight: 800; }
+  .btn { width: 100%; border: 1px solid var(--hair); background: rgba(255,255,255,.65); border-radius: 14px; padding: 11px; font-weight: 700; color: var(--ink); }
+  .btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); margin-bottom: 8px; }
+  .slot { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--hair); font-size: 13px; }
+  .slot b { display: block; }
+
+  @media (max-width: 1180px) { .layout { grid-template-columns: 300px minmax(0, 1fr); } .decide { grid-column: 1 / -1; } }
+  @media (max-width: 760px) { .layout { grid-template-columns: 1fr; padding: 0 12px; } .topnav a:not(.on) { display: none; } .msg { max-width: 92%; } }
+  @media (prefers-reduced-transparency: reduce) { .glass { background: rgba(255,255,255,.94); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+  :focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<nav class="topnav glass" aria-label="Asosiy">
+  <span class="brand"><span class="mark"><svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h5" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span>Shortlist</span>
+  <a href="#" class="on">Arizalar</a><a href="#">Vakansiyalar</a><a href="#">Suhbatlar</a><a href="#">Bot</a>
+</nav>
+
+<div class="layout">
+  <section class="panel glass inbox" aria-label="Arizalar">
+    <h2>SMM menejer</h2>
+    <p>5 ta ariza qaroringizni kutmoqda</p>
+    <div class="filter"><button class="on">Yangi 5</button><button>Suhbat 2</button><button>Hammasi 12</button></div>
+    <div class="item on"><span class="initial" style="background:#E3E1FB;color:#4B3FD6">DK</span><div><b>Dilnoza Karimova</b><small class="late">2 kun javobsiz</small></div><div class="pct">90%<small style="color:var(--green)">Tavsiya</small></div></div>
+    <div class="item"><span class="initial" style="background:#DDF1EA;color:#0F7A5A">MY</span><div><b>Madina Yusupova</b><small>1 kun</small></div><div class="pct">80%<small style="color:var(--green)">Tavsiya</small></div></div>
+    <div class="item"><span class="initial" style="background:#FBEBD7;color:#8A5A12">JT</span><div><b>Jasur Toshmatov</b><small>5 soat · yozma javob yo‘q</small></div><div class="pct">70%<small style="color:#A0640F">Ko‘ring</small></div></div>
+    <div class="item"><span class="initial" style="background:#F1E4F6;color:#6E3F8F">SR</span><div><b>Shahnoza Rahimova</b><small>6 soat · test yo‘q</small></div><div class="pct" style="color:var(--muted)">—</div></div>
+    <div class="item"><span class="initial" style="background:#FBE3E0;color:#8E2A23">BA</span><div><b>Bekzod Aliyev</b><small>3 soat</small></div><div class="pct">40%<small class="late">Mos emas</small></div></div>
+  </section>
+
+  <section class="panel glass convo" aria-label="Telegram suhbati">
+    <div class="convo-head">
+      <h1>Dilnoza Karimova</h1><span>+998 90 214 55 08</span>
+      <span class="tg"><svg width="15" height="15" viewBox="0 0 24 24" fill="#2381C4" aria-hidden="true"><path d="M21.5 4.2 2.9 11.4c-1 .4-1 1.8.1 2.1l4.6 1.4 1.8 5.6c.3.8 1.3 1 1.9.4l2.6-2.5 4.9 3.6c.7.5 1.6.1 1.8-.7l3.1-14.7c.2-1-.7-1.8-1.6-1.4zM9.4 14.6l8.5-7.6-6.7 8.9-.3 3.1-1.5-4.4z"/></svg>@apex_hr_bot</span>
+    </div>
+    <div class="chat">
+      <span class="day">21-oktabr</span>
+      <div class="msg bot">Apex Learning’ga ariza. Ma’lumotlaringiz 180 kungacha saqlanadi, test AI yordamida tuziladi. Davom etamizmi?<time>18:31</time></div>
+      <div class="msg me">Roziman<time>18:31</time></div>
+      <div class="msg bot">Qaysi vakansiyaga ariza topshirmoqchisiz?<time>18:31</time></div>
+      <div class="msg me">SMM menejer<time>18:32</time></div>
+      <div class="msg me"><span class="file"><i>PDF</i><span>dilnoza_smm.pdf<br><small style="opacity:.75">412 KB</small></span></span><time>18:36</time></div>
+      <div class="msg result">
+        <div class="result-row"><b>90%</b><span>9 / 10 to‘g‘ri · Hard 100% · Soft 80%</span></div>
+        <span class="ainote">Test 18:41 da yakunlandi, HR tasdiqlagan savollar bilan</span>
+      </div>
+      <div class="msg bot">✍️ Savol 1/2: Nega aynan bizning o‘quv markazimiz?<time>18:41</time></div>
+      <div class="msg me">Ta’lim sohasida kontent qilishni yoqtiraman, o‘quvchilar natijasini ko‘rsatish menga qiziq.<time>18:42</time></div>
+      <div class="msg bot">✍️ Savol 2/2: Qancha maosh kutasiz?<time>18:42</time></div>
+      <div class="msg me">7–8 million so‘m.<time>18:42</time></div>
+    </div>
+  </section>
+
+  <aside class="panel glass decide" aria-label="Qaror">
+    <h3>Qaror</h3>
+    <p>AI tavsiya beradi, qaror sizniki.</p>
+    <div class="verdict"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F7A5A" stroke-width="2.4" aria-hidden="true"><path d="m5 12 5 5L20 7"/></svg><div><b>Tavsiya etiladi</b>Maosh kutilmasi vakansiya diapazonida (6–9 mln so‘m).</div></div>
+    <ul class="reqs">
+      <li><span class="ok">✓</span>Instagram va Telegram kanal yuritish, 3 yil</li>
+      <li><span class="ok">✓</span>Kontent reja va kalendar</li>
+      <li><span class="ok">✓</span>Canva va Capcut</li>
+      <li><span class="ok">✓</span>Ta’lim sohasida tajriba</li>
+      <li><span class="ask">?</span>Meta Ads: CVda yo‘q, suhbatda so‘rang</li>
+    </ul>
+    <button class="btn primary">Suhbatga taklif qilish</button>
+    <button class="btn">Rad etish</button>
+    <div class="slot"><b>Bo‘sh vaqtingiz</b>Ertaga 11:00 yoki 16:30 · Offline, Amir Temur ko‘chasi 1</div>
+  </aside>
+</div>
+</body>
+</html>

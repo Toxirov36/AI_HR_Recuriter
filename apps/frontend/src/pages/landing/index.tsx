@@ -232,13 +232,14 @@ export function LandingPage() {
             type="button"
             aria-label={menuOpen ? t('landing.closeMenu') : t('landing.openMenu')}
             aria-expanded={menuOpen}
+            aria-controls="landing-mobile-nav"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             {menuOpen ? <X size={22} aria-hidden="true" /> : <Menu size={22} aria-hidden="true" />}
           </button>
         </div>
         {menuOpen && (
-          <nav className="sl-mobile-nav" aria-label={t('landing.navigation')}>
+          <nav id="landing-mobile-nav" className="sl-mobile-nav" aria-label={t('landing.navigation')}>
             {NAV.map(({ href, key }) => (
               <a key={href} href={href} onClick={(event) => glideTo(event, href, () => setMenuOpen(false))}>
                 {t(`landing.${key}`)}

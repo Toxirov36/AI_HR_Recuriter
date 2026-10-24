@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shortlist · Sayt C · Shisha</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Site C — "Shisha" (Liquid Glass): Tashkent dusk behind translucent layers.
+     Idea: the two sides of the product — the candidate's chat and the HR's decision — float as glass panes over one another;
+     the visitor flips which side is in front. */
+  :root {
+    --ink: #F3F5FF;
+    --muted: #B9C0DE;
+    --night: #0D1230;
+    --glass: rgba(255,255,255,.10);
+    --glass-strong: rgba(255,255,255,.16);
+    --edge: rgba(255,255,255,.22);
+    --mint: #7CF0C8;
+    --peach: #FFB98A;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; color: var(--ink); font: 17px/1.6 'Manrope', system-ui, sans-serif; min-height: 100vh;
+    background:
+      radial-gradient(800px 560px at 8% 4%, rgba(110,92,255,.55), transparent 60%),
+      radial-gradient(700px 520px at 92% 10%, rgba(255,140,90,.45), transparent 60%),
+      radial-gradient(900px 700px at 60% 60%, rgba(40,190,160,.30), transparent 60%),
+      radial-gradient(800px 600px at 10% 95%, rgba(110,92,255,.35), transparent 60%),
+      var(--night);
+  }
+  a { color: inherit; }
+  .glass { background: var(--glass); border: 1px solid var(--edge); backdrop-filter: blur(24px) saturate(1.5); -webkit-backdrop-filter: blur(24px) saturate(1.5); box-shadow: inset 0 1px 0 rgba(255,255,255,.25), 0 30px 60px -30px rgba(0,0,0,.5); }
+  .wrap { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+
+  header { position: sticky; top: 14px; z-index: 10; margin: 14px auto 0; max-width: 1136px; border-radius: 999px; display: flex; align-items: center; gap: 22px; padding: 8px 8px 8px 18px; }
+  .logo { display: flex; align-items: center; gap: 9px; font-weight: 800; text-decoration: none; font-size: 18px; }
+  .logo i { width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, var(--mint), #6E5CFF); display: grid; place-items: center; }
+  nav { margin-left: auto; display: flex; gap: 22px; }
+  nav a { text-decoration: none; color: var(--muted); font-weight: 600; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; padding: 12px 22px; font-weight: 700; text-decoration: none; border: 1px solid var(--edge); color: var(--ink); background: var(--glass-strong); font: 700 16px 'Manrope'; cursor: pointer; }
+  .btn.solid { background: #fff; color: var(--night); border-color: #fff; }
+
+  .hero { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; padding: 84px 0 110px; }
+  h1 { font-size: clamp(44px, 6vw, 86px); line-height: 1; letter-spacing: -0.04em; margin: 0 0 24px; font-weight: 800; }
+  .hero p { font-size: 20px; color: var(--muted); max-width: 29em; margin: 0 0 32px; }
+  .cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .stack { position: relative; height: 470px; }
+  .switch { position: absolute; top: -52px; right: 0; border-radius: 999px; padding: 4px; display: flex; }
+  .switch button { border: 0; background: none; color: var(--muted); font: 700 14px 'Manrope'; padding: 7px 14px; border-radius: 999px; cursor: pointer; }
+  .switch button.on { background: #fff; color: var(--night); }
+  .pane { position: absolute; border-radius: 26px; padding: 20px; transition: transform .45s ease, opacity .45s ease; }
+  .pane h4 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 700; }
+  .chatpane { width: 330px; left: 0; top: 0; }
+  .decpane { width: 340px; right: 0; top: 120px; }
+  .stack[data-front="chat"] .chatpane { z-index: 2; transform: none; }
+  .stack[data-front="chat"] .decpane { z-index: 1; transform: scale(.94) translateY(16px); opacity: .7; }
+  .stack[data-front="hr"] .decpane { z-index: 2; transform: none; }
+  .stack[data-front="hr"] .chatpane { z-index: 1; transform: scale(.94) translateY(16px); opacity: .7; }
+  .b { padding: 9px 12px; border-radius: 16px; font-size: 14px; margin-bottom: 8px; max-width: 88%; }
+  .b.bot { background: rgba(255,255,255,.14); }
+  .b.me { background: rgba(124,240,200,.22); margin-left: auto; }
+  .score { display: flex; align-items: baseline; gap: 12px; margin: 4px 0 12px; }
+  .score b { font-size: 56px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .score span { color: var(--muted); font-size: 14px; }
+  .chk { list-style: none; padding: 0; margin: 0 0 16px; font-size: 14px; display: grid; gap: 6px; }
+  .chk li::before { content: '✓ '; color: var(--mint); font-weight: 800; }
+  .chk li.ask::before { content: '? '; color: var(--peach); }
+  .pane .btn { width: 100%; padding: 10px; font-size: 14px; }
+  @media (prefers-reduced-motion: reduce) { .pane { transition: none; } }
+
+  section.block { padding: 0 0 110px; }
+  h2 { font-size: clamp(32px, 4.2vw, 58px); line-height: 1.04; letter-spacing: -0.035em; margin: 0 0 16px; font-weight: 800; max-width: 15em; }
+  .lead { color: var(--muted); max-width: 36em; margin: 0 0 40px; font-size: 19px; }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .tile { border-radius: 26px; padding: 28px; }
+  .tile.wide { grid-column: span 2; }
+  .tile h3 { margin: 0 0 8px; font-size: 22px; letter-spacing: -0.01em; }
+  .tile p { margin: 0; color: var(--muted); }
+  .tile .k { font-size: 48px; font-weight: 800; letter-spacing: -0.04em; color: var(--mint); line-height: 1; margin-bottom: 14px; }
+
+  .plans { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .plan { border-radius: 24px; padding: 24px; display: flex; flex-direction: column; }
+  .plan.pick { background: rgba(255,255,255,.22); border-color: rgba(255,255,255,.4); }
+  .plan h3 { margin: 0; font-size: 17px; }
+  .plan .price { font-size: 32px; font-weight: 800; letter-spacing: -0.03em; margin: 12px 0 0; }
+  .plan small { color: var(--muted); }
+  .plan ul { color: var(--muted); padding-left: 18px; font-size: 15px; margin: 14px 0 20px; }
+  .plan .btn { margin-top: auto; }
+  .fine { color: var(--muted); font-size: 14px; margin-top: 14px; }
+
+  .faq { display: grid; grid-template-columns: 1fr 1.3fr; gap: 40px; }
+  details { border-radius: 18px; padding: 16px 20px; margin-bottom: 10px; }
+  summary { font-weight: 700; cursor: pointer; }
+  details p { color: var(--muted); margin: 8px 0 0; }
+
+  .final { border-radius: 36px; padding: 70px 56px; display: grid; grid-template-columns: 1fr auto; gap: 30px; align-items: end; margin-bottom: 40px; }
+  .final h2 { margin: 0; }
+  footer { display: flex; justify-content: space-between; color: var(--muted); font-size: 14px; padding: 20px 0 40px; }
+
+  @media (max-width: 960px) {
+    nav { display: none; } .hero, .faq, .final { grid-template-columns: 1fr; } .tiles, .plans { grid-template-columns: 1fr 1fr; } .tile.wide { grid-column: span 2; }
+    .stack { height: 560px; margin-top: 40px; } .chatpane, .decpane { width: 86%; } .decpane { top: 200px; }
+  }
+  @media (max-width: 560px) { .wrap { padding: 0 16px; } .tiles, .plans { grid-template-columns: 1fr; } .tile.wide { grid-column: auto; } .final { padding: 36px 24px; } header { margin: 10px 12px 0; } }
+  @media (prefers-reduced-transparency: reduce) { .glass { background: rgba(20,26,60,.92); backdrop-filter: none; -webkit-backdrop-filter: none; } }
+  :focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+</style>
+</head>
+<body>
+<header class="glass">
+  <a class="logo" href="#"><i><svg width="13" height="13" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 4h12M2 8h8M2 12h5" stroke="#0D1230" stroke-width="2.6" stroke-linecap="round"/></svg></i>Shortlist</a>
+  <nav><a href="#imkoniyat">Imkoniyatlar</a><a href="#narx">Narxlar</a><a href="#savol">Savollar</a></nav>
+  <a class="btn solid" href="#">Bepul boshlash</a>
+</header>
+
+<div class="wrap">
+  <section class="hero">
+    <div>
+      <h1>Nomzod yozadi. Siz tanlaysiz.</h1>
+      <p>Shortlist arizalarni Telegram-botda qabul qiladi, test qiladi va AI bilan tahlil qiladi. Sizga faqat eng yaxshilarini chaqirish qoladi.</p>
+      <div class="cta"><a class="btn solid" href="#">Bepul boshlash</a><a class="btn" href="#imkoniyat">Imkoniyatlar</a></div>
+    </div>
+    <div class="stack" id="stack" data-front="hr">
+      <div class="switch glass" role="group" aria-label="Qaysi tomonni ko‘rsatish"><button type="button" data-side="chat">Nomzod</button><button type="button" data-side="hr" class="on">HR</button></div>
+      <div class="pane glass chatpane" aria-label="Nomzod ko‘radigan bot">
+        <h4>@apex_hr_bot</h4>
+        <div class="b bot">Qaysi vakansiyaga ariza topshirasiz?</div>
+        <div class="b me">SMM menejer</div>
+        <div class="b bot">CV faylingizni yuboring</div>
+        <div class="b me">📄 dilnoza_smm.pdf</div>
+        <div class="b bot">✍️ Nega aynan bizning o‘quv markazimiz?</div>
+        <div class="b me">Ta’lim sohasida kontent qilishni yoqtiraman.</div>
+      </div>
+      <div class="pane glass decpane" aria-label="HR ko‘radigan natija">
+        <h4>Dilnoza Karimova · SMM menejer</h4>
+        <div class="score"><b>90%</b><span>9/10 · Hard 100% · Soft 80%</span></div>
+        <ul class="chk"><li>3 yil Instagram va Telegram</li><li>Kontent reja va kalendar</li><li>Ta’lim sohasida tajriba</li><li class="ask">Meta Ads: suhbatda so‘rang</li></ul>
+        <a class="btn solid" href="#">Suhbatga taklif qilish</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="imkoniyat">
+    <h2>Yollashning zerikarli qismi o‘zi bajariladi</h2>
+    <p class="lead">CV yig‘ish, birinchi saralash, test va suhbat vaqtini kelishish. Siz faqat odamlar bilan gaplashasiz.</p>
+    <div class="tiles">
+      <div class="tile glass wide"><div class="k">Telegram</div><h3>Ariza nomzodga qulay joyda</h3><p>Sayt va ro‘yxatdan o‘tish shart emas. Bot havolasi kanallaringizda, hh.uz va OLX e’lonlarida, hatto Telegram profilingizda ishlaydi.</p></div>
+      <div class="tile glass"><div class="k">10</div><h3>Savollik test</h3><p>AI tuzadi, siz tasdiqlaysiz. 5 ta hard va 5 ta soft skill.</p></div>
+      <div class="tile glass"><div class="k">1–5</div><h3>O‘z savollaringiz</h3><p>Nomzod yozma javob beradi, AI har biriga qisqa izoh qo‘shadi.</p></div>
+      <div class="tile glass"><div class="k">Meet</div><h3>Suhbat vaqti</h3><p>Nomzod botda vaqtni tanlaydi. Online bo‘lsa Google Meet havolasi, offline bo‘lsa xaritadagi nuqta.</p></div>
+      <div class="tile glass"><div class="k">3 til</div><h3>O‘zbek, rus, tojik</h3><p>Bot nomzod tanlagan tilda gaplashadi.</p></div>
+    </div>
+  </section>
+
+  <section class="block" id="narx">
+    <h2>Bepul boshlang</h2>
+    <p class="lead">Narx vakansiyalar va tahlil qilinadigan nomzodlar soniga qarab.</p>
+    <div class="plans">
+      <div class="plan glass"><h3>Bepul</h3><div class="price">0</div><small>doimiy</small><ul><li>1 vakansiya</li><li>15 nomzod / oy</li></ul><a class="btn" href="#">Boshlash</a></div>
+      <div class="plan glass pick"><h3>Start</h3><div class="price">149 000</div><small>so‘m / oy</small><ul><li>3 vakansiya</li><li>100 nomzod / oy</li><li>Yozma savollar</li></ul><a class="btn solid" href="#">Tanlash</a></div>
+      <div class="plan glass"><h3>Biznes</h3><div class="price">399 000</div><small>so‘m / oy</small><ul><li>10 vakansiya</li><li>400 nomzod / oy</li><li>Suhbatlar, kanallar</li></ul><a class="btn" href="#">Tanlash</a></div>
+      <div class="plan glass"><h3>Pro</h3><div class="price">899 000</div><small>so‘m / oy</small><ul><li>Cheksiz vakansiya</li><li>1 500 nomzod / oy</li></ul><a class="btn" href="#">Bog‘lanish</a></div>
+    </div>
+    <p class="fine">Narxlar namunaviy, tasdiqlanmagan.</p>
+  </section>
+
+  <section class="block faq" id="savol">
+    <h2>Savollar</h2>
+    <div>
+      <details class="glass" open><summary>AI nomzodni o‘zi rad etadimi?</summary><p>Yo‘q. AI faqat tavsiya beradi va dalil ko‘rsatadi. Qarorni har doim HR qiladi.</p></details>
+      <details class="glass"><summary>Nomzodlarning ma’lumotlari xavfsizmi?</summary><p>Ma’lumotlar O‘zbekistondagi serverda, siz belgilagan muddatgacha saqlanadi va keyin o‘chiriladi.</p></details>
+      <details class="glass"><summary>Qancha vaqtda boshlash mumkin?</summary><p>Ro‘yxatdan o‘tib, vakansiya yaratib, bot havolasini e’longa qo‘yasiz. Birinchi arizalar shu kuni keladi.</p></details>
+    </div>
+  </section>
+
+  <section class="final glass">
+    <h2>Keyingi xodimingiz allaqachon Telegram’da</h2>
+    <a class="btn solid" href="#">Bepul boshlash</a>
+  </section>
+  <footer><span>© 2026 Shortlist · hrdai.uz</span><span>Toshkent</span></footer>
+</div>
+<script>
+  // The live thing: flip which side of the product is in front.
+  const stack = document.getElementById('stack');
+  document.querySelectorAll('.switch button').forEach((button) => button.addEventListener('click', () => {
+    stack.dataset.front = button.dataset.side;
+    document.querySelectorAll('.switch button').forEach((b) => b.classList.toggle('on', b === button));
+  }));
+</script>
+</body>
+</html>
