@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../../components/ui';
+import { GenerationProgress } from '../../components/generation-progress';
 import type { Vacancy } from '../../types';
 import { useAudioRecorder } from './use-audio-recorder';
 
@@ -195,13 +196,12 @@ export function VacancyGenerator({
         onClick={() => void generate()}
       >
         <Sparkles size={16} />{' '}
-        {busy ? t('vacancies.saving', 'Saving…') : t('vacancyGenerator.generateButton')}
+        {busy ? t('vacancyGenerator.generating', 'Generating…') : t('vacancyGenerator.generateButton')}
       </button>
-      {busy && (
-        <p role="status" className="muted small">
-          {t('vacancyGenerator.preparing', 'Preparing the role description and requirements…')}
-        </p>
-      )}
+      <GenerationProgress
+        active={busy}
+        label={t('vacancyGenerator.preparing', 'Preparing the role description and requirements…')}
+      />
       {draft && (
         <div className="vacancy-draft">
           <h4>{draft.title}</h4>

@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { api, send } from '../../lib/api';
 import { Button, Input, Modal, Textarea } from '../../components/ui';
+import { GenerationProgress } from '../../components/generation-progress';
 import type { AssessmentQuestion, AssessmentView, Vacancy } from '../../types';
 
 /** HR reviews, edits and approves the AI-drafted candidate test; the bot only uses an approved test. */
@@ -16,6 +17,7 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
   const [interviewFocus, setInterviewFocus] = useState('');
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
   const base = `/vacancies/${vacancy.id}/assessment`;
 
@@ -43,6 +45,15 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
       setError((cause as Error).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function generate() {
+    setGenerating(true);
+    try {
+      await run(() => send<AssessmentView>(`${base}/generate`, {}), t('vacancies.assessmentGenerated'));
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -83,10 +94,12 @@ export function AssessmentModal({ vacancy, close }: { vacancy: Vacancy; close: (
           >
             {t(`vacancies.assessmentState${state}`)}
           </span>
-          <Button type="button" variant="outline" disabled={busy || !view} onClick={() => void run(() => send<AssessmentView>(`${base}/generate`, {}), t('vacancies.assessmentGenerated'))}>
+          <Button type="button" variant="outline" disabled={busy || !view} onClick={() => void generate()}>
             {hasDraft ? t('vacancies.assessmentRegenerate') : t('vacancies.assessmentGenerate')}
           </Button>
         </div>
+
+        <GenerationProgress active={generating} label={t('vacancies.assessmentGenerating', 'Generating the test questions…')} />
 
         {hasDraft &&
           draft.map((question, index) => (

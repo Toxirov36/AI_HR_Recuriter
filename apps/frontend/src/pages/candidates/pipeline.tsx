@@ -35,6 +35,7 @@ import { CandidateDossierModal } from '../../components/candidate-dossier-modal'
 import { InterviewPanel } from '../../features/interviews/interview-panel';
 import { WrittenAnswersPanel } from '../../components/written-answers';
 import { AiInterviewPanel } from '../../components/ai-interview-panel';
+import { GenerationProgress } from '../../components/generation-progress';
 import { TopCandidatesModal } from '../../features/ai-matching';
 import {
   Alert,
@@ -1209,7 +1210,7 @@ export function ApplicationDetail() {
                   >
                     <Sparkles size={15} />
                     {busy === 'analyze'
-                      ? t('common.loading', 'Tahlil qilinmoqda…')
+                      ? t('applications.analyzing', 'Tahlil qilinmoqda…')
                       : a.analysis
                         ? t('applications.reanalyze', 'Qayta tahlil qilish')
                         : t('applications.analyzeCv', 'CV dalillarini tahlil qilish')}
@@ -1217,6 +1218,12 @@ export function ApplicationDetail() {
                   <span className="count-chip">{a.vacancy.requirements.length} {t('vacancies.cardRequirements', 'talab')}</span>
                 </div>
               </div>
+              <GenerationProgress
+                active={busy === 'analyze'}
+                className="px-4 pb-3"
+                doneLabel={t('applications.analyzed', 'Tahlil tayyor')}
+                label={t('applications.analyzingLabel', 'CV matnidan dalillar tahlil qilinmoqda…')}
+              />
               <AccordionItem value="evidence" className="border-b-0">
                 <AccordionContent className="pb-0">
                   {(aiBlocked || !a.candidate.resumeText) && (
