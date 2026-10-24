@@ -39,9 +39,6 @@
   },
   "overrides": {
     "multer": "^2.5.0",
-    "@nestjs/platform-express": {
-      "multer": "^2.5.0"
-    },
     "deepmerge-ts": "$deepmerge-ts",
     "@prisma/config": {
       "deepmerge-ts": "$deepmerge-ts"
@@ -49,6 +46,9 @@
     "prisma": {
       "mysql2": "^3.24.4"
     },
-    "lodash": "^4.18.1"
+    "lodash": "^4.18.1",
+    "@nestjs/platform-express": {
+      "multer": "^2.5.0"
+    }
   }
 }
