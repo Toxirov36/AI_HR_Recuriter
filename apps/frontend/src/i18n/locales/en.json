@@ -1400,7 +1400,6 @@
     "mapPick": "Pick the place on the map",
     "mapPickHint": "Click the map to place a pin",
     "onlineMeet": "Online (Google Meet)",
-    "meetReady": "A Google Meet link and a calendar entry are created automatically when the candidate picks a time ({{email}}).",
     "mapUnavailable": "The map is not available right now. Try again later; the address text is still sent.",
     "mapLoading": "Loading the map…",
     "mapRemovePin": "Remove pin",

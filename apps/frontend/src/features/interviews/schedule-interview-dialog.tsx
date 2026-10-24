@@ -126,14 +126,6 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
             )}
           </div>
         )}
-        {mode === 'ONLINE' && google?.connected && (
-          <div role="note" className="-mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-            {t('interviews.meetReady', {
-              defaultValue: 'A Google Meet link and a calendar entry are created when the candidate picks a time ({{email}}).',
-              email: google.googleEmail ?? 'Google',
-            })}
-          </div>
-        )}
         {mode === 'OFFLINE' && (
           <Field label={t('interviews.address', 'Address')} htmlFor="interview-location">
             <Input
