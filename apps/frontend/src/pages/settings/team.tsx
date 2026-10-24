@@ -966,6 +966,7 @@ export function Team() {
                     <span className="inline-block w-2 h-2 rounded-full bg-blue-600 animate-ping" />
                     {t('admin.modalStep3Waiting')}
                   </div>
+                  <p className="text-slate-600 text-[11px] pt-1">{t('admin.modalStep3Reconnect')}</p>
                 </div>
               </div>
             </div>

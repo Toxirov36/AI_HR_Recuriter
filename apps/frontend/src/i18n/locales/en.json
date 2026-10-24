@@ -1320,6 +1320,7 @@
     "openBusinessSettings": "Open Telegram Business settings",
     "modalStep3Title": "Automatic verification",
     "modalStep3Waiting": "Waiting for Telegram connection webhook (live check)…",
+    "modalStep3Reconnect": "If the bot was already connected in Telegram Business, no signal arrives: remove the bot under Chatbots and connect it again.",
     "close": "Close",
     "disconnectModalTitle": "Disconnect Telegram",
     "disconnectModalDesc": "Are you sure you want to disconnect Telegram Business?",

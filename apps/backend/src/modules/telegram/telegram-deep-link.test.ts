@@ -208,6 +208,31 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
     expect(db.telegramConnectRequest.update).not.toHaveBeenCalled();
   });
 
+  it('keeps a live connection with its company but moves one the owner removed and reconnected', async () => {
+    const request = {
+      id: 9, companyId: 3, userId: 11, used: false, telegramUsername: 'owner',
+      company: { name: 'New Co' }, user: { id: 11, fullName: 'New Admin', role: 'ADMIN' },
+    };
+    const run = async (existing: { companyId: number; enabled: boolean }) => {
+      const upsert = vi.fn().mockResolvedValue({ id: 'conn-1' });
+      const db = {
+        telegramConnectRequest: { findFirst: vi.fn().mockResolvedValue(request), update: vi.fn() },
+        telegramBusinessConnection: { findUnique: vi.fn().mockResolvedValue(existing), upsert },
+      };
+      const handler = new BusinessConnectionHandler(db as never, { sendMessage: vi.fn().mockResolvedValue({}) } as never, { log: vi.fn() } as never);
+      await handler.handle({ id: 'conn-1', user: { id: 555 }, user_chat_id: 555, is_enabled: true });
+      return { update: upsert.mock.calls[0][0].update, claimed: db.telegramConnectRequest.update.mock.calls.length > 0 };
+    };
+
+    const live = await run({ companyId: 1, enabled: true });
+    expect(live.update.companyId).toBeUndefined();
+    expect(live.claimed).toBe(false);
+
+    const removed = await run({ companyId: 1, enabled: false });
+    expect(removed.update).toEqual(expect.objectContaining({ companyId: 3, userId: 11 }));
+    expect(removed.claimed).toBe(true);
+  });
+
   it('only reconciles an unassigned connection belonging to the /start account', async () => {
     const connectionFindFirst = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     const db = {

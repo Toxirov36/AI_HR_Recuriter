@@ -29,9 +29,11 @@ export class BusinessConnectionHandler {
       include: { company: true, user: true },
     });
     const existing = await this.db.telegramBusinessConnection.findUnique({
-      where: { id: connection.id }, select: { companyId: true },
+      where: { id: connection.id }, select: { companyId: true, enabled: true },
     });
-    if (existing?.companyId && pendingRequest?.companyId !== existing.companyId) {
+    // A live connection stays with its company. Once the owner has removed the bot in Telegram (the record is
+    // disabled), reconnecting it with a fresh /start link may move it to the company of that link.
+    if (existing?.companyId && existing.enabled && pendingRequest?.companyId !== existing.companyId) {
       pendingRequest = null;
     }
 

@@ -1320,6 +1320,7 @@
     "openBusinessSettings": "Кушодани танзимоти Telegram Business",
     "modalStep3Title": "Тасдиқи худкор",
     "modalStep3Waiting": "Интизори сигнали пайвастшавӣ аз Telegram (санҷиши зинда)…",
+    "modalStep3Reconnect": "Агар бот аллакай дар Telegram Business пайваст бошад, сигнал намеояд: ботро дар бахши Chatbots хориҷ кунед ва аз нав пайваст кунед.",
     "close": "Пӯшидан",
     "disconnectModalTitle": "Қатъи пайвасти Telegram",
     "disconnectModalDesc": "Оё мутмаин ҳастед, ки мехоҳед пайвасти Telegram Business-ро қатъ кунед?",

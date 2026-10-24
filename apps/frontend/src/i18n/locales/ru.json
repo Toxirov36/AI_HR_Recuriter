@@ -1322,6 +1322,7 @@
     "openBusinessSettings": "Открыть настройки Telegram Business",
     "modalStep3Title": "Автоматическое подтверждение",
     "modalStep3Waiting": "Ожидание сигнала подключения от Telegram (проверка в реальном времени)…",
+    "modalStep3Reconnect": "Если бот уже был подключён в Telegram Business, сигнал не придёт: удалите бота в разделе «Чат-боты» и подключите его снова.",
     "close": "Закрыть",
     "disconnectModalTitle": "Отключение Telegram",
     "disconnectModalDesc": "Вы уверены, что хотите отключить Telegram Business?",

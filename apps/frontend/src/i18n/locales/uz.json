@@ -1320,6 +1320,7 @@
     "openBusinessSettings": "Telegram Business sozlamalarini ochish",
     "modalStep3Title": "Avtomatik tasdiqlash",
     "modalStep3Waiting": "Telegram'dan ulanish signali kutilmoqda (jonli tekshiruv)…",
+    "modalStep3Reconnect": "Bot Telegram Business'da avvaldan ulangan bo'lsa, signal kelmaydi: Chatbots bo'limida botni o'chiring (Remove/Disconnect) va qayta ulang.",
     "close": "Yopish",
     "disconnectModalTitle": "Telegram ulanishini uzish",
     "disconnectModalDesc": "Haqiqatan ham Telegram Business ulanishini uzmoqchimisiz?",
