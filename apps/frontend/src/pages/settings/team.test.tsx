@@ -137,6 +137,24 @@ describe('Settings Hub (RBAC, Audit Logs, Retention, Telegram)', () => {
     expect(screen.getByText('HR')).toBeInTheDocument();
   });
 
+  it('picks the invite role and the retention period from accordions instead of dropdowns', () => {
+    render(<Team />);
+    fireEvent.click(screen.getByRole('tab', { name: /Jamoa va Rollar/i }));
+    const role = screen.getByRole('button', { name: /Ruxsat roli/i });
+    expect(role).toHaveTextContent(/^HR/);
+    fireEvent.click(role);
+    fireEvent.click(screen.getByRole('option', { name: /Recruiter/ }));
+    expect(screen.queryByRole('option', { name: /Interviewer/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Ruxsat roli/i })).toHaveTextContent(/^Recruiter/);
+
+    fireEvent.click(screen.getAllByRole('tab')[3]);
+    const retention = screen.getByRole('button', { name: /Saqlanish muddati/i });
+    expect(retention).toHaveTextContent('365');
+    fireEvent.click(retention);
+    fireEvent.click(screen.getByRole('option', { name: /90/ }));
+    expect(screen.getByRole('button', { name: /Saqlanish muddati/i })).toHaveTextContent('90');
+  });
+
   it('switches to Audit loglar tab and renders export buttons', () => {
     render(<Team />);
     const auditTab = screen.getByRole('tab', { name: /Audit loglar & Export/i });

@@ -24,12 +24,7 @@ import {
   Input,
   Loading,
   PageTitle,
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+  FilterAccordion,
   useData,
 } from '../../components/ui';
 import { useAuth } from '../../features/auth';
@@ -367,25 +362,21 @@ export function Team() {
                     className="mt-1"
                   />
                 </label>
-                <label className="block text-xs font-semibold text-slate-700">
+                <div className="block text-xs font-semibold text-slate-700">
                   {t('admin.accessRole')}
-                  <Select value={role} onValueChange={setRole}>
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder={t('admin.selectRole')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="HR">{t('admin.roleHrOption')}</SelectItem>
-                        <SelectItem value="RECRUITER">
-                          {t('admin.roleRecruiterOption')}
-                        </SelectItem>
-                        <SelectItem value="INTERVIEWER">
-                          {t('admin.roleInterviewerOption')}
-                        </SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
-                </label>
+                  <FilterAccordion
+                    inline
+                    className="mt-1"
+                    value={role}
+                    onChange={setRole}
+                    ariaLabel={t('admin.accessRole')}
+                    options={[
+                      { value: 'HR', label: t('admin.roleHrOption') },
+                      { value: 'RECRUITER', label: t('admin.roleRecruiterOption') },
+                      { value: 'INTERVIEWER', label: t('admin.roleInterviewerOption') },
+                    ]}
+                  />
+                </div>
                 <Button
                   type="submit"
                   disabled={busy}
@@ -530,20 +521,18 @@ export function Team() {
                 <span className="text-xs font-semibold text-slate-700">
                   {t('admin.retentionPeriodLabel')}
                 </span>
-                <Select
+                <FilterAccordion
+                  className="w-[170px]"
                   value={String(retentionDays)}
-                  onValueChange={(val) => setRetentionDays(parseInt(val, 10))}
-                >
-                  <SelectTrigger className="w-[140px] text-xs h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="90">{t('admin.days90')}</SelectItem>
-                    <SelectItem value="180">{t('admin.days180')}</SelectItem>
-                    <SelectItem value="365">{t('admin.days365')}</SelectItem>
-                    <SelectItem value="730">{t('admin.days730')}</SelectItem>
-                  </SelectContent>
-                </Select>
+                  onChange={(val) => setRetentionDays(parseInt(val, 10))}
+                  ariaLabel={t('admin.retentionPeriodLabel')}
+                  options={[
+                    { value: '90', label: t('admin.days90') },
+                    { value: '180', label: t('admin.days180') },
+                    { value: '365', label: t('admin.days365') },
+                    { value: '730', label: t('admin.days730') },
+                  ]}
+                />
               </div>
               <Button
                 size="sm"

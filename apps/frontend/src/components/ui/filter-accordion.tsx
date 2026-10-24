@@ -18,13 +18,15 @@ type Props = {
   className?: string;
   /** The list opens flush with the right edge of the button (for filters near the right edge). */
   alignRight?: boolean;
+  /** The list opens in the page flow and pushes what follows down, so a panel that clips its content can't cut it off. */
+  inline?: boolean;
 };
 
 /**
  * A filter that opens like an accordion under its button (the same look as the status filter on the
  * vacancies page): one option is chosen, the list closes, and a click elsewhere or Escape closes it too.
  */
-export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackLabel, search, emptyText, className, alignRight }: Props) {
+export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackLabel, search, emptyText, className, alignRight, inline }: Props) {
   const [open, setOpen] = useState('');
   const ref = useRef<HTMLDivElement>(null);
   const isOpen = open === 'filter';
@@ -48,7 +50,7 @@ export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackL
   const label = options.find((option) => option.value === value)?.label ?? fallbackLabel ?? '';
 
   return (
-    <div className={cn('relative h-10 w-full min-w-0', className)} ref={ref}>
+    <div className={cn('relative w-full min-w-0', !inline && 'h-10', className)} ref={ref}>
       <Accordion type="single" collapsible value={open} onValueChange={setOpen} className="w-full">
         <AccordionItem value="filter" className="border-none">
           <AccordionTrigger
@@ -58,7 +60,11 @@ export function FilterAccordion({ value, options, onChange, ariaLabel, fallbackL
             <span className="truncate pr-2 text-left">{label}</span>
           </AccordionTrigger>
           <AccordionContent
-            containerClassName={cn('absolute top-[calc(100%+6px)] z-50 w-full min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-2xl', alignRight ? 'right-0' : 'left-0')}
+            containerClassName={
+              inline
+                ? 'mt-1.5 w-full rounded-xl border border-slate-200 bg-white shadow-sm'
+                : cn('absolute top-[calc(100%+6px)] z-50 w-full min-w-[220px] rounded-xl border border-slate-200 bg-white shadow-2xl', alignRight ? 'right-0' : 'left-0')
+            }
             className="p-1.5"
           >
             {search && (
