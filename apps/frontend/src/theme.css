@@ -1262,3 +1262,23 @@ a.company-switch:hover .company-chevron {
     display: none;
   }
 }
+
+/* Theme change: the new theme is revealed as a growing circle (the circle itself is animated in lib/theme.ts) */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

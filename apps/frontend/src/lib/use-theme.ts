@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getStoredTheme, setTheme, type Theme } from './theme';
+import { getStoredTheme, setTheme, type RevealOrigin, type Theme } from './theme';
 
-export function useTheme(): { theme: Theme; setTheme: (theme: Theme) => void } {
+export function useTheme(): { theme: Theme; setTheme: (theme: Theme, origin?: RevealOrigin) => void } {
   const [theme, setCurrent] = useState<Theme>(getStoredTheme);
 
   useEffect(() => {

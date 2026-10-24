@@ -21,7 +21,10 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       aria-checked={isDark}
       aria-label={label}
       title={label}
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={(event) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        setTheme(isDark ? 'light' : 'dark', { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      }}
       className={cn(
         'relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white transition-colors duration-300 lg:w-16 lg:justify-start lg:p-1',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
