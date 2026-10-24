@@ -30,16 +30,34 @@ export class NotificationService {
     @Inject(EmailService) private readonly emailService: EmailService,
   ) {}
 
-  private async getBusinessConnectionId(companyId: number): Promise<string | undefined> {
+  /** The company's Telegram Business connections that may reply, newest first (each HR can connect their own). */
+  private async businessConnectionIds(companyId: number): Promise<string[]> {
     try {
-      const connection = await this.db.telegramBusinessConnection.findFirst({
+      const connections = await this.db.telegramBusinessConnection.findMany({
         where: { companyId, enabled: true, canReply: true },
         orderBy: { updatedAt: 'desc' },
+        select: { id: true },
       });
-      return connection?.id;
+      return connections.map((connection) => connection.id).filter(Boolean);
     } catch {
-      return undefined;
+      return [];
     }
+  }
+
+  /**
+   * Sends from the HRs' own accounts, one after another, until one gets through: the candidate's chat is with
+   * whichever HR they wrote to, and Telegram refuses the others.
+   */
+  private async viaBusiness<T extends { ok?: boolean }>(
+    companyId: number,
+    send: (businessConnectionId: string) => Promise<T>,
+  ): Promise<{ result?: T; connectionId?: string }> {
+    let result: T | undefined;
+    for (const connectionId of await this.businessConnectionIds(companyId)) {
+      result = await send(connectionId);
+      if (result?.ok === true) return { result, connectionId };
+    }
+    return { result };
   }
 
   private async recordTelegramFailure(candidate: CandidateNotificationTarget, kind: string) {
@@ -69,14 +87,18 @@ export class NotificationService {
       `Keyingi qadamlar bo'yicha tez orada siz bilan bog'lanamiz!`;
 
     try {
-      const bConnId = connectionId || (await this.getBusinessConnectionId(candidate.companyId));
-      if (!bConnId) {
+      const chatId = candidate.telegramUserId;
+      const delivery = connectionId
+        ? await this.telegramApi.sendMessage(chatId, message, { businessConnectionId: connectionId })
+        : (
+            await this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+              this.telegramApi.sendMessage(chatId, message, { businessConnectionId }),
+            )
+          ).result;
+      if (!delivery) {
         await this.recordTelegramFailure(candidate, 'CV javobi');
         return;
       }
-      const delivery = await this.telegramApi.sendMessage(candidate.telegramUserId, message, {
-        businessConnectionId: bConnId,
-      });
       if (!delivery.ok) throw new Error(delivery.description || 'Telegram business reply failed');
 
       await this.db.candidateEvent.create({
@@ -201,14 +223,15 @@ export class NotificationService {
     if (!candidate.telegramUserId) return;
     try {
       // The pin follows the confirmation: from the HR's own account when the text went that way.
-      const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
-      if (viaBusiness && businessConnectionId) {
-        const own = await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address, { businessConnectionId });
-        if (own.ok === true) return;
-      }
-      const direct = await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address);
+      const chatId = candidate.telegramUserId;
+      const own = () =>
+        this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+          this.telegramApi.sendVenue(chatId, lat, lng, title, address, { businessConnectionId }),
+        );
+      if (viaBusiness && (await own()).connectionId) return;
+      const direct = await this.telegramApi.sendVenue(chatId, lat, lng, title, address);
       if (direct.ok === true) return;
-      if (businessConnectionId && !viaBusiness) await this.telegramApi.sendVenue(candidate.telegramUserId, lat, lng, title, address, { businessConnectionId });
+      if (!viaBusiness) await own();
     } catch (err) {
       this.logger.warn(`Interview map pin failed for candidateId=${candidate.id}: ${(err as Error).message}`);
     }
@@ -295,13 +318,18 @@ export class NotificationService {
     if (candidate.telegramUserId) {
       try {
         let delivered = false;
+        const chatId = candidate.telegramUserId;
+        const own = async () =>
+          Boolean(
+            (
+              await this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+                this.telegramApi.sendMessage(chatId, textWithLink, { businessConnectionId }),
+              )
+            ).connectionId,
+          );
         if (message.preferBusiness) {
-          const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
-          if (businessConnectionId) {
-            const own = await this.telegramApi.sendMessage(candidate.telegramUserId, textWithLink, { businessConnectionId });
-            delivered = own.ok === true;
-            viaBusiness = delivered;
-          }
+          delivered = await own();
+          viaBusiness = delivered;
         }
         // 1) The bot chat: works for anyone who has ever opened the bot (Telegram refuses the message otherwise).
         const rows = [
@@ -317,12 +345,8 @@ export class NotificationService {
         if (direct?.ok === true && link && !link.url.startsWith('https://')) await this.telegramApi.sendMessage(candidate.telegramUserId, link.url);
         // 2) Otherwise the HR's Telegram Business chat (needs reply access and a chat within the last 24 hours).
         if (!delivered && !message.preferBusiness) {
-          const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
-          if (businessConnectionId) {
-            const fallback = await this.telegramApi.sendMessage(candidate.telegramUserId, textWithLink, { businessConnectionId });
-            delivered = fallback.ok === true;
-            viaBusiness = delivered;
-          }
+          delivered = await own();
+          viaBusiness = delivered;
         }
         telegramSent = delivered;
         if (!delivered) await this.recordTelegramFailure(candidate, message.failureKind);
@@ -376,12 +400,12 @@ export class NotificationService {
         `Sizga kelgusi kasbiy faoliyatingizda va yangi maqsadlaringizda ulkan zafarlar tilaymiz!`;
 
       try {
-        const businessConnectionId = await this.getBusinessConnectionId(candidate.companyId);
-        const result = businessConnectionId
-          ? await this.telegramApi.sendMessage(candidate.telegramUserId, telegramMessage, {
-              businessConnectionId,
-            })
-          : { ok: false };
+        const chatId = candidate.telegramUserId;
+        const result = (
+          await this.viaBusiness(candidate.companyId, (businessConnectionId) =>
+            this.telegramApi.sendMessage(chatId, telegramMessage, { businessConnectionId }),
+          )
+        ).result ?? { ok: false, description: undefined };
 
         if (result.ok) {
           telegramSent = true;

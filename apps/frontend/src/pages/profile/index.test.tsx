@@ -48,6 +48,8 @@ describe('Profile Page', () => {
     expect(screen.getByDisplayValue('Dilshodbek Toxirov')).toBeInTheDocument();
     expect(screen.getByDisplayValue('dilshodbektohirov40@gmail.com')).toBeDisabled();
     expect(screen.getByDisplayValue('Acme Corp')).toBeEnabled();
+    // The administrator connects Telegram in the admin panel, not here
+    expect(screen.queryByText(/Mening Telegramim/)).not.toBeInTheDocument();
   });
 
   it('submits updated full name and company name', async () => {
@@ -112,5 +114,7 @@ describe('Profile Page', () => {
     render(<Profile />);
 
     expect(screen.getByDisplayValue('Acme Corp')).toBeDisabled();
+    // An HR connects their own Telegram Business from the profile
+    expect(screen.getByText(/Mening Telegramim/)).toBeInTheDocument();
   });
 });

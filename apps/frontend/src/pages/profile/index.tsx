@@ -16,6 +16,7 @@ import { useAuth } from '../../features/auth';
 import { send } from '../../lib/api';
 import { Alert, Badge, Button, Input } from '../../components/ui';
 import { GoogleCalendarCard } from '../../features/interviews/google-calendar-card';
+import { TelegramBusinessCard } from '../../features/telegram/telegram-business-card';
 
 export function Profile() {
   const { t } = useTranslation();
@@ -122,6 +123,8 @@ export function Profile() {
       </div>
 
       {user?.role !== 'INTERVIEWER' && <GoogleCalendarCard />}
+      {/* Each HR connects their own Telegram here; the administrator does it in the admin panel */}
+      {(user?.role === 'HR' || user?.role === 'RECRUITER') && <TelegramBusinessCard />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Card 1: Personal and Organization */}

@@ -7,7 +7,12 @@ const interview = { mode: 'ONLINE' as const, durationMinutes: 30, note: 'Portfol
 
 function setup(language: string | null, origin = 'https://hrdai.uz', business: { id: string } | null = null) {
   const db: any = {
-    telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue(business), findMany: vi.fn().mockResolvedValue([{ userChatId: BigInt(900), telegramUserId: BigInt(900) }]) },
+    // Asked with `select: { id }` for the HR accounts to send from; otherwise for the organizer's own chats.
+    telegramBusinessConnection: {
+      findMany: vi.fn((args?: { select?: { id?: boolean } }) =>
+        Promise.resolve(args?.select?.id ? (business ? [business] : []) : [{ userChatId: BigInt(900), telegramUserId: BigInt(900) }]),
+      ),
+    },
     telegramUserLanguage: { findUnique: vi.fn().mockResolvedValue(language ? { language } : null) },
     candidateEvent: { create: vi.fn().mockResolvedValue({}) },
   };

@@ -112,7 +112,7 @@ describe('time buttons in the bot chat', () => {
 describe('the proposal message', () => {
   function notification(language: string | null = 'uz', business: { id: string } | null = null) {
     const db: any = {
-      telegramBusinessConnection: { findFirst: vi.fn().mockResolvedValue(business) },
+      telegramBusinessConnection: { findMany: vi.fn().mockResolvedValue(business ? [business] : []) },
       telegramUserLanguage: { findUnique: vi.fn().mockResolvedValue(language ? { language } : null) },
       candidateEvent: { create: vi.fn().mockResolvedValue({}) },
     };

@@ -26,6 +26,10 @@ const mockTelegramStatus = {
       createdAt: '2026-09-20T10:00:00Z',
     },
     botUsername: 'apex_recruiter_bot',
+    team: [
+      { id: 'conn-1', telegramUsername: 'dilshodbek_hr', canReply: true, fullName: 'Dilshodbek Toxirov', mine: true },
+      { id: 'conn-2', telegramUsername: 'ali_hr', canReply: true, fullName: 'Ali Valiyev', mine: false },
+    ],
   },
   error: '',
   reload: vi.fn(),
@@ -150,10 +154,13 @@ describe('Settings Hub (RBAC, Audit Logs, Retention, Telegram)', () => {
     fireEvent.pointerDown(telegramTab, { button: 0 });
     fireEvent.click(telegramTab);
 
-    expect(screen.getByText(/Telegram Business Integratsiyasi/i)).toBeInTheDocument();
+    expect(screen.getByText(/Mening Telegramim/i)).toBeInTheDocument();
     expect(screen.getByText(/Faol va Ulangan ✅/i)).toBeInTheDocument();
     expect(screen.getByText('@dilshodbek_hr')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Ulanishni uzish/i })).toBeInTheDocument();
+    // The administrator also sees the other HRs' own connections, without their own one repeated
+    expect(screen.getByText('Ali Valiyev', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.getByText(/@ali_hr/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Ulanishni uzish/i })).toHaveLength(2);
   });
 
   it('translates admin panel content when switching to English, Russian, and Tajik', async () => {

@@ -14,6 +14,7 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
     mockDb = {
       telegramBusinessConnection: {
         findFirst: vi.fn().mockResolvedValue({ id: 'biz_conn_99' }),
+        findMany: vi.fn().mockResolvedValue([{ id: 'biz_conn_99' }]),
       },
       candidateEvent: {
         create: vi.fn().mockResolvedValue({ id: 1 }),
@@ -230,6 +231,21 @@ describe('NotificationService (Telegram & Email Auto-Response)', () => {
           label: expect.stringContaining('Muloyim rad javobi yuborildi'),
         }),
       });
+    });
+
+    it('tries each HR account of the company until the one the candidate wrote to accepts it', async () => {
+      mockDb.telegramBusinessConnection.findMany = vi.fn().mockResolvedValue([{ id: 'hr_a' }, { id: 'hr_b' }]);
+      mockTelegramApi.sendMessage.mockImplementation(async (_chat: string, _text: string, options?: { businessConnectionId?: string }) =>
+        options?.businessConnectionId === 'hr_b' ? { ok: true } : { ok: false, description: 'chat not found' },
+      );
+      const result = await service.sendRejectionNotice({
+        applicationId: 203,
+        candidate: { id: 32, fullName: 'Nodira', telegramUserId: '777', companyId: 3 },
+        vacancy: { id: 1, title: 'Designer' },
+        companyName: 'Acme',
+      });
+      expect(result.telegramSent).toBe(true);
+      expect(mockTelegramApi.sendMessage.mock.calls.map((call: unknown[]) => (call[2] as { businessConnectionId: string }).businessConnectionId)).toEqual(['hr_a', 'hr_b']);
     });
 
     it('does not throw when notification delivery fails', async () => {

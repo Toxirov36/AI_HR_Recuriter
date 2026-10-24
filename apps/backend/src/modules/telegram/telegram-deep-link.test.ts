@@ -236,7 +236,7 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
   it('only reconciles an unassigned connection belonging to the /start account', async () => {
     const connectionFindFirst = vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     const db = {
-      telegramBusinessConnection: { findFirst: connectionFindFirst },
+      telegramBusinessConnection: { findFirst: connectionFindFirst, findMany: vi.fn().mockResolvedValue([]) },
       telegramConnectRequest: { findFirst: vi.fn().mockResolvedValue({
         id: 8, companyId: 2, userId: 10, telegramUserId: '123456789', used: false,
         expiresAt: new Date('2026-09-23T12:00:00Z'),
@@ -297,10 +297,47 @@ describe('Telegram Deep-Linking & Automated Onboarding', () => {
 
     const disconnectRes = await service.disconnect(user);
     expect(disconnectRes.ok).toBe(true);
-    expect(deleteMany).toHaveBeenCalledWith({ where: { companyId: 2 } });
+    // The administrator's own connection, plus old ones made before connections had an owner
+    expect(deleteMany).toHaveBeenCalledWith({ where: { companyId: 2, OR: [{ userId: 10 }, { userId: null }] } });
     expect(audit.log).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'TELEGRAM_DISCONNECTED' }),
     );
+  });
+
+  it('gives every HR their own connection: status, disconnect and the admin list', async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const findMany = vi.fn().mockResolvedValue([
+      { id: 'conn-hr', telegramUsername: 'hr_one', canReply: true, userId: 11, user: { fullName: 'HR One' } },
+    ]);
+    const deleteMany = vi.fn().mockResolvedValue({ count: 1 });
+    const db = {
+      telegramBusinessConnection: { findFirst, findMany, deleteMany },
+      telegramConnectRequest: { findFirst: vi.fn().mockResolvedValue(null) },
+    };
+    const service = new TelegramService(
+      db as never, {} as never, {} as never,
+      { getMe: vi.fn().mockResolvedValue({ username: 'apex_recruiter_bot' }) } as never,
+      { log: vi.fn() } as never,
+    );
+    const hr = { id: 12, companyId: 2, role: 'HR', fullName: 'HR Two', email: 'two@apex.uz' };
+
+    // A second HR is not "connected" just because a colleague is, and gets no company list
+    const status = await service.getStatus(hr);
+    expect(findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: { companyId: 2, enabled: true, userId: 12 } }));
+    expect(db.telegramConnectRequest.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ userId: 12 }) }));
+    expect(status.connected).toBe(false);
+    expect(status.team).toBeUndefined();
+
+    // Disconnecting touches only the HR's own connection; removing a colleague's is for the administrator
+    await service.disconnect(hr);
+    expect(deleteMany).toHaveBeenLastCalledWith({ where: { companyId: 2, userId: 12 } });
+    await expect(service.disconnect(hr, 'conn-hr')).rejects.toThrow();
+
+    const adminUser = { id: 10, companyId: 2, role: 'ADMIN', fullName: 'Admin', email: 'admin@apex.uz' };
+    const adminStatus = await service.getStatus(adminUser);
+    expect(adminStatus.team).toEqual([{ id: 'conn-hr', telegramUsername: 'hr_one', canReply: true, fullName: 'HR One', mine: false }]);
+    await service.disconnect(adminUser, 'conn-hr');
+    expect(deleteMany).toHaveBeenLastCalledWith({ where: { id: 'conn-hr', companyId: 2 } });
   });
 });
 

@@ -76,6 +76,12 @@ export class TelegramController {
     return this.telegramService.disconnect(req.user);
   }
 
+  @Delete('connections/:id')
+  @UseGuards(AuthGuard)
+  removeConnection(@Req() req: AuthRequest, @Param('id') id: string) {
+    return this.telegramService.disconnect(req.user, id);
+  }
+
   @Get('connections')
   @UseGuards(AuthGuard)
   connections(@Req() req: AuthRequest) {

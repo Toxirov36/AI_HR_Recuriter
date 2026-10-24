@@ -227,17 +227,30 @@ export class TelegramService {
     await this.telegramApi.sendMessage(message.chat.id, instruction);
   }
 
-  async getStatus(user: Identity) {
-    let connection = await this.db.telegramBusinessConnection.findFirst({
-      where: { companyId: user.companyId, enabled: true },
+  /**
+   * The signed-in user's own Telegram Business connection: every HR of a company connects their own account.
+   * Connections made before they were tied to a person (no userId) count as the administrator's.
+   */
+  private ownConnection(user: Identity) {
+    return this.db.telegramBusinessConnection.findFirst({
+      where: {
+        companyId: user.companyId,
+        enabled: true,
+        ...(user.role === 'ADMIN' ? { OR: [{ userId: user.id }, { userId: null }] } : { userId: user.id }),
+      },
       orderBy: { updatedAt: 'desc' },
     });
+  }
+
+  async getStatus(user: Identity) {
+    let connection = await this.ownConnection(user);
 
     // Reconcile only when /start proved ownership of this exact Telegram account.
     if (!connection) {
       const recentRequest = await this.db.telegramConnectRequest.findFirst({
         where: {
           companyId: user.companyId,
+          userId: user.id,
           used: false,
           telegramUserId: { not: null },
           expiresAt: { gt: new Date() },
@@ -305,8 +318,32 @@ export class TelegramService {
         })
       : null;
     const bot = await this.telegramApi.getMe();
+    // The administrator also sees who else in the company has connected their Telegram.
+    const team =
+      user.role === 'ADMIN'
+        ? (
+            await this.db.telegramBusinessConnection.findMany({
+              where: { companyId: user.companyId, enabled: true },
+              orderBy: { updatedAt: 'desc' },
+              select: {
+                id: true,
+                telegramUsername: true,
+                canReply: true,
+                userId: true,
+                user: { select: { fullName: true } },
+              },
+            })
+          ).map((item) => ({
+            id: item.id,
+            telegramUsername: item.telegramUsername,
+            canReply: item.canReply,
+            fullName: item.user?.fullName ?? null,
+            mine: item.id === connection?.id,
+          }))
+        : undefined;
 
     return {
+      team,
       connected: Boolean(connection),
       setup: pending
         ? {
@@ -330,19 +367,22 @@ export class TelegramService {
     };
   }
 
-  async disconnect(user: Identity) {
-    admin(user);
-    const existing = await this.db.telegramBusinessConnection.findMany({
-      where: { companyId: user.companyId },
-    });
+  /** Disconnects the user's own Telegram; an administrator may pass another member's connection id. */
+  async disconnect(user: Identity, connectionId?: string) {
+    if (connectionId) admin(user);
+    const where = connectionId
+      ? { id: connectionId, companyId: user.companyId }
+      : {
+          companyId: user.companyId,
+          ...(user.role === 'ADMIN' ? { OR: [{ userId: user.id }, { userId: null }] } : { userId: user.id }),
+        };
+    const existing = await this.db.telegramBusinessConnection.findMany({ where });
 
     if (!existing.length) {
       return { ok: true, message: 'Ulanish mavjud emas' };
     }
 
-    await this.db.telegramBusinessConnection.deleteMany({
-      where: { companyId: user.companyId },
-    });
+    await this.db.telegramBusinessConnection.deleteMany({ where });
 
     await this.audit.log({
       companyId: user.companyId,
