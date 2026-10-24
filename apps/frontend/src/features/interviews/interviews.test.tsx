@@ -78,6 +78,14 @@ describe('schedule interview dialog', () => {
     render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
     expect(screen.getByText(/online interviews will get a Jitsi link/)).toBeVisible();
     expect(screen.getByRole('button', { name: 'Send to candidate' })).toBeEnabled();
+    expect(screen.queryByText(/Google Meet\)/)).not.toBeInTheDocument();
+  });
+
+  it('says the online interview is a Google Meet, and from which account, when the calendar is connected', () => {
+    render(<MemoryRouter><ScheduleInterviewDialog applicationId={11} close={vi.fn()} saved={vi.fn()} /></MemoryRouter>);
+    expect(screen.getAllByText('Online (Google Meet)').length).toBeGreaterThan(0);
+    expect(screen.getByText(/Google Meet link and a calendar entry are created automatically.*hr@acme\.uz/)).toBeVisible();
+    expect(screen.queryByText(/Jitsi/)).not.toBeInTheDocument();
   });
 
   it('reschedules an existing interview through its own endpoint', async () => {

@@ -1399,6 +1399,8 @@
     "addressPlaceholder": "Shahar, ko‘cha, ofis, qavat",
     "mapPick": "Joyni xaritada belgilang",
     "mapPickHint": "Pin qo‘yish uchun xaritani bosing",
+    "onlineMeet": "Onlayn (Google Meet)",
+    "meetReady": "Nomzod vaqtni tanlaganda Google Meet havolasi va kalendar yozuvi avtomatik yaratiladi ({{email}}).",
     "mapUnavailable": "Xarita hozir mavjud emas. Keyinroq qayta urinib ko‘ring; manzil matni baribir yuboriladi.",
     "mapLoading": "Xarita yuklanmoqda…",
     "mapRemovePin": "Pinni olib tashlash",

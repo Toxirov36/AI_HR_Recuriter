@@ -103,7 +103,11 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
             value={mode}
             onChange={(value) => setMode(value as InterviewMode)}
             options={[
-              { value: 'ONLINE', label: t('interviews.online', 'Online') },
+              {
+                value: 'ONLINE',
+                // With the calendar connected the link is a Google Meet; otherwise it is a Jitsi room (see the note below)
+                label: google?.connected ? t('interviews.onlineMeet', 'Online (Google Meet)') : t('interviews.online', 'Online'),
+              },
               { value: 'OFFLINE', label: t('interviews.offline', 'Offline (in person)') },
             ]}
           />
@@ -120,6 +124,14 @@ export function ScheduleInterviewDialog({ applicationId, existing, close, saved 
             ) : (
               t('interviews.googleNotConfigured', 'Google Calendar is not configured on this server: online interviews will get a Jitsi link.')
             )}
+          </div>
+        )}
+        {mode === 'ONLINE' && google?.connected && (
+          <div role="note" className="-mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            {t('interviews.meetReady', {
+              defaultValue: 'A Google Meet link and a calendar entry are created when the candidate picks a time ({{email}}).',
+              email: google.googleEmail ?? 'Google',
+            })}
           </div>
         )}
         {mode === 'OFFLINE' && (
